@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="查看 GooseHost 的最新更新动态，了解新功能与修复内容。">
+    <title>更新日志 - GooseHost</title>
+    <link rel="icon" type="image/x-icon" href="../icons/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --color-fg-default: #24292f;
+            --color-fg-muted: #57606a;
+            --color-fg-subtle: #8c959f;
+            --color-canvas-default: #ffffff;
+            --color-canvas-subtle: #f6f8fa;
+            --color-canvas-inset: #eaeef2;
+            --color-border-default: #d0d7de;
+            --color-border-muted: #d8dee4;
+            --color-accent-fg: #2da44e;
+            --color-accent-subtle: #e6f9ed;
+            --color-success-fg: #1a7f37;
+            --color-success-subtle: #dafbe1;
+            --color-danger-fg: #cf222e;
+            --color-danger-subtle: #ffebe9;
+            --color-attention-fg: #9a6700;
+            --color-attention-subtle: #fff8c5;
+            --radius: 6px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--color-fg-default);
+            background: var(--color-canvas-subtle);
+        }
+
+        .header {
+            background: var(--color-canvas-default);
+            border-bottom: 1px solid var(--color-border-muted);
+            padding: 0 24px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 18px;
+            text-decoration: none;
+            color: inherit;
+        }
+        .header-brand img { height: 28px; }
+        .header-nav { display: flex; align-items: center; gap: 4px; }
+        .header-link {
+            color: var(--color-fg-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            transition: background 0.2s;
+        }
+        .header-link:hover { color: var(--color-fg-default); background: var(--color-canvas-subtle); }
+        .header-link.active { color: var(--color-accent-fg); }
+
+        .container { max-width: 820px; margin: 0 auto; padding: 40px 24px 80px; }
+        #md-content { color: var(--color-fg-default); }
+        #md-content h1 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+        #md-content h2 { font-size: 20px; font-weight: 700; margin: 36px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--color-border-muted); }
+        #md-content h3 { font-size: 15px; font-weight: 600; margin: 20px 0 8px; }
+        #md-content p { margin-bottom: 14px; color: var(--color-fg-muted); }
+        #md-content a { color: var(--color-accent-fg); text-decoration: none; }
+        #md-content a:hover { text-decoration: underline; }
+        #md-content code {
+            font-family: 'Cascadia Code', 'Fira Code', Consolas, 'Liberation Mono', monospace;
+            font-size: 12px;
+            background: var(--color-canvas-inset);
+            padding: 2px 5px;
+            border-radius: 3px;
+            color: var(--color-fg-default);
+        }
+        #md-content pre {
+            background: var(--color-canvas-subtle);
+            border: 1px solid var(--color-border-muted);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        #md-content pre code {
+            background: none;
+            padding: 0;
+            font-size: 12px;
+            line-height: 1.6;
+            white-space: pre;
+        }
+        #md-content pre .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--color-canvas-default);
+            border: 1px solid var(--color-border-default);
+            border-radius: var(--radius);
+            padding: 3px 10px;
+            font-size: 11px;
+            cursor: pointer;
+            color: var(--color-fg-muted);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        #md-content pre:hover .copy-btn { opacity: 1; }
+        #md-content pre .copy-btn:hover { background: var(--color-canvas-inset); }
+        #md-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+        #md-content th {
+            background: var(--color-canvas-subtle);
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid var(--color-border-muted);
+            color: var(--color-fg-muted);
+        }
+        #md-content td {
+            padding: 7px 12px;
+            border: 1px solid var(--color-border-muted);
+            color: var(--color-fg-muted);
+        }
+        #md-content tr:nth-child(even) td { background: var(--color-canvas-subtle); }
+        #md-content ul, #md-content ol { margin: 0 0 14px 20px; color: var(--color-fg-muted); }
+        #md-content li { margin-bottom: 4px; }
+        #md-content blockquote {
+            background: var(--color-accent-subtle);
+            border-left: 4px solid var(--color-accent-fg);
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+        #md-content blockquote p { color: var(--color-fg-default); margin: 0; }
+        #md-content hr { border: none; border-top: 1px solid var(--color-border-muted); margin: 32px 0; }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: var(--color-fg-muted);
+        }
+        .loading i { font-size: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .header { height: 52px; padding: 0 12px; }
+            .header-brand img { height: 22px; }
+            .header-nav { gap: 2px; }
+            .header-link { padding: 5px 8px; font-size: 12px; }
+            .container { padding: 20px 16px 60px; }
+            #md-content h1 { font-size: 22px; }
+            #md-content h2 { font-size: 16px; }
+            #md-content pre { font-size: 11px; }
+        }
+
+        @media (max-width: 400px) {
+            .header { height: 48px; padding: 0 10px; }
+            .header-brand img { height: 20px; }
+            .header-brand { font-size: 15px; }
+            .header-nav { gap: 1px; }
+            .header-link { padding: 4px 7px; font-size: 11px; border-radius: 4px; }
+            .container { padding: 16px 12px 50px; }
+            #md-content h1 { font-size: 20px; }
+            #md-content h2 { font-size: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="../index.html" class="header-brand">
+            <img src="../logo.svg" alt="GooseHost" onerror="this.style.display='none'">
+        </a>
+        <nav class="header-nav">
+            <a href="index.html" class="header-link active">更新日志</a>
+            <a href="../api-docs/index.html" class="header-link">API 文档</a>
+            <a href="../docs/index.html" class="header-link">用户协议</a>
+            <a href="../index.html" class="header-link">返回首页</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="loading" id="loading">
+            <i class="fas fa-circle-notch"></i>
+            <p style="margin-top:12px;">加载中...</p>
+        </div>
+        <div id="md-content"></div>
+    </main>
+
+    <script>
+        function addCopyButtons() {
+            document.querySelectorAll('#md-content pre').forEach(pre => {
+                if (pre.querySelector('.copy-btn')) return;
+                const btn = document.createElement('button');
+                btn.className = 'copy-btn';
+                btn.textContent = '复制';
+                btn.onclick = () => {
+                    const code = pre.querySelector('code');
+                    if (code) {
+                        navigator.clipboard.writeText(code.textContent).then(() => {
+                            btn.textContent = '已复制!';
+                            setTimeout(() => btn.textContent = '复制', 1500);
+                        });
+                    }
+                };
+                pre.style.position = 'relative';
+                pre.appendChild(btn);
+            });
+        }
+
+        fetch('changelog.md')
+            .then(r => r.text())
+            .then(md => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('md-content').innerHTML = marked.parse(md);
+                addCopyButtons();
+            })
+            .catch(() => {
+                document.getElementById('loading').innerHTML =
+                    '<i class="fas fa-exclamation-circle" style="font-size:24px;color:var(--color-danger-fg);"></i>' +
+                    '<p style="margin-top:12px;">加载失败，请稍后刷新重试</p>';
+            });
+    </script>
+<!-- Cloudflare Pages Analytics --><!-- Cloudflare Pages Analytics --><!-- Cloudflare Pages Analytics --><!-- Cloudflare Pages Analytics --></body>
+</html>

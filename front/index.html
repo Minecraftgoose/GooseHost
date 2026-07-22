@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="icon" type="image/x-icon" href="icons/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16x16.png" />
+    <link rel="apple-touch-icon" href="icons/icon-180x180.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180x180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="128x128" href="icons/icon-128x128.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="icons/icon-256x256.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png" />
+    <meta property="og:image" content="icons/og-image-1200x630.png" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GooseHost">
+    <link rel="manifest" href="manifest.json">
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="GooseHost - 免费的静态网站托管平台，支持 HTML 上传，一键部署，全球 CDN 加速。简单、快速、可靠。" />
+    <meta name="keywords" content="静态网站托管, HTML托管, 免费网站托管, CDN加速, 网站部署, 个人网站" />
+    <meta name="author" content="GooseHost" />
+    <meta name="robots" content="index, follow" />
+    <meta name="msvalidate.01" content="F26AA8B56E846BA40C6FABA37F0B1669" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="GooseHost - 静态网站托管" />
+    <meta property="og:description" content="免费的静态网站托管平台，支持 HTML 上传，一键部署，全球 CDN 加速。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://host.goose.cc.cd/" />
+    <meta property="og:site_name" content="GooseHost" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="GooseHost - 静态网站托管" />
+    <meta name="twitter:description" content="免费的静态网站托管平台，支持 HTML 上传，一键部署，全球 CDN 加速。" />
+
+    <title>GooseHost - 静态网站托管</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+    <style>
+        /* ===== 钉钉进步体字体 ===== */
+        @font-face {
+            font-family: 'DingTalk JinBuTi';
+            src: url('fonts/DingTalk JinBuTi.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        /* ===== 全局重置 & 滚动条 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'DingTalk JinBuTi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+            /* 已彻底删除自定义光标，恢复默认 */
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(2, 255, 142, 0.25);
+            border-radius: 6px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(2, 255, 142, 0.5);
+        }
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(2, 255, 142, 0.25) rgba(255, 255, 255, 0.03);
+        }
+
+        /* ===== 必应壁纸背景 ===== */
+        .bg-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: #0a0f0d center/cover;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .bg-layer.loaded {
+            opacity: 1;
+        }
+        .bg-layer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(10, 20, 15, 0.85) 0%, rgba(26, 37, 32, 0.75) 100%);
+        }
+
+        /* ===== 主容器 — 采用 Flex 列布局 ===== */
+        .container {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 2rem 1.5rem;
+        }
+
+        /* ===== 动画 ===== */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== Logo ===== */
+        .logo {
+            margin-bottom: 3rem;
+            text-align: center;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+            animation-delay: 2.5s;
+        }
+        .logo img {
+            height: 80px;
+            width: auto;
+            margin-bottom: 0.75rem;
+        }
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #02ff8e;
+            letter-spacing: 0.1em;
+        }
+
+        /* ===== 探索按钮 ===== */
+        .btn-explore {
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+            animation-delay: 2.8s;
+        }
+        .btn-explore {
+            padding: 1.2rem 3rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #02ff8e, #00cc6a);
+            color: #001a0d;
+            box-shadow: 0 4px 30px rgba(2, 255, 142, 0.4);
+            transition: all 0.25s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-explore:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 40px rgba(2, 255, 142, 0.5);
+        }
+        .btn-api {
+            margin-top: 1rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+            animation-delay: 2.9s;
+            padding: 0.7rem 2rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            background: rgba(2, 255, 142, 0.08);
+            color: rgba(2, 255, 142, 0.7);
+            border: 1px solid rgba(2, 255, 142, 0.2);
+            transition: all 0.25s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-api:hover {
+            background: rgba(2, 255, 142, 0.15);
+            color: #02ff8e;
+            border-color: rgba(2, 255, 142, 0.4);
+        }
+
+        .btn-explore:hover .fa-compass {
+            animation: compass-spin 0.4s linear infinite;
+        }
+        @keyframes compass-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* ===== 特色介绍模块 ===== */
+        .intro-section {
+            width: 100%;
+            max-width: 640px;
+            margin-top: 2.5rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+            animation-delay: 3.1s;
+        }
+        .intro-card {
+            background: rgba(0, 20, 10, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(2, 255, 142, 0.15);
+            border-radius: 6px;
+            padding: 2rem;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+        }
+        .url-compare {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+            padding: 0.9rem 1.2rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(2, 255, 142, 0.15);
+            border-radius: 6px;
+            flex-wrap: wrap;
+        }
+        .url-compare .url-old {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.4);
+            text-decoration: line-through;
+            letter-spacing: 0.02em;
+        }
+        .url-compare .url-arrow {
+            color: #02ff8e;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .url-compare .url-new {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #02ff8e;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+        @media (max-width: 480px) {
+            .url-compare { gap: 0.5rem; padding: 0.7rem 0.9rem; }
+            .url-compare .url-old { font-size: 0.7rem; }
+            .url-compare .url-new { font-size: 0.75rem; }
+            .url-compare .url-arrow { font-size: 0.9rem; }
+        }
+        .intro-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(2, 255, 142, 0.1);
+            border: 1px solid rgba(2, 255, 142, 0.25);
+            border-radius: 20px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            color: #02ff8e;
+            margin-bottom: 1.2rem;
+            letter-spacing: 0.05em;
+        }
+        .intro-tag i { font-size: 0.7rem; }
+        .intro-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #f0faf5;
+            line-height: 1.5;
+            margin-bottom: 0.6rem;
+        }
+        .intro-title em { font-style: normal; color: #ff6b6b; }
+        .intro-desc {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.65);
+            line-height: 1.75;
+            margin-bottom: 1.5rem;
+        }
+        .intro-desc .highlight { color: #02ff8e; font-weight: 600; }
+        .intro-desc .anti { color: #ff4757; font-weight: 600; }
+        .intro-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.06);
+            margin: 1.5rem 0;
+        }
+        .intro-features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .intro-feature {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            padding: 0.8rem 1rem;
+            background: rgba(2, 255, 142, 0.05);
+            border: 1px solid rgba(2, 255, 142, 0.1);
+            border-radius: 6px;
+        }
+        .intro-feature i { color: #02ff8e; font-size: 1rem; margin-top: 0.1rem; flex-shrink: 0; }
+        .intro-feature span { font-size: 0.88rem; color: rgba(255, 255, 255, 0.8); line-height: 1.4; }
+        .intro-credit {
+            margin-top: 1.5rem;
+            padding: 1rem 1.2rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 6px;
+            font-size: 0.88rem;
+            color: rgba(255, 255, 255, 0.65);
+            line-height: 1.5;
+        }
+        .intro-credit strong { color: #f0faf5; font-weight: 600; }
+        .intro-credit a { color: #02ff8e; text-decoration: none; font-weight: 600; }
+        .intro-credit a:hover { text-decoration: underline; }
+
+        /* ===== 使用教程模块 ===== */
+        .tutorial-section {
+            width: 100%;
+            max-width: 640px;
+            margin-top: 2rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+            animation-delay: 3.3s;
+        }
+        .tutorial-card {
+            background: rgba(0, 20, 10, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(2, 255, 142, 0.15);
+            border-radius: 6px;
+            padding: 1.5rem 2rem;
+        }
+        .tutorial-header {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .tutorial-header i { font-size: 1.1rem; color: #02ff8e; }
+        .tutorial-header h3 { font-size: 1rem; font-weight: 600; color: #f0faf5; }
+        .tutorial-frame {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: 6px;
+            border: none;
+            display: block;
+            background: #000;
+        }
+
+        @media (max-width: 640px) {
+            .intro-card { padding: 1.2rem 1rem; }
+            .intro-title { font-size: 1.25rem; }
+            .intro-desc { font-size: 0.88rem; }
+            .intro-features { grid-template-columns: 1fr; gap: 0.7rem; }
+            .intro-feature { padding: 0.7rem 0.85rem; }
+            .tutorial-card { padding: 1rem; }
+            .tutorial-frame { height: 200px; aspect-ratio: auto; }
+            .sponsor-section iframe { aspect-ratio: auto; height: 180px; }
+            .container { padding: 1.5rem 1rem 1rem; }
+        }
+
+        /* ===== FAQ 模块 ===== */
+        .faq-section {
+            width: 100%;
+            max-width: 640px;
+            margin-top: 28px;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+            animation-delay: 3.0s;
+        }
+
+        .faq-container {
+            background: rgba(0, 20, 10, 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(2, 255, 142, 0.12);
+            border-radius: 6px;
+            padding: 1.6rem 1.8rem;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+            transition: border-color 0.3s;
+        }
+        .faq-container:hover {
+            border-color: rgba(2, 255, 142, 0.22);
+        }
+
+        .faq-header {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1.2rem;
+            padding-bottom: 0.7rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .faq-header i {
+            font-size: 1.2rem;
+            color: #02ff8e;
+        }
+        .faq-header h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #f0faf5;
+            letter-spacing: 0.02em;
+        }
+        .faq-header span {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.25);
+            font-weight: 400;
+        }
+
+        .faq-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: border-color 0.25s;
+        }
+        .faq-item:last-child {
+            border-bottom: none;
+        }
+
+        .faq-question {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 0.2rem;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+            border-radius: 6px;
+            gap: 1rem;
+        }
+        .faq-question:hover {
+            background: rgba(2, 255, 142, 0.05);
+        }
+        .faq-question .q-text {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #e8f5ef;
+            transition: color 0.2s;
+            line-height: 1.4;
+        }
+        .faq-question:hover .q-text {
+            color: #02ff8e;
+        }
+        .faq-question .q-icon {
+            flex-shrink: 0;
+            font-size: 0.85rem;
+            color: rgba(2, 255, 142, 0.5);
+            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.25s;
+            width: 1.2rem;
+            text-align: center;
+        }
+        .faq-question:hover .q-icon {
+            color: #02ff8e;
+        }
+        .faq-item.active .faq-question .q-icon {
+            transform: rotate(180deg);
+            color: #02ff8e;
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                padding 0.35s ease,
+                opacity 0.3s ease;
+            opacity: 0;
+            padding: 0 0.2rem;
+        }
+        .faq-item.active .faq-answer {
+            max-height: 300px;
+            opacity: 1;
+            padding: 0 0.2rem 0.9rem 0.2rem;
+        }
+        .faq-answer .a-text {
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.7);
+            letter-spacing: 0.01em;
+        }
+        .faq-answer .a-text i {
+            color: #02ff8e;
+            margin-right: 0.2rem;
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+
+        @media (max-width: 640px) {
+            .faq-container {
+                padding: 1.2rem 1.2rem;
+                border-radius: 6px;
+            }
+            .faq-header h3 {
+                font-size: 0.95rem;
+            }
+            .faq-question .q-text {
+                font-size: 0.88rem;
+            }
+            .faq-answer .a-text {
+                font-size: 0.84rem;
+                line-height: 1.6;
+            }
+            .faq-question {
+                padding: 0.65rem 0.1rem;
+            }
+            .faq-item.active .faq-answer {
+                padding: 0 0.1rem 0.7rem 0.1rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .faq-container {
+                padding: 1rem 0.9rem;
+            }
+            .faq-question .q-text {
+                font-size: 0.82rem;
+            }
+            .faq-answer .a-text {
+                font-size: 0.8rem;
+            }
+            .faq-header i {
+                font-size: 1rem;
+            }
+            .faq-header h3 {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* ===== 赞助商区域 — 撑满剩余空间 ===== */
+        .sponsor-section {
+            margin-top: 24px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 640px;
+            flex: 1;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+            animation-delay: 3.2s;
+        }
+        .sponsor-thanks {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        .sponsor-section iframe {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: 6px;
+            border: none;
+            display: block;
+        }
+
+        /* ===== 页脚 — 相对定位，自动贴底 ===== */
+        .footer {
+            position: relative;
+            margin-top: 1.2rem;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.85rem;
+            text-align: center;
+            width: 100%;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+            animation-delay: 3.4s;
+        }
+
+        @media (max-width: 480px) {
+            .logo img {
+                height: 60px;
+            }
+            .btn-explore {
+                padding: 1rem 2rem;
+                font-size: 1rem;
+            }
+            .container {
+                padding: 1.5rem 1.2rem 1rem;
+            }
+        }
+
+        /* ===== 开屏加载动画 ===== */
+        .splash-screen {
+            position: fixed;
+            inset: 0;
+            background: #050a07;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            z-index: 9999;
+            animation: splash-fade-out 0.8s ease 2.5s forwards;
+        }
+        @keyframes splash-fade-out {
+            to {
+                opacity: 0;
+                pointer-events: none;
+            }
+        }
+        .splash-screen .splash-logo {
+            width: 200px;
+            height: auto;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease 0.3s forwards;
+        }
+        .splash-screen .infinity-wrap {
+            width: 80px;
+            height: 40px;
+            filter: drop-shadow(0 0 15px rgba(2, 255, 142, 0.6));
+        }
+        .splash-screen .infinity-wrap .infinity-path {
+            fill: none;
+            stroke: #02ff8e;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 300;
+            stroke-dashoffset: 300;
+            animation: infinity-draw 1.2s ease-in-out infinite;
+        }
+        @keyframes infinity-draw {
+            0%   { stroke-dashoffset: 300; }
+            50%  { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -300; }
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            white-space: nowrap;
+            border: 0;
+        }
+        /* ===== 图标微动效 ===== */
+        i.fas, i.far, i.fab {
+            transition: color 0.15s ease, transform 0.15s ease;
+        }
+        i.fas:not(.fa-spin):hover,
+        i.far:not(.fa-spin):hover,
+        i.fab:not(.fa-spin):hover {
+            transform: scale(1.08);
+        }
+
+    </style>
+</head>
+<body class="splash-active">
+    <h1 class="sr-only">GooseHost - 静态网站托管</h1>
+
+    <!-- ===== 开屏加载 ===== -->
+    <div class="splash-screen" id="splashScreen">
+        <svg class="infinity-wrap" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+            <path class="infinity-path" d="M 50,50 C 50,20 80,20 100,50 C 120,80 150,80 150,50 C 150,20 120,20 100,50 C 80,80 50,80 50,50 Z" />
+        </svg>
+        <img src="logo.svg" class="splash-logo" alt="GooseHost">
+    </div>
+
+    <!-- ===== 背景层 ===== -->
+    <div id="bgLayer" class="bg-layer"></div>
+
+    <!-- ===== 主容器 ===== -->
+    <div class="container">
+
+        <!-- Logo -->
+        <div class="logo">
+            <img src="logo.svg" alt="GooseHost" />
+            <div class="logo-text">极速托管</div>
+        </div>
+
+        <!-- 探索按钮 -->
+        <a href="dashboard.html" class="btn-explore">
+            <i class="fas fa-compass"></i>
+            开始探索
+        </a>
+        <a href="api-docs/index.html" class="btn-api">
+            <i class="fas fa-book"></i>
+            API 文档
+        </a>
+
+        <!-- 特色介绍模块 -->
+        <div class="intro-section">
+            <div class="intro-card">
+                <div class="url-compare">
+                    <span class="url-old">github.io/your-super-long-repo-name</span>
+                    <span class="url-arrow"><i class="fas fa-arrow-right"></i></span>
+                    <span class="url-new">page.goose.cc.cd/s/you</span>
+                </div>
+                <div class="intro-tag"><i class="fas fa-bolt"></i> 为什么选 GooseHost？</div>
+                <div class="intro-title">还在和 GitHub 较劲吗？<br><em>就为了上传一个 HTML？</em></div>
+                <div class="intro-desc">
+                    然后获得一个贼长的 <code style="color:#ff9f43; background:rgba(255,159,67,0.1); padding:2px 6px; border-radius:4px;">.github.io</code> 链接？<br>
+                    GitHub 虽好，但是让你这么用，有点小题大做了。。。
+                </div>
+                <div class="intro-divider"></div>
+                <div class="intro-desc" style="margin-bottom:0.8rem;">
+                    来 <span class="highlight">GooseHost</span> — 这里有 <span class="highlight">全球 CDN 加速</span> — 在哪都能访问
+                </div>
+                <div class="intro-features">
+                    <div class="intro-feature"><i class="fas fa-rocket"></i><span>一键部署，无需命令行</span></div>
+                    <div class="intro-feature"><i class="fas fa-globe"></i><span>全球 CDN 节点覆盖</span></div>
+                    <div class="intro-feature"><i class="fas fa-link"></i><span>短链接，易分享</span></div>
+                    <div class="intro-feature"><i class="fas fa-shield-halved"></i><span>免费 · 无广告 · 无追踪</span></div>
+                </div>
+                <div class="intro-credit">
+                    <strong>GooseHost</strong> 由 <a href="https://goosecode.surge.sh" target="_blank">GooseCode</a>（Minecraft_goose）开发<br>
+                    专为初级网页开发者而生 — 在这里，部署你的网站<br>
+                    <a href="https://github.com/Minecraftgoose/GooseHost" target="_blank" style="color:#02ff8e;font-size:12px;opacity:0.6;">GitHub 仓库</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 使用教程模块 -->
+        <div class="tutorial-section">
+            <div class="tutorial-card">
+                <div class="tutorial-header">
+                    <i class="fas fa-play-circle"></i>
+                    <h3>使用教程</h3>
+                </div>
+                <iframe src="https://player.bilibili.com/player.html?isOutside=true&amp;aid=116836213461377&amp;bvid=BV1ivKo6TEvv&amp;cid=39518930511&amp;p=1&amp;autoplay=1&amp;muted=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" allow="autoplay" class="tutorial-frame"></iframe>
+            </div>
+        </div>
+
+        <!-- FAQ 模块 -->
+        <div class="faq-section" id="faqSection">
+            <div class="faq-container">
+                <div class="faq-header">
+                    <i class="fas fa-circle-question"></i>
+                    <h3>常见问题</h3>
+                    <span>FAQ</span>
+                </div>
+
+                <!-- 问题 1 -->
+                <div class="faq-item">
+                    <div class="faq-question" role="button" tabindex="0" aria-expanded="false">
+                        <span class="q-text">GooseHost 是什么？</span>
+                        <span class="q-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="faq-answer">
+                        <div class="a-text">
+                            <i class="fas fa-arrow-right"></i>
+                            GooseHost 是一个<strong>免费</strong>的静态网站托管平台，支持 HTML、CSS、JavaScript 等静态文件的上传和部署，提供全球 CDN 加速，让您的网站快速、稳定地访问。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 问题 2 -->
+                <div class="faq-item">
+                    <div class="faq-question" role="button" tabindex="0" aria-expanded="false">
+                        <span class="q-text">如何上传我的网站？</span>
+                        <span class="q-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="faq-answer">
+                        <div class="a-text">
+                            <i class="fas fa-arrow-right"></i>
+                            点击 「开始探索」 登录/注册后进入dashboard，在控制台中您可以上传您的html/md文件，全程无需命令行。
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 问题 3 -->
+                <div class="faq-item">
+                    <div class="faq-question" role="button" tabindex="0" aria-expanded="false">
+                        <span class="q-text">支持哪些文件类型？</span>
+                        <span class="q-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="faq-answer">
+                        <div class="a-text">
+                            <i class="fas fa-arrow-right"></i>
+                            仅支持 <code>.html</code>、<code>.md</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 问题 4 -->
+                <div class="faq-item">
+                    <div class="faq-question" role="button" tabindex="0" aria-expanded="false">
+                        <span class="q-text">有流量或存储限制吗？</span>
+                        <span class="q-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="faq-answer">
+                        <div class="a-text">
+                            <i class="fas fa-arrow-right"></i>
+                            GooseHost 的总储存空间为 <strong>1GB</strong>
+							<p>
+                            注意您的上传速度不宜过快
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 问题 5 -->
+                <div class="faq-item">
+                    <div class="faq-question" role="button" tabindex="0" aria-expanded="false">
+                        <span class="q-text">还有更多问题？</span>
+                        <span class="q-icon"><i class="fas fa-chevron-down"></i></span>
+                    </div>
+                    <div class="faq-answer">
+                        <div class="a-text">
+                            <i class="fas fa-arrow-right"></i>
+                            <a href="https://www.bilibili.com/video/BV1nRKD6FEeX/" target="_blank" rel="noopener noreferrer" 
+   style="color:#fb7299; text-decoration:none; font-weight:bold; border-bottom:2px solid #fb7299;">
+   这里比较详细
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ===== 赞助商区域 ===== -->
+        <div class="sponsor-section">
+            <p class="sponsor-thanks">感谢 Minecraft_Java 的支持！</p>
+            <iframe
+            src="https://player.bilibili.com/player.html?isOutside=true&aid=116832639916002&bvid=BV1EdKU6DEgN&cid=39504314854&p=1&high_quality=1&danmaku=0&muted=1&autoplay=1"
+            border="0" frameborder="no" framespacing="0" allowfullscreen="true">
+        </iframe>
+    </div>
+
+    <!-- ===== 页脚 ===== -->
+    <div class="footer">
+        © 2026 GooseHost · <a href="status.html" style="color: var(--color-accent);">系统状态</a>
+    </div>
+
+</div>
+
+<!-- ==========================================================
+JavaScript
+========================================================== -->
+<script>
+    // ----- 必应壁纸 -----
+    (function setBingWallpaper() {
+        const bgLayer = document.getElementById('bgLayer');
+        const timestamp = new Date().getTime();
+        const wallpaperUrl = 'https://bing.img.run/uhd.php?t=' + timestamp;
+        const img = new Image();
+        img.onload = function() {
+            bgLayer.style.backgroundImage = 'url(\'' + wallpaperUrl + '\')';
+            bgLayer.classList.add('loaded');
+        };
+        img.onerror = function() {
+            // 壁纸加载失败，保留纯色背景，仍标记为已加载（显示背景色）
+            bgLayer.classList.add('loaded');
+        };
+        img.src = wallpaperUrl;
+    })();
+
+    // ----- FAQ 折叠展开 -----
+    (function initFaq() {
+        const items = document.querySelectorAll('.faq-item');
+
+        items.forEach(function(item) {
+            const question = item.querySelector('.faq-question');
+
+            function toggle() {
+                const isActive = item.classList.contains('active');
+
+                // 关闭其他打开项
+                items.forEach(function(other) {
+                    if (other !== item && other.classList.contains('active')) {
+                        other.classList.remove('active');
+                        other.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                if (isActive) {
+                    item.classList.remove('active');
+                    question.setAttribute('aria-expanded', 'false');
+                } else {
+                    item.classList.add('active');
+                    question.setAttribute('aria-expanded', 'true');
+                }
+            }
+
+            question.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggle();
+            });
+
+            question.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggle();
+                }
+            });
+        });
+    })();
+
+    // ----- 开屏动画：等待页面完全加载后再移除，避免内容未渲染 -----
+    (function() {
+        var splash = document.getElementById('splashScreen');
+        if (splash) {
+            // 等待页面所有资源（包括图片、iframe）加载完成，再加一个短延迟确保动画完成
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    var parent = splash.parentNode;
+                    if (parent) parent.removeChild(splash);
+                }, 500);
+            });
+            // 兜底：如果 load 事件已触发（极少情况），立即移除
+            if (document.readyState === 'complete') {
+                setTimeout(function() {
+                    var parent = splash.parentNode;
+                    if (parent) parent.removeChild(splash);
+                }, 500);
+            }
+        }
+    })();
+
+    // 注册 Service Worker（保留，外部文件存在）
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(function() {});
+    }
+</script>
+
+<!-- ===== 只保留一个 Cloudflare Beacon（删除重复的第二个） ===== -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447"
+integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ=="
+data-cf-beacon='{"version":"2024.11.0","token":"80216126cb7b443cab839ba6d03181d3","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}'
+crossorigin="anonymous">
+</script>
+
+<!-- Cloudflare Pages Analytics --><!-- Cloudflare Pages Analytics --><!-- Cloudflare Pages Analytics --><!-- Cloudflare Pages Analytics --></body>
+</html>

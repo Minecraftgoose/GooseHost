@@ -1,0 +1,26 @@
+{
+  "name": "GooseHost 管理面板",
+  "short_name": "GooseHost",
+  "description": "GooseHost 静态网站托管 - 管理面板",
+  "start_url": "/dashboard.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050a07",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "developer tools"],
+  "lang": "zh-CN"
+}

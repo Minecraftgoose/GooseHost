@@ -1,0 +1,2665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="管理您的 GooseHost 网站，上传、部署、编辑和删除静态网站。">
+    <title>管理面板 - GooseHost</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16x16.png">
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="icons/icon-180x180.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180x180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="128x128" href="icons/icon-128x128.png">
+    <!-- Android Chrome Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="icons/icon-256x256.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png">
+    <!-- Open Graph Image -->
+    <meta property="og:image" content="icons/og-image-1200x630.png">
+    <meta property="og:title" content="GooseHost - 静态网站托管">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GooseHost">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* 钉钉进步体字体 */
+        @font-face {
+            font-family: 'DingTalk JinBuTi';
+            src: url('fonts/DingTalk JinBuTi.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'DingTalk JinBuTi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; }
+
+        /* 美化滚动条 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(2,255,142,0.25); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(2,255,142,0.5); }
+        * { scrollbar-width: thin; scrollbar-color: rgba(2,255,142,0.25) rgba(255,255,255,0.03); }
+
+        /* ===== 动效设计令牌（统一缓动与时长，性能优先） ===== */
+        :root {
+            --accent: #02ff8e;
+            --ease-out: cubic-bezier(0.22, 1, 0.36, 1);  /* 顺滑减速，用于入场与交互动效 */
+            --dur-fast: 0.2s;
+            --dur-base: 0.3s;
+        }
+
+        /* ===== 必应壁纸背景 ===== */
+        .bg-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: #0a0f0d center/cover;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .bg-layer.loaded { opacity: 1; }
+        .bg-layer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(10,20,15,0.85) 0%, rgba(26,37,32,0.75) 100%);
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(10, 20, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(2, 255, 142, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            z-index: 100;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .navbar-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* 移动端菜单按钮 */
+        .menu-toggle {
+            display: flex;
+            width: 40px;
+            height: 40px;
+            background: rgba(2, 255, 142, 0.1);
+            border: 1px solid rgba(2, 255, 142, 0.2);
+            border-radius: 6px;
+            color: #02ff8e;
+            font-size: 1.2rem;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ===== 主布局 ===== */
+        .main-layout {
+            display: flex;
+            padding-top: 60px;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== 侧边栏 ===== */
+        .sidebar {
+            width: 240px;
+            background: rgba(10, 20, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(2, 255, 142, 0.1);
+            position: fixed;
+            top: 60px;
+            left: 0;
+            bottom: 0;
+            padding: 1.5rem 0;
+            overflow-y: auto;
+            transition: transform 0.3s ease, width 0.3s ease;
+            z-index: 90;
+        }
+
+        .sidebar.collapsed {
+            width: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed .nav-section,
+        .sidebar.collapsed .nav-divider {
+            display: none;
+        }
+
+        .sidebar-toggler {
+            display: none;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-section-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.3);
+            padding: 0 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.25rem;
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+            border-left: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item:hover {
+            background: rgba(2, 255, 142, 0.05);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .nav-item.active {
+            background: rgba(2, 255, 142, 0.1);
+            color: #02ff8e;
+            border-left-color: #02ff8e;
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .nav-divider {
+            height: 1px;
+            background: rgba(2, 255, 142, 0.1);
+            margin: 1rem 1.25rem;
+        }
+
+        /* ===== 主内容区 ===== */
+        .content {
+            flex: 1;
+            margin-left: 240px;
+            padding: 2rem;
+            max-width: 1200px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .content.sidebar-collapsed {
+            margin-left: 0;
+        }
+
+        .page {
+            display: none;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+        }
+
+        .page.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 部署区域入场动画 */
+        @keyframes deployEnter {
+            from { opacity: 0; transform: translateY(26px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #page-deploy.active .page-header {
+            animation: deployEnter 0.45s var(--ease-out) both;
+        }
+        #page-deploy.active .card {
+            animation: deployEnter 0.55s var(--ease-out) both;
+        }
+
+        /* 偏好 / 账户页分层入场 —— 右侧拉入 */
+        @keyframes pullIn {
+            from { opacity: 0; transform: translateX(32px) scale(0.97); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        #page-preferences.active .page-header,
+        #page-account.active .page-header {
+            animation: pullIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+        #page-preferences.active .card,
+        #page-account.active .card {
+            animation: pullIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        /* 类型切换入场动画 */
+        .input-group-pop {
+            animation: deployEnter 0.4s var(--ease-out) both;
+        }
+
+        /* 概览页统计卡 —— 弹入 */
+        @keyframes popReveal {
+            from { opacity: 0; transform: scale(0.92); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        #page-overview.active .stat-card {
+            animation: popReveal 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+        #page-overview.active .stat-card:last-child {
+            animation-delay: 0.08s;
+        }
+
+        /* 我的网站页头部 —— 左侧划入 */
+        @keyframes fadeSlideLeft {
+            from { opacity: 0; transform: translateX(-24px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        #page-sites.active .page-header {
+            animation: fadeSlideLeft 0.4s var(--ease-out) both;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-desc {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+        }
+
+        /* ===== 卡片通用样式 ===== */
+        .card {
+            background: rgba(20, 35, 25, 0.8);
+            border: 1px solid rgba(2, 255, 142, 0.15);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 0 0 1px rgba(2, 255, 142, 0.35), 0 0 22px rgba(2, 255, 142, 0.12);
+            border-color: rgba(2, 255, 142, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(2, 255, 142, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-title i { color: #02ff8e; }
+
+        /* ===== 统计卡片 ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(2, 255, 142, 0.1) 0%, rgba(2, 255, 142, 0.02) 100%);
+            border: 1px solid rgba(2, 255, 142, 0.15);
+            border-radius: 6px;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        body.splash-active .stat-card { animation-delay: 2.5s; }
+        body.splash-active .splash-action { animation-delay: 2.5s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(2, 255, 142, 0.15);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #02ff8e;
+            font-size: 1.2rem;
+        }
+
+        .stat-info { flex: 1; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: #fff; }
+        .stat-label { font-size: 0.8rem; color: rgba(255, 255, 255, 0.5); }
+
+        /* ===== 按钮样式 ===== */
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #02ff8e, #00cc6a);
+            color: #001a0d;
+            font-weight: 500;
+        }
+        .btn-primary:hover { box-shadow: 0 0 14px rgba(2, 255, 142, 0.35); }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+
+        .btn-danger {
+            background: rgba(255, 82, 82, 0.15);
+            color: #ff5252;
+            border: 1px solid rgba(255, 82, 82, 0.3);
+        }
+        .btn-danger:hover { background: rgba(255, 82, 82, 0.25); }
+
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+        /* ===== 表单元素 ===== */
+        .form-group { margin-bottom: 1.25rem; }
+        .form-label {
+            display: block;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .input-wrap { position: relative; }
+        .input-wrap i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(2, 255, 142, 0.5);
+        }
+
+        .input-wrap input {
+            padding-left: 40px;
+        }
+
+        input, textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(2, 255, 142, 0.2);
+            border-radius: 6px;
+            padding: 12px 14px 12px 40px;
+            color: #fff;
+            font-size: 0.95rem;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #02ff8e;
+            box-shadow: 0 0 0 3px rgba(2, 255, 142, 0.1);
+        }
+
+        input::placeholder, textarea::placeholder { color: rgba(255, 255, 255, 0.3); }
+
+        /* ===== 浮动标签输入框 ===== */
+        .input-wrap.floating {
+            border: 1px solid rgba(2, 255, 142, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .input-wrap.floating:focus-within {
+            border-color: #02ff8e;
+            box-shadow: 0 0 0 3px rgba(2, 255, 142, 0.1);
+        }
+        .input-wrap.floating input {
+            background: transparent;
+            border: none;
+        }
+        .input-wrap.floating input:focus {
+            outline: none;
+            box-shadow: none;
+            border-color: transparent;
+        }
+        .input-wrap.floating label {
+            position: absolute;
+            left: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+            padding: 0 4px;
+            background: transparent;
+            transition: top 0.18s ease, font-size 0.18s ease, color 0.18s ease, background 0.18s ease;
+        }
+        .input-wrap.floating input:focus ~ label,
+        .input-wrap.floating input:not(:placeholder-shown) ~ label {
+            top: 0;
+            font-size: 0.72rem;
+            color: #02ff8e;
+            background: #16241b;
+        }
+
+        textarea { min-height: 300px; resize: vertical; font-family: 'Consolas', 'Monaco', monospace; line-height: 1.6; }
+
+        /* Monaco Editor Container */
+        #monaco-container { display: none; height: 400px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(2, 255, 142, 0.2); }
+        #monaco-container.active { display: block; }
+
+        /* ===== 文件拖拽上传 ===== */
+        .file-drop-zone {
+            border: 2px dashed rgba(2, 255, 142, 0.3);
+            border-radius: 6px;
+            padding: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .file-drop-zone:hover, .file-drop-zone.dragover {
+            border-color: #02ff8e;
+            background: rgba(2, 255, 142, 0.05);
+            box-shadow: 0 0 22px rgba(2, 255, 142, 0.12);
+        }
+        .file-drop-zone i {
+            font-size: 2rem;
+            color: rgba(2, 255, 142, 0.5);
+            margin-bottom: 0.5rem;
+        }
+        .file-drop-zone p {
+            color: rgba(255, 255, 255, 0.6);
+            margin: 0;
+        }
+        .file-drop-zone .file-link {
+            color: #02ff8e;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .file-drop-zone .file-name {
+            display: block;
+            color: #02ff8e;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .file-drop-zone.has-file i { color: #02ff8e; }
+
+        /* ===== 站点列表 ===== */
+        .site-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+        .site-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            border: 1px solid rgba(2, 255, 142, 0.1);
+            gap: 1rem;
+            transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .site-item:hover {
+            background: rgba(2, 255, 142, 0.05);
+            border-color: rgba(2, 255, 142, 0.25);
+            box-shadow: 0 0 18px rgba(2, 255, 142, 0.15);
+        }
+
+        .site-item {
+            animation: slideIn 0.4s ease forwards;
+            opacity: 0;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+
+        .site-info { flex: 1; min-width: 0; }
+        .site-name { color: #02ff8e; font-weight: 500; word-break: break-all; }
+        .site-meta { font-size: 0.8rem; color: rgba(255, 255, 255, 0.4); margin-top: 4px; display: flex; gap: 1rem; }
+        .site-meta span { display: flex; align-items: center; gap: 4px; }
+
+        .site-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+        .site-actions a {
+            padding: 6px 12px;
+            border-radius: 6px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.08);
+            transition: background 0.15s ease, color 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .site-actions a:hover { background: rgba(2, 255, 142, 0.2); color: #02ff8e; }
+        .site-actions .danger { color: #ff5252; }
+        .site-actions .danger:hover { background: rgba(255, 82, 82, 0.2); }
+
+        .empty {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: rgba(255, 255, 255, 0.4);
+        }
+        .empty i { font-size: 3rem; margin-bottom: 1rem; color: rgba(2, 255, 142, 0.3); }
+
+        /* ===== 设置项 ===== */
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(2, 255, 142, 0.08);
+        }
+
+        .setting-item:last-child { border-bottom: none; }
+
+        .setting-info { flex: 1; min-width: 0; }
+        .setting-title { color: #fff; font-size: 0.95rem; margin-bottom: 4px; }
+        .setting-desc { font-size: 0.8rem; color: rgba(255, 255, 255, 0.4); }
+        .setting-item .toggle, .setting-item .btn { flex-shrink: 0; }
+
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            cursor: pointer;
+        }
+
+        .toggle input { opacity: 0; width: 0; height: 0; }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+
+        .toggle input:checked + .toggle-slider {
+            background: rgba(2, 255, 142, 0.4);
+        }
+
+        .toggle input:checked + .toggle-slider::before {
+            transform: translateX(22px);
+            background: #02ff8e;
+        }
+
+        /* ===== 弹窗 ===== */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow: auto;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.active .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(2, 255, 142, 0.15);
+        }
+
+        .modal-title {
+            color: #fff;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-title i { color: #02ff8e; }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-close:hover { color: #fff; }
+
+        .modal-body { padding: 1.5rem; }
+
+        .modal-footer {
+            display: flex;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(2, 255, 142, 0.15);
+        }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 300;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .toast.success { background: rgba(2, 255, 142, 0.9); color: #001a0d; }
+        .toast.error { background: rgba(255, 82, 82, 0.9); }
+
+        /* ===== 自定义确认对话框 ===== */
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 250;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .confirm-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .confirm-box {
+            background: rgba(20, 35, 25, 0.98);
+            border: 1px solid rgba(2, 255, 142, 0.2);
+            border-radius: 6px;
+            padding: 1.75rem 2rem;
+            max-width: 360px;
+            width: 90%;
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.25s ease;
+        }
+
+        .confirm-overlay.active .confirm-box {
+            transform: scale(1);
+        }
+
+        .confirm-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+        }
+
+        .confirm-icon.danger {
+            background: rgba(255, 82, 82, 0.15);
+            color: #ff5252;
+        }
+
+        .confirm-title {
+            color: #fff;
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .confirm-message {
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .confirm-actions .btn {
+            flex: 1;
+            justify-content: center;
+        }
+
+        .btn-danger-solid {
+            background: linear-gradient(135deg, #ff5252, #e04545);
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .btn-danger-solid:hover {
+            box-shadow: 0 4px 15px rgba(255, 82, 82, 0.4);
+        }
+
+        /* ===== 加载动画 - ♾️ 无穷大描边 ===== */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+        }
+
+        /* ♾️ 无穷大 SVG 动画 - 通用样式 */
+        .infinity-svg {
+            width: 50px;
+            height: 50px;
+            filter: drop-shadow(0 0 10px rgba(2, 255, 142, 0.5));
+        }
+        .infinity-svg .infinity-path {
+            fill: none;
+            stroke: #02ff8e;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 300;
+            stroke-dashoffset: 300;
+            animation: infinity-draw 1.5s ease-in-out infinite;
+        }
+        @keyframes infinity-draw {
+            0% { stroke-dashoffset: 300; }
+            50% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -300; }
+        }
+
+        /* 脉冲点加载 */
+        .loading-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .loading-dots span {
+            width: 8px;
+            height: 8px;
+            background: #02ff8e;
+            border-radius: 50%;
+            animation: pulse-dot 1.4s ease-in-out infinite;
+        }
+        .loading-dots span:nth-child(1) { animation-delay: 0s; }
+        .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes pulse-dot {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* 骨架屏 */
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s infinite;
+            border-radius: 6px;
+        }
+        @keyframes skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .skeleton-line {
+            height: 14px;
+            margin-bottom: 0.25rem;
+        }
+        .skeleton-line.short { width: 40%; }
+        .skeleton-line.medium { width: 70%; }
+
+        /* 渐变呼吸加载 - ♾️ 无穷大 SVG */
+        .loading-glow {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 0 10px rgba(2, 255, 142, 0.5));
+        }
+        .loading-glow svg {
+            width: 100%;
+            height: 100%;
+        }
+        .loading-glow .infinity-path {
+            fill: none;
+            stroke: #02ff8e;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 300;
+            stroke-dashoffset: 300;
+            animation: infinity-draw 1.5s ease-in-out infinite;
+        }
+        @keyframes glow-pulse {
+            0%, 100% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .loading i { animation: spin 1s linear infinite; color: #02ff8e; font-size: 1.5rem; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* 水波纹点击效果 */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            animation: ripple-effect 0.6s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes ripple-effect {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* 带波纹的按钮 */
+        .ripple-btn {
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        /* ===== 快捷操作卡片 ===== */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .quick-action {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            text-decoration: none;
+            color: #fff;
+            transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+
+        .quick-action:hover {
+            background: rgba(2, 255, 142, 0.1);
+            border-color: rgba(2, 255, 142, 0.25);
+            box-shadow: 0 0 20px rgba(2, 255, 142, 0.15);
+        }
+
+        .quick-action i { font-size: 1.5rem; color: #02ff8e; }
+        .quick-action span { font-size: 0.9rem; }
+
+        /* ===== 移动端菜单按钮 ===== */
+        .mobile-menu-toggle {
+            display: none;
+            width: 40px;
+            height: 40px;
+            background: rgba(2, 255, 142, 0.1);
+            border: 1px solid rgba(2, 255, 142, 0.2);
+            border-radius: 6px;
+            color: #02ff8e;
+            font-size: 1.2rem;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ===== 响应式布局 ===== */
+        @media (max-width: 1024px) {
+            .site-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+                padding: 1rem;
+            }
+
+            .site-info {
+                width: 100%;
+            }
+
+            .site-meta {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .site-actions {
+                width: 100%;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .site-actions a {
+                flex: 1;
+                justify-content: center;
+                min-width: 60px;
+                padding: 8px 10px;
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle { display: none !important; }
+            .mobile-menu-toggle { display: flex !important; }
+
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar.collapsed {
+                transform: translateX(-100%);
+            }
+
+            .sidebar-toggler {
+                display: none !important;
+            }
+
+            .content {
+                margin-left: 0;
+                padding: 1.5rem 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .page-title {
+                font-size: 1.25rem;
+            }
+
+            .card {
+                padding: 1rem;
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .setting-item {
+                flex-direction: row;
+                align-items: center;
+                gap: 0.75rem;
+            }
+
+            .modal-content {
+                max-width: 100%;
+                margin: 0 0.5rem;
+            }
+
+            .type-selector {
+                flex-direction: row;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .site-actions a {
+                min-width: 50px;
+                padding: 6px 8px;
+                font-size: 0.7rem;
+            }
+
+            .site-actions a i {
+                font-size: 0.8rem;
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .navbar {
+                padding: 0 1rem;
+            }
+
+            .page-title {
+                font-size: 1.1rem;
+            }
+
+            .page-desc {
+                font-size: 0.8rem;
+            }
+
+            .btn {
+                padding: 8px 14px;
+                font-size: 0.85rem;
+            }
+
+            .btn-sm {
+                padding: 5px 10px;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* 遮罩层（已禁用） */
+        .sidebar-overlay {
+            display: none;
+        }
+        /* ===== 开屏加载动画 ===== */
+        .splash-screen {
+            position: fixed;
+            inset: 0;
+            background: #050a07;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            z-index: 9999;
+            animation: splash-fade-out 0.8s ease 2.5s forwards;
+        }
+        @keyframes splash-fade-out {
+            to {
+                opacity: 0;
+                pointer-events: none;
+            }
+        }
+        .splash-screen .splash-logo {
+            width: 200px;
+            height: auto;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease 0.3s forwards;
+        }
+        .splash-screen .infinity-wrap {
+            width: 80px;
+            height: 40px;
+            filter: drop-shadow(0 0 15px rgba(2, 255, 142, 0.6));
+        }
+        .splash-screen .infinity-wrap .infinity-path {
+            fill: none;
+            stroke: #02ff8e;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 300;
+            stroke-dashoffset: 300;
+            animation: infinity-draw 1.2s ease-in-out infinite;
+        }
+
+        /* ===== 类型标签 ===== */
+        .type-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        .type-tag.html {
+            background: rgba(255, 140, 0, 0.2);
+            color: #ff8c00;
+        }
+        .type-tag.md {
+            background: rgba(100, 149, 237, 0.2);
+            color: #6495ed;
+        }
+
+        /* ===== 类型选择器（紧凑分段控件） ===== */
+        .type-selector {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(2, 255, 142, 0.15);
+            border-radius: 8px;
+        }
+        .type-option {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.5rem 0.75rem;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .type-option:hover {
+            background: rgba(2, 255, 142, 0.06);
+        }
+        .type-option.selected {
+            background: rgba(2, 255, 142, 0.14);
+            box-shadow: inset 0 0 0 1px rgba(2, 255, 142, 0.4);
+        }
+        .type-option i {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.45);
+            transition: color 0.2s;
+        }
+        .type-option.selected i {
+            color: #02ff8e;
+        }
+        .type-option span {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            transition: color 0.2s;
+        }
+        .type-option.selected span {
+            color: #fff;
+            font-weight: 500;
+        }
+        .type-option input {
+            display: none;
+        }
+
+        .form-hint {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .form-hint a {
+            color: #02ff8e;
+            text-decoration: none;
+        }
+        .form-hint a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== 图标微动效 ===== */
+        i.fas, i.far, i.fab {
+            transition: color 0.15s ease, transform 0.15s ease;
+        }
+        i.fas:not(.fa-spin):hover,
+        i.far:not(.fa-spin):hover,
+        i.fab:not(.fa-spin):hover {
+            transform: scale(1.08);
+        }
+
+    </style>
+</head>
+<body class="splash-active">
+    <!-- 开屏加载 -->
+    <div class="splash-screen" id="splashScreen">
+        <svg class="infinity-wrap" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+            <path class="infinity-path" d="M 50,50 C 50,20 80,20 100,50 C 120,80 150,80 150,50 C 150,20 120,20 100,50 C 80,80 50,80 50,50 Z" />
+        </svg>
+        <img src="logo.svg" class="splash-logo" alt="GooseHost">
+    </div>
+    <div id="bgLayer" class="bg-layer"></div>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <button class="menu-toggle" id="menuToggle" onclick="toggleSidebarDesktop()">
+                <i class="fas fa-outdent"></i>
+            </button>
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" onclick="toggleSidebarMobile()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="navbar-icon">
+                <img src="logo.svg" height="36" alt="Logo">
+            </div>
+        </div>
+    </nav>
+
+    <!-- 移动端遮罩层 -->
+    <div class="sidebar-overlay" onclick="toggleSidebarMobile()"></div>
+
+    <!-- 主布局 -->
+    <div class="main-layout" id="mainContent" onclick="closeSidebarOnMobile(event)">
+        <!-- 侧边栏 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="nav-section">
+                <div class="nav-section-title">主菜单</div>
+                <div class="nav-item active" data-page="overview" onclick="navigateTo('overview')" role="button" tabindex="0">
+                    <i class="fas fa-home"></i>
+                    <span>概览</span>
+                </div>
+                <div class="nav-item" data-page="deploy" onclick="navigateTo('deploy')" role="button" tabindex="0">
+                    <i class="fas fa-rocket"></i>
+                    <span>部署</span>
+                </div>
+                <div class="nav-item" data-page="sites" onclick="navigateTo('sites')" role="button" tabindex="0">
+                    <i class="fas fa-globe"></i>
+                    <span>我的网站</span>
+                </div>
+            </div>
+
+            <div class="nav-divider"></div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">设置</div>
+                <div class="nav-item" data-page="preferences" onclick="navigateTo('preferences')" role="button" tabindex="0">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>偏好设置</span>
+                </div>
+                <div class="nav-item" data-page="account" onclick="navigateTo('account')" role="button" tabindex="0">
+                    <i class="fas fa-user-circle"></i>
+                    <span>账户</span>
+                </div>
+                <a href="status.html" class="nav-item" style="text-decoration: none;">
+                    <i class="fas fa-server"></i>
+                    <span>系统状态</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="content">
+            <!-- 概览页 -->
+            <div class="page active" id="page-overview">
+                <div class="page-header">
+                    <h1 class="page-title">欢迎回来</h1>
+                    <p class="page-desc">这里是您的网站管理控制台</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-globe"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="stat-sites">0</div>
+                            <div class="stat-label">网站总数</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="stat-latest">-</div>
+                            <div class="stat-label">最近更新</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-bolt"></i> 快捷操作</div>
+                    </div>
+                    <div class="quick-actions">
+                        <div class="quick-action splash-action" style="animation: fadeInUp 0.4s ease forwards; opacity: 0; animation-delay: 0.3s" onclick="navigateTo('deploy')">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>新建网站</span>
+                        </div>
+                        <div class="quick-action splash-action" style="animation: fadeInUp 0.4s ease forwards; opacity: 0; animation-delay: 0.4s" onclick="navigateTo('sites')">
+                            <i class="fas fa-list"></i>
+                            <span>管理网站</span>
+                        </div>
+                        <div class="quick-action splash-action" style="animation: fadeInUp 0.4s ease forwards; opacity: 0; animation-delay: 0.5s" onclick="navigateTo('preferences')">
+                            <i class="fas fa-cog"></i>
+                            <span>编辑器设置</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 部署页 -->
+            <div class="page" id="page-deploy">
+                <div class="page-header">
+                    <h1 class="page-title">部署网站</h1>
+                    <p class="page-desc">快速创建和部署您的静态网站</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-upload"></i> 上传网站</div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-wrap floating">
+                            <i class="fas fa-link"></i>
+                            <input type="text" id="deploy-slug" placeholder=" ">
+                            <label for="deploy-slug">子域名（如 my-site）</label>
+                        </div>
+                    </div>
+
+                    <!-- 类型选择 -->
+                    <div class="form-group">
+                        <label class="form-label">网站类型</label>
+                        <div class="type-selector">
+                            <label class="type-option selected" onclick="selectSiteType('html')">
+                                <input type="radio" name="siteType" value="html" checked>
+                                <i class="fas fa-code"></i>
+                                <span>HTML 网站</span>
+                            </label>
+                            <label class="type-option" onclick="selectSiteType('md')">
+                                <input type="radio" name="siteType" value="md">
+                                <i class="fab fa-markdown"></i>
+                                <span>Markdown 网站</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- HTML 输入区 -->
+                    <div id="html-input-group">
+                        <div class="form-group">
+                            <label class="form-label">HTML 代码</label>
+                            <div class="file-drop-zone" id="fileDropZone">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>拖拽 HTML 文件到此处,或 <label for="fileInput" class="file-link">点击选择文件</label></p>
+                                <input type="file" id="fileInput" accept=".html,.htm" style="display:none;">
+                                <span id="fileName" class="file-name"></span>
+                            </div>
+                            <textarea id="deploy-html" placeholder="粘贴您的 HTML 代码..."></textarea>
+                            <div id="monaco-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- MD 输入区（默认隐藏） -->
+                    <div id="md-input-group" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">Markdown 内容</label>
+                            <div class="file-drop-zone" id="mdFileDropZone">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>拖拽 Markdown 文件到此处,或 <label for="mdFileInput" class="file-link">点击选择文件</label></p>
+                                <input type="file" id="mdFileInput" accept=".md,.markdown" style="display:none;">
+                                <span id="mdFileName" class="file-name"></span>
+                            </div>
+                            <textarea id="deploy-md" placeholder="# 标题&#10;&#10;写你的内容..."></textarea>
+                            <div id="md-monaco-container" style="display:none; height: 400px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(2, 255, 142, 0.2); margin-top: 0.5rem;"></div>
+                            <div class="form-hint">
+                                <i class="fas fa-info-circle"></i>
+                                支持标准 Markdown 语法，将自动渲染为 HTML
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="deployBtn" class="btn btn-primary ripple-btn" onclick="createSite()">
+                        <i class="fas fa-rocket"></i> 部署网站
+                    </button>
+                </div>
+            </div>
+
+            <!-- 我的网站页 -->
+            <div class="page" id="page-sites">
+                <div class="page-header">
+                    <h1 class="page-title">我的网站</h1>
+                    <p class="page-desc">管理和编辑您所有的网站</p>
+                </div>
+
+                <div id="siteList">
+                    <div class="loading">
+                        <svg class="infinity-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                            <path class="infinity-path" d="M 50,50 C 50,20 80,20 100,50 C 120,80 150,80 150,50 C 150,20 120,20 100,50 C 80,80 50,80 50,50 Z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 偏好设置页 -->
+            <div class="page" id="page-preferences">
+                <div class="page-header">
+                    <h1 class="page-title">偏好设置</h1>
+                    <p class="page-desc">自定义您的编辑体验</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-code"></i> 编辑器设置</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-title">使用 Monaco 编辑器</div>
+                            <div class="setting-desc">启用功能齐全的代码编辑器，支持语法高亮和自动补全</div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="toggle-monaco" onchange="savePreferences()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+                
+                
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-database"></i> 本地存储</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-title">清除本地数据</div>
+                            <div class="setting-desc">删除所有保存在本地的数据</div>
+                        </div>
+                        <button class="btn btn-danger btn-sm no-ripple" onclick="clearLocalData()">
+                            <i class="fas fa-trash"></i> 清除
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 账户页 -->
+            <div class="page" id="page-account">
+                <div class="page-header">
+                    <h1 class="page-title">账户设置</h1>
+                    <p class="page-desc">管理您的账户信息和安全设置</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-user"></i> 账户信息</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-title">登录邮箱</div>
+                            <div class="setting-desc" id="account-email">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-sign-out-alt"></i> 退出登录</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-title">退出当前账户</div>
+                            <div class="setting-desc">清除登录状态,返回登录页面</div>
+                        </div>
+                        <button class="btn btn-danger ripple-btn" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <div id="editModal" class="modal">
+        <div class="modal-content card" style="padding: 0;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-edit"></i> 编辑网站
+                    <span id="edit-type-badge" class="type-tag" style="margin-left:8px;"></span>
+                </div>
+                <button class="modal-close no-ripple" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editSlug">
+                <input type="hidden" id="editType">
+
+                <!-- HTML 编辑面板 -->
+                <div id="html-editor-panel">
+                    <div class="file-drop-zone" id="editFileDropZone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>拖拽 HTML 文件到此处,或 <label for="editFileInput" class="file-link">点击选择文件</label></p>
+                        <input type="file" id="editFileInput" accept=".html,.htm" style="display:none;">
+                        <span id="editFileName" class="file-name"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">HTML 代码</label>
+                        <textarea id="editHtml" placeholder="粘贴 HTML 代码..." style="padding:12px;"></textarea>
+                        <div id="edit-monaco-container" style="display:none; height: 350px; border-radius: 6px; overflow: hidden; margin-top: 0.5rem;"></div>
+                    </div>
+                </div>
+
+                <!-- MD 编辑面板 -->
+                <div id="md-editor-panel" style="display:none;">
+                    <div class="file-drop-zone" id="editMdFileDropZone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>拖拽 Markdown 文件到此处,或 <label for="editMdFileInput" class="file-link">点击选择文件</label></p>
+                        <input type="file" id="editMdFileInput" accept=".md,.markdown" style="display:none;">
+                        <span id="editMdFileName" class="file-name"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Markdown 内容</label>
+                        <textarea id="editMd" placeholder="# 标题&#10;&#10;写你的内容..." style="padding:12px;"></textarea>
+                        <div id="edit-md-monaco-container" style="display:none; height: 350px; border-radius: 6px; overflow: hidden; margin-top: 0.5rem;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary ripple-btn" onclick="updateSite()"><i class="fas fa-save"></i> 保存修改</button>
+                <button class="btn btn-secondary no-ripple" onclick="closeModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <!-- 自定义确认对话框 -->
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-box">
+            <div class="confirm-icon danger" id="confirmIcon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="confirm-title" id="confirmTitle">确认操作</div>
+            <div class="confirm-message" id="confirmMessage"></div>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary" onclick="closeConfirm()">取消</button>
+                <button class="btn btn-danger-solid" id="confirmBtn" onclick="doConfirm()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- Monaco Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+
+    <script>
+        // 配置
+        const API_URL_FALLBACK = 'https://page.goose.cc.cd';
+        let API_URL = API_URL_FALLBACK;
+        fetch(API_URL_FALLBACK + '/api/config').then(r => r.json()).then(d => {
+            if (d && d.apiUrl) { window.API_URL = d.apiUrl; API_URL = d.apiUrl; }
+        }).catch(() => {});
+
+        // 状态
+        let token = localStorage.getItem('sb_token');
+        let user = JSON.parse(localStorage.getItem('sb_user') || 'null');
+        let monacoEditor = null;
+        let mdMonacoEditor = null;
+        let editMonacoEditor = null;
+        let editMdMonacoEditor = null;
+        let useMonaco = false;
+
+        // 必应壁纸
+        (function preloadWallpaper() {
+            const bgLayer = document.getElementById('bgLayer');
+            const timestamp = new Date().getTime();
+            const wallpaperUrl = `https://bing.img.run/uhd.php?t=${timestamp}`;
+            const img = new Image();
+            img.onload = function() {
+                bgLayer.style.backgroundImage = `url('${wallpaperUrl}')`;
+                bgLayer.classList.add('loaded');
+            };
+            img.onerror = function() {
+                bgLayer.classList.add('loaded');
+            };
+            img.src = wallpaperUrl;
+        })();
+
+        // 检查登录
+        if (!token || !user) {
+            location.href = 'login.html';
+        }
+
+        // 初始化
+        document.getElementById('account-email').textContent = user?.email || '';
+
+        // 加载设置
+        loadPreferences();
+
+        // 初始化 Monaco 编辑器（带超时回退）
+        function initMonaco(callback, fallback) {
+            if (window.monaco) {
+                callback();
+                return;
+            }
+            require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+            const timeout = setTimeout(() => {
+                console.warn('Monaco CDN 加载超时，回退到 textarea');
+                useMonaco = false;
+                document.getElementById('toggle-monaco').checked = false;
+                updateEditorVisibility();
+                if (fallback) fallback();
+            }, 10000);
+            try {
+                require(['vs/editor/editor.main'], function() {
+                    clearTimeout(timeout);
+                    callback();
+                });
+            } catch (e) {
+                clearTimeout(timeout);
+                console.warn('Monaco 加载失败，回退到 textarea');
+                useMonaco = false;
+                document.getElementById('toggle-monaco').checked = false;
+                updateEditorVisibility();
+                if (fallback) fallback();
+            }
+        }
+
+        // 加载偏好设置
+        function loadPreferences() {
+            const prefs = JSON.parse(localStorage.getItem('preferences') || '{}');
+            useMonaco = prefs.useMonaco || false;
+
+            document.getElementById('toggle-monaco').checked = useMonaco;
+            updateEditorVisibility();
+        }
+
+        // 保存偏好设置
+        function savePreferences() {
+            const prefs = {
+                useMonaco: document.getElementById('toggle-monaco').checked
+            };
+            localStorage.setItem('preferences', JSON.stringify(prefs));
+            useMonaco = prefs.useMonaco;
+            updateEditorVisibility();
+            // 切换Monaco前同步内容
+            if (monacoEditor) {
+                document.getElementById('deploy-html').value = monacoEditor.getValue();
+            }
+            if (mdMonacoEditor) {
+                document.getElementById('deploy-md').value = mdMonacoEditor.getValue();
+            }
+            showToast('设置已保存');
+        }
+
+        // 更新编辑器可见性
+        function updateEditorVisibility() {
+            const htmlTextarea = document.getElementById('deploy-html');
+            const htmlMonacoContainer = document.getElementById('monaco-container');
+            const mdTextarea = document.getElementById('deploy-md');
+            const mdMonacoContainer = document.getElementById('md-monaco-container');
+
+            if (useMonaco) {
+                htmlTextarea.style.display = 'none';
+                htmlMonacoContainer.classList.add('active');
+                mdTextarea.style.display = 'none';
+                mdMonacoContainer.style.display = 'block';
+                initMonaco(() => {
+                    if (!monacoEditor) {
+                        monacoEditor = monaco.editor.create(htmlMonacoContainer, {
+                            value: htmlTextarea.value,
+                            language: 'html',
+                            theme: 'vs-dark',
+                            automaticLayout: true,
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            lineNumbers: 'on',
+                            wordWrap: 'on'
+                        });
+                        monacoEditor.onDidChangeModelContent(() => {
+                            htmlTextarea.value = monacoEditor.getValue();
+                        });
+                    }
+                    if (!mdMonacoEditor) {
+                        mdMonacoEditor = monaco.editor.create(mdMonacoContainer, {
+                            value: mdTextarea.value,
+                            language: 'markdown',
+                            theme: 'vs-dark',
+                            automaticLayout: true,
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            lineNumbers: 'on',
+                            wordWrap: 'on'
+                        });
+                        mdMonacoEditor.onDidChangeModelContent(() => {
+                            mdTextarea.value = mdMonacoEditor.getValue();
+                        });
+                    }
+                });
+            } else {
+                htmlTextarea.style.display = 'block';
+                htmlMonacoContainer.classList.remove('active');
+                mdTextarea.style.display = 'block';
+                mdMonacoContainer.style.display = 'none';
+            }
+
+        }
+
+        // 清除本地数据
+        function clearLocalData() {
+            (async () => {
+                const confirmed = await showConfirm('清除数据', '确定要清除所有本地数据吗?');
+                if (!confirmed) return;
+                const keys = ['preferences'];
+                keys.forEach(k => localStorage.removeItem(k));
+                // 清理活动记录
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('activities_')) {
+                        localStorage.removeItem(key);
+                    }
+                }
+                showToast('本地数据已清除');
+            })();
+        }
+
+        // 导航切换（导航项已通过内联 onclick 绑定，兼容 iOS/移动端非原生可点击元素）
+        function navigateTo(page) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector(`[data-page="${page}"]`).classList.add('active');
+
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(`page-${page}`).classList.add('active');
+
+            // 滚动到顶部
+            window.scrollTo(0, 0);
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+            document.getElementById('sidebar').scrollTop = 0;
+
+            // 关闭移动端侧边栏
+            closeSidebar();
+
+            // 页面特定初始化
+            if (page === 'sites') loadSites();
+            if (page === 'deploy') updateEditorVisibility();
+
+            // 部署区域入场动画：强制重排以重新触发 CSS 动画
+            if (page === 'deploy') {
+                document.querySelectorAll('#page-deploy .page-header, #page-deploy .card').forEach(el => {
+                    el.style.animation = 'none';
+                    void el.offsetWidth; // 触发重排
+                    el.style.animation = '';
+                });
+            }
+        }
+
+        // ----- 修复：侧边栏关闭逻辑（移动端） -----
+        function closeSidebarOnMobile(event) {
+            if (window.innerWidth <= 768) {
+                const target = event.target;
+                const sidebar = document.getElementById('sidebar');
+                // 如果点击的是侧边栏内部，不做任何操作，防止误关
+                if (sidebar && sidebar.contains(target)) {
+                    return;
+                }
+                closeSidebar();
+            }
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.remove('open');
+            // 移动端清理 collapsed 类，避免残留
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('collapsed');
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar.classList.contains('open')) {
+                closeSidebar();
+            } else {
+                sidebar.classList.add('open');
+                // 确保移动端没有 collapsed 类影响显示
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('collapsed');
+                }
+            }
+        }
+
+        // 桌面端侧边栏收起/展开
+        function toggleSidebarDesktop() {
+            const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.getElementById('menuToggle');
+            const content = document.querySelector('.content');
+
+            if (sidebar.classList.contains('collapsed')) {
+                sidebar.classList.remove('collapsed');
+                content.classList.remove('sidebar-collapsed');
+                menuToggle.innerHTML = '<i class="fas fa-outdent"></i>';
+            } else {
+                sidebar.classList.add('collapsed');
+                content.classList.add('sidebar-collapsed');
+                menuToggle.innerHTML = '<i class="fas fa-indent"></i>';
+            }
+        }
+
+        // 移动端侧边栏切换（修复：移除 collapsed 类）
+        function toggleSidebarMobile() {
+            const sidebar = document.getElementById('sidebar');
+            // 移除可能残留的 collapsed 类，确保宽度正常
+            sidebar.classList.remove('collapsed');
+            sidebar.classList.toggle('open');
+        }
+        // ----- 修复结束 -----
+
+        // Toast
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = `toast ${type} show`;
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // 登出
+        function logout() {
+            localStorage.removeItem('sb_token');
+            localStorage.removeItem('sb_user');
+            location.href = 'login.html';
+        }
+
+        // 文件上传处理
+        const fileDropZone = document.getElementById('fileDropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+
+        // MD 文件上传处理
+        const mdFileDropZone = document.getElementById('mdFileDropZone');
+        const mdFileInput = document.getElementById('mdFileInput');
+        const mdFileName = document.getElementById('mdFileName');
+
+        function handleFile(file, target) {
+            if (!file) return;
+            const isMd = target === 'md';
+            const extRegex = isMd ? /\.(md|markdown)$/i : /\.(html?|htm)$/i;
+            const errorMsg = isMd ? '请上传 Markdown 文件' : '请上传 HTML 文件';
+            if (!file.name.match(extRegex)) {
+                showToast(errorMsg, 'error');
+                return;
+            }
+            if (file.size > 500 * 1024) {
+                showToast('文件超过 500KB 限制', 'error');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                if (isMd) {
+                    if (useMonaco && mdMonacoEditor) {
+                        mdMonacoEditor.setValue(content);
+                    } else {
+                        document.getElementById('deploy-md').value = content;
+                    }
+                    mdFileName.textContent = '已选择: ' + file.name;
+                    mdFileDropZone.classList.add('has-file');
+                } else {
+                    if (useMonaco && monacoEditor) {
+                        monacoEditor.setValue(content);
+                    } else {
+                        document.getElementById('deploy-html').value = content;
+                    }
+                    fileName.textContent = '已选择: ' + file.name;
+                    fileDropZone.classList.add('has-file');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0], 'html'));
+        mdFileInput.addEventListener('change', (e) => handleFile(e.target.files[0], 'md'));
+
+        fileDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileDropZone.classList.add('dragover');
+        });
+
+        fileDropZone.addEventListener('dragleave', () => {
+            fileDropZone.classList.remove('dragover');
+        });
+
+        fileDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileDropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0], 'html');
+        });
+
+        mdFileDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            mdFileDropZone.classList.add('dragover');
+        });
+
+        mdFileDropZone.addEventListener('dragleave', () => {
+            mdFileDropZone.classList.remove('dragover');
+        });
+
+        mdFileDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            mdFileDropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0], 'md');
+        });
+
+        // 编辑弹窗：拖拽上传文件
+        const editFileDropZone = document.getElementById('editFileDropZone');
+        const editFileInput = document.getElementById('editFileInput');
+        const editMdFileDropZone = document.getElementById('editMdFileDropZone');
+        const editMdFileInput = document.getElementById('editMdFileInput');
+
+        // 编辑弹窗文件处理（写入对应的编辑框/Monaco 编辑器）
+        function handleEditFile(file, target) {
+            if (!file) return;
+            const isMd = target === 'md';
+            const extRegex = isMd ? /\.(md|markdown)$/i : /\.(html?|htm)$/i;
+            const errorMsg = isMd ? '请上传 Markdown 文件' : '请上传 HTML 文件';
+            if (!file.name.match(extRegex)) {
+                showToast(errorMsg, 'error');
+                return;
+            }
+            if (file.size > 500 * 1024) {
+                showToast('文件超过 500KB 限制', 'error');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                if (isMd) {
+                    if (useMonaco && editMdMonacoEditor) {
+                        editMdMonacoEditor.setValue(content);
+                    } else {
+                        document.getElementById('editMd').value = content;
+                    }
+                    document.getElementById('editMdFileName').textContent = '已选择: ' + file.name;
+                    editMdFileDropZone.classList.add('has-file');
+                } else {
+                    if (useMonaco && editMonacoEditor) {
+                        editMonacoEditor.setValue(content);
+                    } else {
+                        document.getElementById('editHtml').value = content;
+                    }
+                    document.getElementById('editFileName').textContent = '已选择: ' + file.name;
+                    editFileDropZone.classList.add('has-file');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        editFileInput.addEventListener('change', (e) => handleEditFile(e.target.files[0], 'html'));
+        editMdFileInput.addEventListener('change', (e) => handleEditFile(e.target.files[0], 'md'));
+
+        editFileDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            editFileDropZone.classList.add('dragover');
+        });
+        editFileDropZone.addEventListener('dragleave', () => {
+            editFileDropZone.classList.remove('dragover');
+        });
+        editFileDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            editFileDropZone.classList.remove('dragover');
+            handleEditFile(e.dataTransfer.files[0], 'html');
+        });
+
+        editMdFileDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            editMdFileDropZone.classList.add('dragover');
+        });
+        editMdFileDropZone.addEventListener('dragleave', () => {
+            editMdFileDropZone.classList.remove('dragover');
+        });
+        editMdFileDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            editMdFileDropZone.classList.remove('dragover');
+            handleEditFile(e.dataTransfer.files[0], 'md');
+        });
+
+        // 类型选择
+        function selectSiteType(type) {
+            document.querySelectorAll('.type-option').forEach(el => el.classList.remove('selected'));
+            document.querySelector(`.type-option input[value="${type}"]`).closest('.type-option').classList.add('selected');
+
+            const htmlGroup = document.getElementById('html-input-group');
+            const mdGroup = document.getElementById('md-input-group');
+
+            if (type === 'md') {
+                htmlGroup.style.display = 'none';
+                htmlGroup.classList.remove('input-group-pop');
+                mdGroup.style.display = 'block';
+                mdGroup.classList.remove('input-group-pop');
+                void mdGroup.offsetWidth; // force reflow
+                mdGroup.classList.add('input-group-pop');
+            } else {
+                mdGroup.style.display = 'none';
+                mdGroup.classList.remove('input-group-pop');
+                htmlGroup.style.display = 'block';
+                htmlGroup.classList.remove('input-group-pop');
+                void htmlGroup.offsetWidth;
+                htmlGroup.classList.add('input-group-pop');
+            }
+        }
+
+        // 创建网站
+        async function createSite() {
+            const slug = document.getElementById('deploy-slug').value.trim();
+            const siteType = document.querySelector('input[name="siteType"]:checked').value;
+            const btn = document.getElementById('deployBtn');
+            let html, md;
+
+            if (siteType === 'md') {
+                md = useMonaco && mdMonacoEditor ? mdMonacoEditor.getValue() : document.getElementById('deploy-md').value;
+                if (!md) { showToast('请输入 Markdown 内容', 'error'); return; }
+            } else {
+                html = useMonaco && monacoEditor ? monacoEditor.getValue() : document.getElementById('deploy-html').value;
+                if (!html) { showToast('请输入 HTML 代码', 'error'); return; }
+            }
+
+            if (!slug) { showToast('请输入网站名称', 'error'); return; }
+            if (!/^[\u4e00-\u9fa5a-zA-Z0-9_\-.~]{1,64}$/.test(slug)) {
+                showToast('名称格式不正确', 'error'); return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="infinity-btn"></span> 部署中...';
+
+            // 嵌入 ♾️ 按钮内动画样式
+            if (!document.getElementById('infinityBtnStyle')) {
+                const style = document.createElement('style');
+                style.id = 'infinityBtnStyle';
+                style.textContent = `
+                    .infinity-btn {
+                        display: inline-block;
+                        width: 16px;
+                        height: 16px;
+                        background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 50,50 C 50,20 80,20 100,50 C 120,80 150,80 150,50 C 150,20 120,20 100,50 C 80,80 50,80 50,50 Z' fill='none' stroke='%23001a0d' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+                        animation: infinity-btn-draw 1s ease-in-out infinite;
+                    }
+                    @keyframes infinity-btn-draw {
+                        0% { opacity: 1; }
+                        50% { opacity: 0.5; }
+                        100% { opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            try {
+                const body = { slug };
+                if (siteType === 'md') {
+                    body.md = md;
+                } else {
+                    body.html = html;
+                }
+                const res = await apiFetch(API_URL + '/api/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(body)
+                });
+                let data;
+                try { data = await res.json(); } catch { data = {}; }
+                if (res.ok && data.success) {
+                    document.getElementById('deploy-slug').value = '';
+                    if (siteType === 'md') {
+                        document.getElementById('deploy-md').value = '';
+                        if (useMonaco && mdMonacoEditor) mdMonacoEditor.setValue('');
+                        mdFileName.textContent = '';
+                        mdFileDropZone.classList.remove('has-file');
+                    } else {
+                        if (useMonaco && monacoEditor) monacoEditor.setValue('');
+                        else document.getElementById('deploy-html').value = '';
+                    }
+                    showToast('部署成功!');
+                    // 跳转到"我的网站"并刷新
+                    navigateTo('sites');
+                } else {
+                    showToast(data.error || '部署失败', 'error');
+                }
+            } catch (e) {
+                showToast(e.message === '请求超时' ? '请求超时，请重试' : '网络错误', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-rocket"></i> 部署网站';
+            }
+        }
+        // 全局 fetch 封装（超时 + 401 处理）
+        async function apiFetch(url, options = {}) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 15000);
+            try {
+                const res = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(timeout);
+                if (res.status === 401) {
+                    localStorage.removeItem('sb_token');
+                    localStorage.removeItem('sb_user');
+                    location.href = 'login.html';
+                    throw new Error('Unauthorized');
+                }
+                return res;
+            } catch (e) {
+                clearTimeout(timeout);
+                if (e.name === 'AbortError') throw new Error('请求超时');
+                throw e;
+            }
+        }
+
+        // XSS 防护
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#x27;');
+        }
+
+        // 加载网站列表
+        async function loadSites() {
+            window.allSites = [];
+            const list = document.getElementById('siteList');
+            list.innerHTML = '<svg class="infinity-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg"><path class="infinity-path" d="M 50,50 C 50,20 80,20 100,50 C 120,80 150,80 150,50 C 150,20 120,20 100,50 C 80,80 50,80 50,50 Z" /></svg>';
+
+            try {
+                const res = await apiFetch(API_URL + '/api/my-sites', { headers: { 'Authorization': `Bearer ${token}` } });
+                let sites;
+                try { sites = await res.json(); } catch { sites = []; }
+
+                // 按 updated_at 降序排序
+                sites.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+                document.getElementById('stat-sites').textContent = sites.length;
+                if (sites.length > 0) {
+                    const latest = new Date(sites[0].updated_at);
+                    document.getElementById('stat-latest').textContent = formatTime(latest);
+                } else {
+                    document.getElementById('stat-latest').textContent = '-';
+                }
+
+                if (sites.length === 0) {
+                    list.innerHTML = '<div class="empty"><i class="fas fa-globe"></i><p>还没有网站,创建一个吧!</p></div>';
+                    return;
+                }
+
+                // XSS 防护：escapeHtml 处理 site.name
+                list.innerHTML = `<div class="card"><div class="site-list">` +
+                    sites.map((site, i) => {
+                        const siteType = site.name.startsWith('md/') ? 'md' : 'html';
+                        const visitUrl = siteType === 'md'
+                            ? `${API_URL}/md/${encodeURIComponent(site.name.replace('md/', ''))}`
+                            : `${API_URL}/s/${encodeURIComponent(site.name)}`;
+                        return `
+                        <div class="site-item splash-action" data-slug="${escapeHtml(site.name)}" style="animation-delay: ${(window.__splashDone ? 0 : 2.5) + i * 0.08}s">
+                            <div class="site-info">
+                                <div class="site-name">${escapeHtml(site.name.replace(/^md\//, ''))}</div>
+                                <div class="site-meta">
+                                    <span class="type-tag ${siteType}">${siteType.toUpperCase()}</span>
+                                    <span><i class="fas fa-calendar"></i> ${formatDate(site.created_at)}</span>
+                                    <span><i class="fas fa-clock"></i> ${formatTime(new Date(site.updated_at))}</span>
+                                </div>
+                            </div>
+                            <div class="site-actions">
+                                <a href="${visitUrl}" target="_blank"><i class="fas fa-eye"></i> 访问</a>
+                                <a href="dashboard.html#" onclick="editSite('${site.name.replace(/'/g, "\\'")}');return false;"><i class="fas fa-edit"></i> 编辑</a>
+                                <a href="dashboard.html#" class="danger" onclick="confirmDelete('${site.name.replace(/'/g, "\\'")}');return false;"><i class="fas fa-trash"></i> 删除</a>
+                            </div>
+                        </div>
+                    `}).join('') + '</div></div>';
+
+                window.allSites = sites || [];
+            } catch (e) {
+                window.allSites = [];
+                list.innerHTML = '<div class="empty"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div>';
+            }
+        }
+
+        // 编辑网站
+        function editSite(slug) {
+            // 检测网站类型
+            const siteType = slug.startsWith('md/') ? 'md' : 'html';
+            document.getElementById('editSlug').value = slug;
+            document.getElementById('editType').value = siteType;
+
+            // 显示类型标签
+            const badge = document.getElementById('edit-type-badge');
+            badge.textContent = siteType.toUpperCase();
+            badge.className = 'type-tag ' + siteType;
+
+            // 切换编辑面板
+            if (siteType === 'md') {
+                document.getElementById('html-editor-panel').style.display = 'none';
+                document.getElementById('md-editor-panel').style.display = 'block';
+            } else {
+                document.getElementById('html-editor-panel').style.display = 'block';
+                document.getElementById('md-editor-panel').style.display = 'none';
+            }
+
+            document.getElementById('editModal').classList.add('active');
+
+            if (siteType === 'md') {
+                // MD 网站
+                showEditMdLoading();
+                document.getElementById('editMd').value = '';
+                document.getElementById('editMd').style.display = 'block';
+                document.getElementById('edit-md-monaco-container').style.display = 'none';
+                if (useMonaco) {
+                    document.getElementById('editMd').style.display = 'none';
+                    document.getElementById('edit-md-monaco-container').style.display = 'block';
+                    initMonaco(() => {
+                        if (editMdMonacoEditor) { editMdMonacoEditor.dispose(); editMdMonacoEditor = null; }
+                        editMdMonacoEditor = monaco.editor.create(document.getElementById('edit-md-monaco-container'), {
+                            value: '',
+                            language: 'markdown',
+                            theme: 'vs-dark',
+                            automaticLayout: true,
+                            minimap: { enabled: false },
+                            fontSize: 14
+                        });
+                        fetchSiteContent(slug);
+                    });
+                } else {
+                    fetchSiteContent(slug);
+                }
+            } else {
+                // HTML 网站：原有逻辑
+                document.getElementById('editHtml').value = '';
+                document.getElementById('editHtml').style.position = 'relative';
+                if (!document.getElementById('editLoading')) {
+                    const loading = document.createElement('div');
+                    loading.id = 'editLoading';
+                    loading.innerHTML = '<svg class="infinity-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg"><path class="infinity-path" d="M 50,50 C 50,20 80,20 100,50 C 120,80 150,80 150,50 C 150,20 120,20 100,50 C 80,80 50,80 50,50 Z" /></svg>';
+                    loading.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);border-radius:6px;';
+                    document.getElementById('editHtml').parentElement.appendChild(loading);
+                } else {
+                    document.getElementById('editLoading').style.display = 'flex';
+                }
+                document.getElementById('edit-monaco-container').style.display = 'none';
+                document.getElementById('editHtml').style.display = 'block';
+
+                if (useMonaco) {
+                    document.getElementById('editHtml').style.display = 'none';
+                    document.getElementById('edit-monaco-container').style.display = 'block';
+                    initMonaco(() => {
+                        if (editMonacoEditor) { editMonacoEditor.dispose(); editMonacoEditor = null; }
+                        editMonacoEditor = monaco.editor.create(document.getElementById('edit-monaco-container'), {
+                            value: '',
+                            language: 'html',
+                            theme: 'vs-dark',
+                            automaticLayout: true,
+                            minimap: { enabled: false },
+                            fontSize: 14
+                        });
+                        fetchSiteContent(slug);
+                    });
+                } else {
+                    fetchSiteContent(slug);
+                }
+            }
+        }
+
+        // 显示 MD 编辑加载动画（与 HTML 编辑的 editLoading 一致）
+        function showEditMdLoading() {
+            const panel = document.getElementById('md-editor-panel');
+            if (!panel) return;
+            panel.style.position = 'relative';
+            let loading = document.getElementById('edit-md-loading');
+            if (!loading) {
+                loading = document.createElement('div');
+                loading.id = 'edit-md-loading';
+                loading.innerHTML = '<svg class="infinity-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg"><path class="infinity-path" d="M 50,50 C 50,20 80,20 100,50 C 120,80 150,80 150,50 C 150,20 120,20 100,50 C 80,80 50,80 50,50 Z" /></svg>';
+                loading.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);border-radius:6px;z-index:5;';
+                panel.appendChild(loading);
+            } else {
+                loading.style.display = 'flex';
+            }
+        }
+
+        function hideEditMdLoading() {
+            const loading = document.getElementById('edit-md-loading');
+            if (loading) loading.style.display = 'none';
+        }
+
+        async function fetchSiteContent(slug) {
+            const siteType = document.getElementById('editType').value;
+            try {
+                const res = await apiFetch(API_URL + '/api/file/' + slug, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+
+                if (siteType === 'md') {
+                    const md = res.ok ? (data.md || data.html || '') : '加载失败';
+                    document.getElementById('editMd').value = md;
+                    if (useMonaco && editMdMonacoEditor) {
+                        editMdMonacoEditor.setValue(md);
+                    }
+                    hideEditMdLoading();
+                } else {
+                    const html = res.ok ? (data.html || '') : '加载失败';
+                    if (useMonaco && editMonacoEditor) {
+                        editMonacoEditor.setValue(html);
+                    } else {
+                        document.getElementById('editHtml').value = html;
+                    }
+                    const editLoading = document.getElementById('editLoading');
+                    if (editLoading) editLoading.style.display = 'none';
+                }
+            } catch {
+                if (siteType === 'md') {
+                    const content = '加载失败';
+                    document.getElementById('editMd').value = content;
+                    if (useMonaco && editMdMonacoEditor) {
+                        editMdMonacoEditor.setValue(content);
+                    }
+                    hideEditMdLoading();
+                } else {
+                    const content = '加载失败';
+                    if (useMonaco && editMonacoEditor) {
+                        editMonacoEditor.setValue(content);
+                    } else {
+                        document.getElementById('editHtml').value = content;
+                    }
+                    const editLoading = document.getElementById('editLoading');
+                    if (editLoading) editLoading.style.display = 'none';
+                }
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('active');
+            // 复用 Monaco 实例，只清内容不销毁
+            if (editMonacoEditor) {
+                editMonacoEditor.setValue('');
+            }
+            if (editMdMonacoEditor) {
+                editMdMonacoEditor.setValue('');
+            }
+            // 清空 MD 编辑区
+            const editMd = document.getElementById('editMd');
+            if (editMd) editMd.value = '';
+            // 重置编辑弹窗上传状态
+            const editFileName = document.getElementById('editFileName');
+            const editMdFileName = document.getElementById('editMdFileName');
+            if (editFileName) { editFileName.textContent = ''; editFileDropZone.classList.remove('has-file'); }
+            if (editMdFileName) { editMdFileName.textContent = ''; editMdFileDropZone.classList.remove('has-file'); }
+            // 隐藏加载动画
+            hideEditMdLoading();
+        }
+
+        // 更新网站
+        async function updateSite() {
+            const slug = document.getElementById('editSlug').value;
+            const siteType = document.getElementById('editType').value;
+            let html, md;
+
+            if (siteType === 'md') {
+                md = useMonaco && editMdMonacoEditor ? editMdMonacoEditor.getValue() : document.getElementById('editMd').value;
+            } else {
+                html = useMonaco && editMonacoEditor ? editMonacoEditor.getValue() : document.getElementById('editHtml').value;
+            }
+
+            try {
+                const body = { slug };
+                if (md !== undefined) body.md = md;
+                if (html !== undefined) body.html = html;
+                const res = await apiFetch(API_URL + '/api/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(body)
+                });
+                let data;
+                try { data = await res.json(); } catch { data = {}; }
+                if (res.ok && data.success) {
+                    showToast('保存成功!');
+                    closeModal();
+                    // 局部更新时间
+                    const item = document.querySelector(`.site-item[data-slug="${slug}"]`);
+                    if (item) {
+                        item.style.transition = 'background 0.3s';
+                        item.style.background = 'rgba(2, 255, 142, 0.15)';
+                        setTimeout(() => {
+                            item.style.background = '';
+                        }, 600);
+                    }
+                } else {
+                    showToast(data.error || '保存失败', 'error');
+                }
+            } catch (e) {
+                showToast(e.message === '请求超时' ? '请求超时，请重试' : '网络错误', 'error');
+            }
+        }
+
+        // 自定义确认对话框
+        let _confirmResolve = null;
+
+        function showConfirm(title, message) {
+            return new Promise(resolve => {
+                _confirmResolve = resolve;
+                document.getElementById('confirmTitle').textContent = title;
+                document.getElementById('confirmMessage').textContent = message;
+                document.getElementById('confirmOverlay').classList.add('active');
+            });
+        }
+
+        function closeConfirm() {
+            document.getElementById('confirmOverlay').classList.remove('active');
+            if (_confirmResolve) _confirmResolve(false);
+            _confirmResolve = null;
+        }
+
+        function doConfirm() {
+            document.getElementById('confirmOverlay').classList.remove('active');
+            if (_confirmResolve) _confirmResolve(true);
+            _confirmResolve = null;
+        }
+
+        // 删除网站(局部更新)
+        async function confirmDelete(slug) {
+            const confirmed = await showConfirm(
+                '删除网站',
+                `确定删除「${slug}」吗?此操作不可恢复。`
+            );
+            if (!confirmed) return;
+
+            const item = document.querySelector(`.site-item[data-slug="${slug}"]`);
+            if (item) {
+                item.style.transition = 'opacity 0.3s, transform 0.3s';
+                item.style.opacity = '0';
+                item.style.transform = 'translateX(-20px)';
+            }
+
+            try {
+                const res = await apiFetch(API_URL + '/api/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ slug })
+                });
+                let data;
+                try { data = await res.json(); } catch { data = {}; }
+                if (res.ok && data.success) {
+                    showToast('删除成功');
+                    if (item) {
+                        setTimeout(() => item.remove(), 300);
+                    } else {
+                        loadSites();
+                    }
+                    // 更新统计
+                    if (window.allSites) {
+                        window.allSites = window.allSites.filter(s => s.name !== slug);
+                        document.getElementById('stat-sites').textContent = window.allSites.length;
+                        // 重新计算 stat-latest
+                        if (window.allSites.length > 0) {
+                            window.allSites.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+                            document.getElementById('stat-latest').textContent = formatTime(new Date(window.allSites[0].updated_at));
+                        } else {
+                            document.getElementById('stat-latest').textContent = '-';
+                        }
+                    }
+                } else {
+                    showToast(data.error || '删除失败', 'error');
+                    if (item) {
+                        item.style.opacity = '1';
+                        item.style.transform = '';
+                    }
+                }
+            } catch (e) {
+                showToast(e.message === '请求超时' ? '请求超时，请重试' : '网络错误', 'error');
+                if (item) {
+                    item.style.opacity = '1';
+                    item.style.transform = '';
+                }
+            }
+        }
+
+        // 工具函数
+        function formatDate(d) {
+            return new Date(d).toLocaleDateString('zh-CN');
+        }
+
+        function formatTime(d) {
+            if (typeof d === 'string') d = new Date(d);
+            const diff = new Date().getTime() - d.getTime();
+            if (diff < 60000) return '刚刚';
+            if (diff < 3600000) return Math.floor(diff/60000) + '分钟前';
+            if (diff < 86400000) return Math.floor(diff/3600000) + '小时前';
+            return d.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' });
+        }
+
+        // 水波纹点击效果
+        function createRipple(event) {
+            const button = event.currentTarget;
+            const rect = button.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = event.clientX - rect.left - size / 2;
+            const y = event.clientY - rect.top - size / 2;
+
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+
+            button.appendChild(ripple);
+            ripple.addEventListener('animationend', () => ripple.remove());
+        }
+
+        // 为所有按钮添加波纹效果
+        document.addEventListener('click', function(e) {
+            // 按钮波纹
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                const btn = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
+                if (!btn.classList.contains('no-ripple')) {
+                    createRipple({ currentTarget: btn });
+                }
+            }
+            // 侧边栏导航波纹
+            if (e.target.classList.contains('nav-item') || e.target.closest('.nav-item')) {
+                const nav = e.target.classList.contains('nav-item') ? e.target : e.target.closest('.nav-item');
+                if (!nav.classList.contains('no-ripple')) {
+                    createRipple({ currentTarget: nav });
+                }
+            }
+        });
+
+        // Ctrl+S 保存编辑中的网站（仅编辑器获得焦点时触发）
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                const editModal = document.getElementById('editModal');
+                if (!editModal || !editModal.classList.contains('active')) return;
+                const active = document.activeElement;
+                const inEdit = active && (
+                    editModal.contains(active) ||
+                    (editMonacoEditor && editMonacoEditor.getDomNode() && editMonacoEditor.getDomNode().contains(active))
+                );
+                if (inEdit) updateSite();
+            }
+        });
+
+        // 开屏动画结束后移除
+        setTimeout(() => {
+            const splash = document.getElementById('splashScreen');
+            if (splash) splash.remove();
+            document.body.classList.remove('splash-active');
+            window.__splashDone = true;
+        }, 3300);
+
+        // 初始化
+        loadSites();
+
+        // 注册假 PWA Service Worker（仅用于安装提示，不缓存）
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(function() {});
+        }
+    </script>
+	</body>
+</html>

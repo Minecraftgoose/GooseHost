@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - GooseHost</title>
+    <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-fg-default: #24292f;
+            --color-fg-muted: #57606a;
+            --color-fg-subtle: #8c959f;
+            --color-fg-on-emphasis: #ffffff;
+            --color-canvas-default: #ffffff;
+            --color-canvas-subtle: #f6f8fa;
+            --color-canvas-inset: #eaeef2;
+            --color-border-default: #d0d7de;
+            --color-border-muted: #d8dee4;
+            --color-accent-fg: #0969da;
+            --color-accent-subtle: #ddf4ff;
+            --color-success-fg: #1a7f37;
+            --color-success-subtle: #dafbe1;
+            --color-danger-fg: #cf222e;
+            --color-danger-subtle: #ffebe9;
+            --color-attention-fg: #9a6700;
+            --color-attention-subtle: #fff8c5;
+            --shadow: 0 1px 0 rgba(27,31,36,0.04);
+            --shadow-md: 0 3px 6px rgba(140,149,159,0.15);
+            --radius: 6px;
+            --radius-lg: 6px;
+        }
+
+        /* 钉钉进步体字体 */
+        @font-face {
+            font-family: 'DingTalk JinBuTi';
+            src: url('fonts/DingTalk JinBuTi.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DingTalk JinBuTi', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--color-fg-default);
+            background: var(--color-canvas-subtle);
+            min-height: 100vh;
+        }
+
+        /* ===== Header ===== */
+        .header {
+            background: var(--color-canvas-default);
+            border-bottom: 1px solid var(--color-border-muted);
+            padding: 0 24px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 18px;
+            color: var(--color-fg-default);
+        }
+        .header-brand img { height: 28px; }
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header-link {
+            color: var(--color-fg-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            transition: background 0.2s, color 0.2s;
+        }
+        .header-link:hover {
+            color: var(--color-fg-default);
+            background: var(--color-canvas-subtle);
+        }
+        .header-link.primary {
+            color: var(--color-fg-on-emphasis);
+            background: var(--color-success-fg);
+        }
+        .header-link.primary:hover {
+            background: #16692e;
+            color: var(--color-fg-on-emphasis);
+        }
+
+        /* ===== Main Layout ===== */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+        @media (max-width: 768px) {
+            .container { padding: 16px; }
+            .header { padding: 0 16px; }
+            .header-brand .brand-text { display: none; }
+        }
+
+        /* ===== Stats ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: var(--color-canvas-default);
+            border: 1px solid var(--color-border-muted);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--color-fg-default);
+            line-height: 1.2;
+        }
+        .stat-label {
+            font-size: 13px;
+            color: var(--color-fg-muted);
+            margin-top: 4px;
+        }
+
+        /* ===== Section ===== */
+        .section {
+            background: var(--color-canvas-default);
+            border: 1px solid var(--color-border-muted);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--color-border-muted);
+            background: var(--color-canvas-subtle);
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title i { color: var(--color-fg-muted); }
+        .section-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* ===== Search ===== */
+        .search-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--color-canvas-subtle);
+            border: 1px solid var(--color-border-default);
+            border-radius: var(--radius);
+            padding: 5px 12px;
+        }
+        .search-wrap i { color: var(--color-fg-muted); font-size: 12px; }
+        .search-wrap input {
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            color: var(--color-fg-default);
+            outline: none;
+            width: 200px;
+        }
+        .search-wrap input::placeholder { color: var(--color-fg-subtle); }
+
+        /* ===== Tabs ===== */
+        .tab-nav {
+            display: flex;
+            border-bottom: 1px solid var(--color-border-muted);
+            margin: 0;
+            background: var(--color-canvas-subtle);
+        }
+        .tab-btn {
+            padding: 12px 20px;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-fg-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .tab-btn:hover { color: var(--color-fg-default); }
+        .tab-btn.active {
+            color: var(--color-fg-default);
+            border-bottom-color: var(--color-accent-fg);
+        }
+
+        /* ===== Table ===== */
+        .table-wrap {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        thead tr {
+            background: var(--color-canvas-subtle);
+            border-bottom: 1px solid var(--color-border-muted);
+        }
+        th {
+            padding: 10px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--color-fg-muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--color-canvas-inset);
+            vertical-align: middle;
+        }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background: var(--color-canvas-subtle); }
+
+        .site-name {
+            font-weight: 600;
+            color: var(--color-accent-fg);
+            text-decoration: none;
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 12px;
+        }
+        .site-name:hover { text-decoration: underline; }
+        .site-owner { color: var(--color-fg-muted); font-size: 12px; }
+        .site-meta { color: var(--color-fg-subtle); font-size: 12px; font-family: monospace; }
+        .site-time { color: var(--color-fg-muted); font-size: 12px; white-space: nowrap; }
+
+        /* ===== Buttons ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: var(--radius);
+            border: 1px solid;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .btn-secondary {
+            background: var(--color-canvas-default);
+            border-color: var(--color-border-default);
+            color: var(--color-fg-default);
+        }
+        .btn-secondary:hover {
+            background: var(--color-canvas-subtle);
+            border-color: var(--color-border-muted);
+        }
+        .btn-primary {
+            background: var(--color-accent-fg);
+            border-color: var(--color-accent-fg);
+            color: #fff;
+        }
+        .btn-primary:hover { background: #0860ca; }
+        .btn-danger {
+            background: var(--color-canvas-default);
+            border-color: var(--color-border-default);
+            color: var(--color-danger-fg);
+        }
+        .btn-danger:hover {
+            background: var(--color-danger-subtle);
+            border-color: var(--color-danger-fg);
+        }
+        .btn-group { display: flex; gap: 4px; }
+
+        /* ===== Modal ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--color-canvas-default);
+            border: 1px solid var(--color-border-muted);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            width: 100%;
+            max-width: 900px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            animation: modal-in 0.2s ease;
+        }
+        @keyframes modal-in {
+            from { opacity: 0; transform: scale(0.97); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--color-border-muted);
+        }
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            color: var(--color-fg-muted);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-close:hover { background: var(--color-canvas-subtle); color: var(--color-fg-default); }
+        .modal-body { flex: 1; overflow-y: auto; padding: 20px; min-height: 0; }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 16px 20px;
+            border-top: 1px solid var(--color-border-muted);
+        }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s, transform 0.2s;
+            z-index: 2000;
+            pointer-events: none;
+            max-width: 400px;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.error { background: var(--color-danger-subtle); color: var(--color-danger-fg); border: 1px solid var(--color-danger-fg); }
+        .toast.success { background: var(--color-success-subtle); color: var(--color-success-fg); border: 1px solid var(--color-success-fg); }
+
+        /* ===== States ===== */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--color-fg-muted);
+        }
+        .empty-state i { font-size: 40px; margin-bottom: 16px; opacity: 0.4; }
+        .empty-state p { font-size: 14px; }
+        .loading-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--color-fg-muted);
+        }
+        .loading-state i { font-size: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        textarea {
+            width: 100%;
+            height: 400px;
+            border: 1px solid var(--color-border-default);
+            border-radius: var(--radius);
+            padding: 12px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 12px;
+            resize: vertical;
+            background: var(--color-canvas-subtle);
+            color: var(--color-fg-default);
+        }
+        textarea:focus { outline: none; border-color: var(--color-accent-fg); box-shadow: 0 0 0 3px rgba(9,105,218,0.15); }
+
+        /* ===== Responsive Table ===== */
+        @media (max-width: 768px) {
+            .section-header { flex-direction: column; align-items: flex-start; }
+            .btn { padding: 4px 10px; font-size: 11px; }
+            th, td { padding: 10px 12px; }
+            .hide-mobile { display: none; }
+        }
+        
+        /* ===== Load More ===== */
+        .load-more-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 24px;
+            border-top: 1px solid var(--color-border-default);
+        }
+        .load-more-info {
+            color: var(--color-fg-muted);
+            font-size: 13px;
+            margin: 0;
+        }
+        .load-more-wrap .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .load-more-wrap .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        /* ===== 图标微动效 ===== */
+        i.fas, i.far, i.fab {
+            transition: color 0.15s ease, transform 0.15s ease;
+        }
+        i.fas:not(.fa-spin):hover,
+        i.far:not(.fa-spin):hover,
+        i.fab:not(.fa-spin):hover {
+            transform: scale(1.08);
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-brand">
+            <img src="logo.svg" alt="GooseHost" onerror="this.style.display='none'">
+            <span style="color: var(--color-fg-muted); font-weight: 400;">Admin</span>
+        </div>
+        <nav class="header-nav">
+            <a href="dashboard.html" class="header-link">
+                <i class="fas fa-arrow-left"></i> 返回面板
+            </a>
+            <a href="status.html" class="header-link">
+                <i class="fas fa-server"></i> 系统状态
+            </a>
+        </nav>
+    </header>
+
+    <!-- Main -->
+    <main class="container">
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalSites">-</div>
+                <div class="stat-label">网站总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalUsers">-</div>
+                <div class="stat-label">用户数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="todaySites">-</div>
+                <div class="stat-label">今日新增</div>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-server"></i>
+                    <span>系统状态控制</span>
+                </div>
+                <div class="section-actions">
+                    <button class="btn btn-primary" onclick="saveSystemStatus()">
+                        <i class="fas fa-save"></i> 保存设置
+                    </button>
+                </div>
+            </div>
+            <div style="margin-top: 1rem;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem 1rem; background: var(--color-bg); border-radius: 4px;">
+                        <input type="checkbox" id="maintenanceMode" onchange="saveSystemStatus()">
+                        <span><i class="fas fa-tools"></i> 维护模式</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem 1rem; background: var(--color-bg); border-radius: 4px;">
+                        <input type="checkbox" id="globalStatus" onchange="toggleAllServices()">
+                        <span><i class="fas fa-globe"></i> 总开关</span>
+                    </label>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="maintenanceMsg" placeholder="维护公告（可选）" style="width: 100%; padding: 0.75rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-fg);">
+                </div>
+                <div style="font-size: 0.85rem; color: var(--color-fg-muted); margin-bottom: 0.75rem;"><i class="fas fa-info-circle"></i> 关闭服务将显示"维护中"</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem;">
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-sign-in-alt"></i> 登录</span>
+                        <input type="checkbox" id="svc-login" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-user-plus"></i> 注册</span>
+                        <input type="checkbox" id="svc-register" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-plus"></i> 创建网站</span>
+                        <input type="checkbox" id="svc-create" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-list"></i> 网站列表</span>
+                        <input type="checkbox" id="svc-my-sites" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-edit"></i> 更新网站</span>
+                        <input type="checkbox" id="svc-update" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-trash"></i> 删除网站</span>
+                        <input type="checkbox" id="svc-delete" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-globe-americas"></i> HTML访问</span>
+                        <input type="checkbox" id="svc-serve-html" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-file-alt"></i> MD访问</span>
+                        <input type="checkbox" id="svc-serve-md" checked onchange="saveSystemStatus()">
+                    </div>
+                </div>
+                <style>
+                    input[type="checkbox"] { width: 18px; height: 18px; accent-color: #02ff8e; cursor: pointer; }
+                </style>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="section">
+            <!-- Tab Nav -->
+            <div class="tab-nav">
+                <button class="tab-btn active" id="tabBtnSites" onclick="switchTab('sites')">
+                    <i class="fas fa-globe"></i> 网站列表
+                </button>
+                <button class="tab-btn" id="tabBtnUsers" onclick="switchTab('users')">
+                    <i class="fas fa-users"></i> 用户列表
+                </button>
+            </div>
+
+            <!-- Tab Header -->
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-database"></i>
+                    <span id="tabLabel">全部数据</span>
+                </div>
+                <div class="section-actions">
+                    <div class="search-wrap" id="searchWrap" style="display:none;">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="siteSearchInput" placeholder="搜索网站..." oninput="filterSites()">
+                    </div>
+                    <button class="btn btn-secondary" onclick="loadData()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                    <button class="btn btn-secondary" id="syncEmailsBtn" onclick="syncEmails()">
+                        <i class="fas fa-address-book"></i> 同步邮箱
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content -->
+            <div id="tab-sites"></div>
+            <div id="tab-users" style="display:none;"></div>
+        </div>
+    </main>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-edit"></i> 编辑网站
+                    <span id="editSiteName" style="color: var(--color-accent-fg); font-family: monospace;"></span>
+                </div>
+                <button class="modal-close" onclick="closeEditModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editType" value="html">
+                <div id="html-editor-panel">
+                    <textarea id="editHtml" placeholder="加载中..."></textarea>
+                    <div id="edit-monaco-container" style="display:none; height: 350px; border-radius: 6px; overflow: hidden; margin-top: 0.5rem;"></div>
+                </div>
+                <div id="md-editor-panel" style="display:none;">
+                    <textarea id="editMd" placeholder="加载中..."></textarea>
+                    <div id="edit-md-monaco-container" style="display:none; height: 350px; border-radius: 6px; overflow: hidden; margin-top: 0.5rem;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveSite()">
+                    <i class="fas fa-check"></i> 保存更改
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Site Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal" style="max-width: 440px;">
+            <div class="modal-header">
+                <div class="modal-title" style="color: var(--color-danger-fg);">
+                    <i class="fas fa-exclamation-triangle"></i> 确认删除
+                </div>
+                <button class="modal-close" onclick="closeDeleteModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <p style="margin-bottom: 8px;">确定删除网站</p>
+                <p id="deleteSiteNameDisplay" style="font-weight: 600; font-size: 16px; margin-bottom: 8px;"></p>
+                <p style="color: var(--color-danger-fg); font-size: 13px;">此操作不可恢复</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">
+                    <i class="fas fa-trash"></i> 删除
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete User Modal -->
+    <div class="modal-overlay" id="deleteUserModal">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <div class="modal-title" style="color: var(--color-danger-fg);">
+                    <i class="fas fa-user-times"></i> 删除用户
+                </div>
+                <button class="modal-close" onclick="closeDeleteUserModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <p style="margin-bottom: 8px;">确定删除用户</p>
+                <p id="deleteUserEmailDisplay" style="font-weight: 600; font-size: 16px; margin-bottom: 8px;"></p>
+                <p id="deleteUserSitesNote" style="color: var(--color-danger-fg); font-size: 13px;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeleteUserModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmDeleteUser()">
+                    <i class="fas fa-trash"></i> 删除用户
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        const API_URL = 'https://page.goose.cc.cd';
+        let pendingDeleteSite = null;
+        let pendingDeleteUser = null;
+        let allData = { sites: [], users: [] };
+        let token = localStorage.getItem('sb_token');
+
+        // Auth
+        function checkAuth() {
+            if (!token) { location.href = 'login.html'; return null; }
+            return token;
+        }
+
+        // Toast
+        function showToast(msg, type = 'error') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = `toast ${type} show`;
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // Tab Switch
+        function switchTab(tab) {
+            document.getElementById('tab-sites').style.display = tab === 'sites' ? 'block' : 'none';
+            document.getElementById('tab-users').style.display = tab === 'users' ? 'block' : 'none';
+            document.getElementById('tabBtnSites').classList.toggle('active', tab === 'sites');
+            document.getElementById('tabBtnUsers').classList.toggle('active', tab === 'users');
+            document.getElementById('tabLabel').textContent = tab === 'sites' ? '全部数据' : '用户列表';
+            document.getElementById('searchWrap').style.display = tab === 'sites' ? 'flex' : 'none';
+            if (tab === 'users') {
+                if (!allData.users.length) loadUsers();
+                else renderUsers();
+            }
+        }
+
+        // Sync Emails
+        async function syncEmails() {
+            const token = checkAuth();
+            if (!token) return;
+            const btn = document.getElementById('syncEmailsBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 同步中...';
+            try {
+                const res = await fetch(`${API_URL}/api/admin/sync-emails`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`同步成功，已记录 ${data.count} 个用户邮箱`, 'success');
+                    loadData();
+                } else {
+                    showToast(data.error || '同步失败', 'error');
+                }
+            } catch (err) {
+                showToast('同步失败: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-address-book"></i> 同步邮箱';
+            }
+        }
+
+        // Pagination state
+        var paginationState = {
+            sites: { page: 1, total: 0, loading: false },
+            users: { page: 1, total: 0, loading: false }
+        };
+
+        // Load Data (with pagination)
+        async function loadData() {
+            const token = checkAuth();
+            if (!token) return;
+            document.getElementById('tab-sites').innerHTML = '<div class="loading-state"><i class="fas fa-circle-notch"></i></div>';
+            paginationState.sites.page = 1;
+            try {
+                const res = await fetch(`${API_URL}/api/admin/sites?page=1&limit=50`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.status === 403) {
+                    document.getElementById('tab-sites').innerHTML = '<div class="empty-state"><i class="fas fa-shield-halved"></i><p>您没有管理员权限</p></div>';
+                    return;
+                }
+                if (!res.ok) throw new Error('获取数据失败');
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    allData.sites = data;
+                } else {
+                    allData.sites = data.sites || [];
+                    if (data.pagination) {
+                        paginationState.sites.total = data.pagination.total || allData.sites.length;
+                    }
+                }
+                renderStats();
+                renderSites();
+                if (!allData.users.length) loadUsersSilent();
+            } catch (err) {
+                document.getElementById('tab-sites').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${err.message}</p></div>`;
+            }
+        }
+
+        // Load More Sites
+        async function loadMoreSites() {
+            if (paginationState.sites.loading) return;
+            paginationState.sites.loading = true;
+            const token = checkAuth();
+            if (!token) return;
+            const currentOffset = allData.sites.length;
+            try {
+                const res = await fetch(`${API_URL}/api/admin/sites?offset=${currentOffset}&limit=50`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('加载更多失败');
+                const data = await res.json();
+                const newSites = Array.isArray(data) ? data : (data.sites || []);
+                const existingIds = new Set(allData.sites.map(s => s.id));
+                const uniqueNewSites = newSites.filter(s => !existingIds.has(s.id));
+                allData.sites = allData.sites.concat(uniqueNewSites);
+                if (data.pagination) {
+                    paginationState.sites.total = data.pagination.total || allData.sites.length;
+                } else {
+                    if (newSites.length < 50) {
+                        paginationState.sites.total = allData.sites.length;
+                    }
+                }
+                renderSites();
+            } catch (err) {
+                console.error('loadMoreSites error:', err);
+            } finally {
+                paginationState.sites.loading = false;
+            }
+        }
+
+        // Load Users Silent
+        async function loadUsersSilent() {
+            const token = checkAuth();
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_URL}/api/admin/users?page=1&limit=100`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!res.ok) return;
+                let data = await res.json();
+                allData.users = Array.isArray(data) ? data : (data.users || []);
+                if (data.pagination && data.pagination.total) {
+                    paginationState.users.total = data.pagination.total;
+                }
+                renderStats();
+                if (document.getElementById('tabBtnUsers').classList.contains('active')) {
+                    renderUsers();
+                }
+            } catch (_) {}
+        }
+
+        // Load Users
+        async function loadUsers() {
+            const token = checkAuth();
+            if (!token) return;
+            document.getElementById('tab-users').innerHTML = '<div class="loading-state"><i class="fas fa-circle-notch"></i></div>';
+            paginationState.users.page = 1;
+            try {
+                const res = await fetch(`${API_URL}/api/admin/users?page=1&limit=50`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('获取用户失败');
+                let data = await res.json();
+                if (data.error) throw new Error(data.error);
+                if (Array.isArray(data)) {
+                    allData.users = data;
+                } else {
+                    allData.users = data.users || [];
+                    if (data.pagination) {
+                        paginationState.users.total = data.pagination.total || allData.users.length;
+                    }
+                }
+                renderUsers();
+            } catch (err) {
+                document.getElementById('tab-users').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${err.message}</p></div>`;
+            }
+        }
+
+        // Load More Users
+        async function loadMoreUsers() {
+            if (paginationState.users.loading) return;
+            paginationState.users.loading = true;
+            const token = checkAuth();
+            if (!token) return;
+            const currentOffset = allData.users.length;
+            try {
+                const res = await fetch(`${API_URL}/api/admin/users?offset=${currentOffset}&limit=50`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('加载更多失败');
+                let data = await res.json();
+                const newUsers = Array.isArray(data) ? data : (data.users || []);
+                const existingIds = new Set(allData.users.map(u => u.id));
+                const uniqueNewUsers = newUsers.filter(u => !existingIds.has(u.id));
+                allData.users = allData.users.concat(uniqueNewUsers);
+                if (data.pagination) {
+                    paginationState.users.total = data.pagination.total || allData.users.length;
+                } else {
+                    if (newUsers.length < 50) {
+                        paginationState.users.total = allData.users.length;
+                    }
+                }
+                renderUsers();
+            } catch (err) {
+                console.error('loadMoreUsers error:', err);
+            } finally {
+                paginationState.users.loading = false;
+            }
+        }
+
+        // Render Stats
+        function renderStats() {
+            document.getElementById('totalSites').textContent = allData.sites.length;
+            const userCount = allData.users.length || new Set(allData.sites.map(s => s.owner_id)).size;
+            document.getElementById('totalUsers').textContent = userCount;
+            const today = new Date().toDateString();
+            document.getElementById('todaySites').textContent = allData.sites.filter(s => new Date(s.created_at).toDateString() === today).length;
+        }
+
+        // ============================================================
+        // 关键修复：renderSites 生成正确的访问链接
+        // ============================================================
+        function renderSites(query) {
+            query = (query || '').toLowerCase().trim();
+            var sites = query
+                ? allData.sites.filter(s =>
+                    s.name.toLowerCase().includes(query) ||
+                    (s.ownerEmail || '').toLowerCase().includes(query) ||
+                    (s.owner_id || '').toLowerCase().includes(query) ||
+                    (s.ip_address || '').includes(query))
+                : allData.sites;
+            if (!sites.length) {
+                document.getElementById('tab-sites').innerHTML = query
+                    ? '<div class="empty-state"><i class="fas fa-search"></i><p>没有找到匹配「' + esc(query) + '」的网站</p></div>'
+                    : '<div class="empty-state"><i class="fas fa-globe"></i><p>暂无网站</p></div>';
+                return;
+            }
+            const rows = sites.map(site => {
+                // 根据名称前缀生成正确的访问 URL
+                const urlPrefix = site.name.startsWith('md/') ? '/md/' : '/s/';
+                const siteSlug = site.name.startsWith('md/') ? site.name.replace('md/', '') : site.name;
+                const siteUrl = API_URL + urlPrefix + encodeURIComponent(siteSlug);
+
+                const createdAt = new Date(site.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+                return `<tr>
+                    <td><a href="${siteUrl}" target="_blank" class="site-name">${esc(site.name)}</a></td>
+                    <td class="site-owner">${esc(site.ownerEmail || site.owner_id || '—')}</td>
+                    <td class="site-meta hide-mobile">${site.ip_address || '—'}</td>
+                    <td class="site-time">${createdAt}</td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="${siteUrl}" target="_blank" class="btn btn-secondary">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                            <button class="btn btn-secondary" onclick="editSite('${esc(site.name)}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger" onclick="showDelete('${esc(site.name)}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+            document.getElementById('tab-sites').innerHTML = `
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>网站</th>
+                                <th>所有者</th>
+                                <th class="hide-mobile">IP</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+                <div class="load-more-wrap">
+                    <p class="load-more-info">已显示 ${allData.sites.length} / ${paginationState.sites.total || '?'} 个网站</p>
+                    <button class="btn btn-secondary" id="loadMoreSitesBtn" onclick="loadMoreSites()">
+                        <i class="fas fa-arrow-down"></i> 加载更多
+                    </button>
+                </div>`;
+        }
+
+        // Filter Sites
+        function filterSites() {
+            const query = document.getElementById('siteSearchInput').value;
+            renderSites(query);
+        }
+
+        // Render Users (同样修正链接)
+        function renderUsers() {
+            if (!allData.users.length) {
+                document.getElementById('tab-users').innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>暂无用户</p></div>';
+                return;
+            }
+            const rows = allData.users.map(u => {
+                const createdAt = new Date(u.createdAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+                const sitesHtml = u.sites && u.sites.length
+                    ? u.sites.map(s => {
+                        // 构建正确链接
+                        const urlPrefix = s.name.startsWith('md/') ? '/md/' : '/s/';
+                        const siteSlug = s.name.startsWith('md/') ? s.name.replace('md/', '') : s.name;
+                        const url = API_URL + urlPrefix + encodeURIComponent(siteSlug);
+                        return `<a href="${url}" target="_blank" class="btn btn-secondary" style="margin:2px;"><i class="fas fa-globe"></i> ${esc(s.name)}</a>`;
+                    }).join('')
+                    : '<span style="color: var(--color-fg-subtle);">—</span>';
+                return `<tr>
+                    <td><strong>${esc(u.email)}</strong></td>
+                    <td class="site-time">${createdAt}</td>
+                    <td>${sitesHtml}</td>
+                    <td><button class="btn btn-danger" onclick="showDeleteUser('${esc(u.id)}', '${esc(u.email)}', ${u.siteCount || 0})"><i class="fas fa-user-times"></i></button></td>
+                </tr>`;
+            }).join('');
+            document.getElementById('tab-users').innerHTML = `
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>邮箱</th>
+                                <th>注册时间</th>
+                                <th>网站</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+                <div class="load-more-wrap">
+                    <p class="load-more-info">已显示 ${allData.users.length} / ${paginationState.users.total || '?'} 个用户</p>
+                    <button class="btn btn-secondary" id="loadMoreUsersBtn" onclick="loadMoreUsers()">
+                        <i class="fas fa-arrow-down"></i> 加载更多
+                    </button>
+                </div>`;
+        }
+
+        // ============================================================
+        // 关键修复：editSite 根据类型显示正确的编辑面板
+        // ============================================================
+        function editSite(name) {
+            const isMd = name.startsWith('md/');
+            document.getElementById('editType').value = isMd ? 'md' : 'html';
+            document.getElementById('editSiteName').textContent = name;
+
+            // 切换面板
+            if (isMd) {
+                document.getElementById('html-editor-panel').style.display = 'none';
+                document.getElementById('md-editor-panel').style.display = 'block';
+            } else {
+                document.getElementById('html-editor-panel').style.display = 'block';
+                document.getElementById('md-editor-panel').style.display = 'none';
+            }
+
+            document.getElementById('editModal').classList.add('active');
+
+            // 清空编辑器
+            if (isMd) {
+                document.getElementById('editMd').value = '加载中...';
+                if (editMdMonacoEditor) editMdMonacoEditor.setValue('加载中...');
+            } else {
+                document.getElementById('editHtml').value = '加载中...';
+                if (editMonacoEditor) editMonacoEditor.setValue('加载中...');
+            }
+
+            // 加载内容
+            fetchSiteContent(name);
+        }
+
+        // 异步加载内容（支持 md 字段）
+        async function fetchSiteContent(name) {
+            const isMd = document.getElementById('editType').value === 'md';
+            try {
+                const res = await fetch(`${API_URL}/api/admin/site/${encodeURIComponent(name)}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || '加载失败');
+
+                if (isMd) {
+                    const md = data.md || '';
+                    document.getElementById('editMd').value = md;
+                    if (editMdMonacoEditor) editMdMonacoEditor.setValue(md);
+                } else {
+                    const html = data.html || '';
+                    document.getElementById('editHtml').value = html;
+                    if (editMonacoEditor) editMonacoEditor.setValue(html);
+                }
+            } catch (err) {
+                const msg = '加载失败: ' + err.message;
+                if (isMd) {
+                    document.getElementById('editMd').value = msg;
+                    if (editMdMonacoEditor) editMdMonacoEditor.setValue(msg);
+                } else {
+                    document.getElementById('editHtml').value = msg;
+                    if (editMonacoEditor) editMonacoEditor.setValue(msg);
+                }
+            }
+        }
+
+        // ============================================================
+        // 关键修复：saveSite 根据类型发送正确的字段
+        // ============================================================
+        async function saveSite() {
+            const name = document.getElementById('editSiteName').textContent;
+            const isMd = document.getElementById('editType').value === 'md';
+            const token = checkAuth();
+            if (!token) return;
+
+            let body = { slug: name };
+            if (isMd) {
+                const md = document.getElementById('editMd').value;
+                if (editMdMonacoEditor) md = editMdMonacoEditor.getValue();
+                body.md = md;
+            } else {
+                const html = document.getElementById('editHtml').value;
+                if (editMonacoEditor) html = editMonacoEditor.getValue();
+                body.html = html;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/api/admin/site/${encodeURIComponent(name)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify(body)
+                });
+                if (!res.ok) {
+                    const d = await res.json();
+                    throw new Error(d.error || '保存失败');
+                }
+                showToast('保存成功', 'success');
+                closeEditModal();
+                loadData(); // 刷新列表
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+
+        // Delete Site
+        function showDelete(name) {
+            pendingDeleteSite = name;
+            document.getElementById('deleteSiteNameDisplay').textContent = name;
+            document.getElementById('deleteModal').classList.add('active');
+        }
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+            pendingDeleteSite = null;
+        }
+        async function confirmDelete() {
+            if (!pendingDeleteSite) return;
+            const token = checkAuth();
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_URL}/api/admin/delete-site`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ siteName: pendingDeleteSite })
+                });
+                if (!res.ok) {
+                    const d = await res.json();
+                    throw new Error(d.error || '删除失败');
+                }
+                showToast('删除成功', 'success');
+                closeDeleteModal();
+                loadData();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        // Delete User
+        function showDeleteUser(userId, email, siteCount) {
+            pendingDeleteUser = userId;
+            document.getElementById('deleteUserEmailDisplay').textContent = email;
+            document.getElementById('deleteUserSitesNote').textContent = siteCount > 0
+                ? `该用户有 ${siteCount} 个网站也将被一并删除`
+                : '该用户暂无网站';
+            document.getElementById('deleteUserModal').classList.add('active');
+        }
+        function closeDeleteUserModal() {
+            document.getElementById('deleteUserModal').classList.remove('active');
+            pendingDeleteUser = null;
+        }
+        async function confirmDeleteUser() {
+            if (!pendingDeleteUser) return;
+            const token = checkAuth();
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_URL}/api/admin/delete-user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ userId: pendingDeleteUser })
+                });
+                if (!res.ok) {
+                    const d = await res.json();
+                    throw new Error(d.error || '删除失败');
+                }
+                showToast('用户已删除', 'success');
+                closeDeleteUserModal();
+                loadData();
+                loadUsers();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        // Escape HTML
+        function esc(str) {
+            if (!str) return '';
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
+
+        // System Status (unchanged)
+        const SERVICE_KEYS = ['login', 'register', 'create', 'my-sites', 'update', 'delete', 'serve-html', 'serve-md'];
+
+        async function loadSystemStatus() {
+            const token = checkAuth();
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_URL}/api/admin/system-status`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || '加载失败');
+                document.getElementById('maintenanceMode').checked = data.maintenance_mode || false;
+                document.getElementById('maintenanceMsg').value = data.maintenance_message || '';
+                const services = data.services || {};
+                SERVICE_KEYS.forEach(key => {
+                    const el = document.getElementById('svc-' + key);
+                    if (el) el.checked = services[key] !== false;
+                });
+                const allOn = SERVICE_KEYS.every(key => services[key] !== false);
+                document.getElementById('globalStatus').checked = allOn;
+            } catch (err) {
+                showToast('加载系统状态失败: ' + err.message);
+            }
+        }
+
+        function toggleAllServices() {
+            const globalOn = document.getElementById('globalStatus').checked;
+            SERVICE_KEYS.forEach(key => {
+                const el = document.getElementById('svc-' + key);
+                if (el) el.checked = globalOn;
+            });
+            setTimeout(() => saveSystemStatus(), 0);
+        }
+
+        async function saveSystemStatus() {
+            const token = checkAuth();
+            if (!token) return;
+            const maintenance_mode = document.getElementById('maintenanceMode').checked;
+            const maintenance_message = document.getElementById('maintenanceMsg').value.trim();
+            const services = {};
+            let allOn = true, allOff = true;
+            SERVICE_KEYS.forEach(key => {
+                const el = document.getElementById('svc-' + key);
+                const isOn = el ? el.checked : true;
+                services[key] = isOn;
+                if (isOn) allOff = false;
+                else allOn = false;
+            });
+            const globalEl = document.getElementById('globalStatus');
+            if (allOn) globalEl.checked = true;
+            else if (allOff) globalEl.checked = false;
+            try {
+                const res = await fetch(`${API_URL}/api/admin/system-status`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ maintenance_mode, maintenance_message, services })
+                });
+                const data = await res.json();
+                if (res.ok) showToast('系统状态已保存', 'success');
+                else showToast(data.error || '保存失败', 'error');
+            } catch (err) {
+                showToast('保存失败: ' + err.message);
+            }
+        }
+
+        // Monaco Editor helpers (optional)
+        let editMonacoEditor = null;
+        let editMdMonacoEditor = null;
+        let useMonaco = false;
+
+        // 加载偏好
+        function loadPreferences() {
+            const prefs = JSON.parse(localStorage.getItem('preferences') || '{}');
+            useMonaco = prefs.useMonaco || false;
+            if (useMonaco) {
+                // 启用Monaco，这里简化处理，实际可动态加载
+                // 由于管理员界面通常不需要复杂编辑器，保持纯textarea即可
+                // 但为了兼容，保留此逻辑
+            }
+        }
+        loadPreferences();
+
+        // Init
+        document.getElementById('searchWrap').style.display = 'flex';
+        loadData();
+        loadSystemStatus();
+    </script>
+    <!-- Cloudflare Pages Analytics -->
+    
+</body>
+</html>

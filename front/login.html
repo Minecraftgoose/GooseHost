@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>登录 - GooseHost</title>
+    <link rel="icon" type="image/x-icon" href="icons/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16x16.png" />
+    <link rel="apple-touch-icon" href="icons/icon-180x180.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0a0f0d" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        /* =========================================
+           设计系统 - CSS 变量
+           ========================================= */
+        :root {
+            --bg-primary: #0a0f0d;
+            --bg-card: rgba(20, 35, 25, 0.85);
+            --accent: #02ff8e;
+            --accent-dark: #00cc6a;
+            --text-primary: rgba(255, 255, 255, 0.9);
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --border: rgba(2, 255, 142, 0.15);
+            --border-focus: rgba(2, 255, 142, 0.35);
+            --error: #ff6b6b;
+            --error-bg: rgba(255, 82, 82, 0.12);
+            --success: #02ff8e;
+            --success-bg: rgba(2, 255, 142, 0.12);
+            --shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+            
+            /* 流体尺寸：在最小屏和最大屏之间平滑过渡 */
+            --space-xs: clamp(0.25rem, 0.8vw, 0.5rem);
+            --space-sm: clamp(0.5rem, 1.5vw, 0.75rem);
+            --space-md: clamp(0.75rem, 2vw, 1rem);
+            --space-lg: clamp(1rem, 3vw, 1.5rem);
+            --space-xl: clamp(1.5rem, 4vw, 2rem);
+            
+            --font-xs: clamp(0.7rem, 2vw, 0.8rem);
+            --font-sm: clamp(0.8rem, 2.2vw, 0.9rem);
+            --font-base: clamp(0.9rem, 2.5vw, 1rem);
+            --font-lg: clamp(1.1rem, 3vw, 1.25rem);
+            
+            --radius: 6px;
+            --input-height: clamp(44px, 8vw, 52px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 钉钉进步体字体 */
+        @font-face {
+            font-family: 'DingTalk JinBuTi';
+            src: url('fonts/DingTalk JinBuTi.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: 'DingTalk JinBuTi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 背景层 */
+        .bg-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: var(--bg-primary) center/cover;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+        .bg-layer.loaded {
+            opacity: 1;
+        }
+        .bg-layer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(10, 20, 15, 0.75);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+
+        /* 布局：始终居中，内容过多时允许滚动 */
+        .page {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-lg);
+            overflow-y: auto;
+        }
+
+        /* 卡片：最大宽度固定，内部自适应 */
+        .card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: var(--space-xl);
+            box-shadow: var(--shadow);
+            animation: cardIn 0.5s ease-out;
+        }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: var(--space-lg);
+        }
+        .logo img {
+            height: clamp(36px, 10vw, 52px);
+            width: auto;
+            display: inline-block;
+        }
+
+        /* 消息提示 */
+        .msg {
+            padding: var(--space-sm) var(--space-md);
+            border-radius: var(--radius);
+            margin-bottom: var(--space-md);
+            font-size: var(--font-sm);
+            text-align: center;
+            display: none;
+            animation: shake 0.4s ease-in-out;
+        }
+        .msg.error {
+            display: block;
+            background: var(--error-bg);
+            color: var(--error);
+            border: 1px solid rgba(255, 82, 82, 0.2);
+        }
+        .msg.success {
+            display: block;
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(2, 255, 142, 0.2);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
+        /* 表单 */
+        .form-group {
+            margin-bottom: var(--space-md);
+        }
+        /* 浮动标签输入框 */
+        .input-wrap.floating {
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: var(--radius);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .input-wrap.floating:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(2, 255, 142, 0.12);
+        }
+        .input-wrap.floating input {
+            background: transparent;
+            border: none;
+        }
+        .input-wrap.floating input:focus {
+            outline: none;
+            box-shadow: none;
+            border-color: transparent;
+        }
+        .input-wrap.floating label {
+            position: absolute;
+            left: calc(var(--space-md) * 2 + 1.2rem);
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: var(--font-base);
+            color: var(--text-secondary);
+            pointer-events: none;
+            padding: 0 4px;
+            background: transparent;
+            transition: top 0.18s ease, transform 0.18s ease, font-size 0.18s ease, color 0.18s ease, background 0.18s ease;
+        }
+        .input-wrap.floating input:focus ~ label,
+        .input-wrap.floating input:not(:placeholder-shown) ~ label {
+            top: 0;
+            transform: translateY(-50%);
+            font-size: var(--font-xs);
+            color: var(--accent);
+            background: var(--bg-card);
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+        .input-wrap i {
+            position: absolute;
+            left: var(--space-md);
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(2, 255, 142, 0.55);
+            font-size: var(--font-base);
+            pointer-events: none;
+            transition: color 0.2s;
+        }
+        .input-wrap:focus-within i {
+            color: var(--accent);
+        }
+
+        input {
+            width: 100%;
+            height: var(--input-height);
+            padding: 0 var(--space-md) 0 calc(var(--space-md) * 2 + 1.2rem);
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: #fff;
+            font-size: var(--font-base);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(2, 255, 142, 0.12);
+        }
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 按钮 */
+        .btn {
+            width: 100%;
+            height: var(--input-height);
+            border: none;
+            border-radius: var(--radius);
+            font-size: var(--font-base);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-sm);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            color: #001a0d;
+            margin-top: var(--space-xs);
+        }
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: 0 4px 24px rgba(2, 255, 142, 0.35);
+            transform: translateY(-1px);
+        }
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 12px rgba(2, 255, 142, 0.25);
+        }
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(0.3);
+        }
+
+        /* 链接 */
+        .link-row {
+            text-align: center;
+            margin-top: var(--space-lg);
+            color: var(--text-secondary);
+            font-size: var(--font-sm);
+        }
+        .link-row a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+        .link-row a:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        .legal-notice {
+            text-align: center;
+            margin-top: var(--space-md);
+            font-size: var(--font-xs);
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        .legal-notice a {
+            color: rgba(2, 255, 142, 0.7);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .legal-notice a:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        /* =========================================
+           唯一断点：超小屏手机
+           ========================================= */
+        @media (max-width: 480px) {
+            .page {
+                padding: var(--space-sm);
+                align-items: flex-start;
+                padding-top: 10vh;
+            }
+            .card {
+                padding: var(--space-lg);
+            }
+        }
+
+        /* 横屏：允许滚动，不再压缩字体 */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .page {
+                align-items: flex-start;
+                padding-top: var(--space-md);
+            }
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.03);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(2, 255, 142, 0.2);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(2, 255, 142, 0.4);
+        }
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(2, 255, 142, 0.2) rgba(255,255,255,0.03);
+        }
+        /* ===== 图标微动效 ===== */
+        i.fas, i.far, i.fab {
+            transition: color 0.15s ease, transform 0.15s ease;
+        }
+        i.fas:not(.fa-spin):hover,
+        i.far:not(.fa-spin):hover,
+        i.fab:not(.fa-spin):hover {
+            transform: scale(1.08);
+        }
+
+    </style>
+</head>
+<body>
+    <div id="bgLayer" class="bg-layer"></div>
+
+    <div class="page">
+        <div class="card">
+            <div class="logo">
+                <img src="./logo.svg" alt="GooseHost" />
+            </div>
+
+            <div id="msg" class="msg"></div>
+
+            <div id="loginForm">
+                <div class="form-group">
+                    <div class="input-wrap floating">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="email" placeholder=" " autocomplete="email" />
+                        <label for="email">邮箱</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-wrap floating">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder=" " autocomplete="current-password" />
+                        <label for="password">密码</label>
+                    </div>
+                </div>
+
+                <button id="loginBtn" class="btn btn-primary" onclick="login()">
+                    <i class="fas fa-sign-in-alt"></i> 登录
+                </button>
+
+                <div class="link-row">
+                    没有账户？<a href="register.html">立即注册</a>
+                </div>
+                <div class="legal-notice">
+                    登录即代表你同意 <a href="https://host.goose.cc.cd/docs" target="_blank">用户协议</a> 与 <a href="https://host.goose.cc.cd/docs" target="_blank">隐私政策</a>
+                </div>
+                <div style="margin-top: 1rem; text-align: center;">
+                    <a href="status.html" style="color: var(--text-secondary);">系统状态</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL_FALLBACK = 'https://page.goose.cc.cd';
+        let API_URL = API_URL_FALLBACK;
+
+        fetch(API_URL_FALLBACK + '/api/config')
+            .then(r => r.json())
+            .then(d => {
+                if (d && d.apiUrl) { 
+                    window.API_URL = d.apiUrl;
+                    API_URL = d.apiUrl; 
+                }
+            })
+            .catch(() => {});
+
+        // 必应壁纸
+        function setBingWallpaper() {
+            const bgLayer = document.getElementById('bgLayer');
+            const wallpaperUrl = `https://bing.img.run/uhd.php?t=${Date.now()}`;
+            const img = new Image();
+            img.onload = () => {
+                bgLayer.style.backgroundImage = `url('${wallpaperUrl}')`;
+                bgLayer.classList.add('loaded');
+            };
+            img.onerror = () => bgLayer.classList.add('loaded');
+            img.src = wallpaperUrl;
+        }
+        setBingWallpaper();
+
+        // 已登录跳转
+        if (localStorage.getItem('sb_token')) {
+            location.href = 'dashboard.html';
+        }
+
+        function showMsg(msg, type) {
+            const el = document.getElementById('msg');
+            el.textContent = msg;
+            el.className = 'msg ' + type;
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+
+            if (!email || !password) {
+                showMsg('请填写邮箱和密码', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登录中...';
+
+            try {
+                const res = await fetch(API_URL + '/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error_description || data.msg || '登录失败');
+                }
+
+                localStorage.setItem('sb_token', data.access_token);
+                localStorage.setItem('sb_user', JSON.stringify(data.user));
+
+                showMsg('登录成功！', 'success');
+                setTimeout(() => location.href = 'dashboard.html', 600);
+            } catch (err) {
+                showMsg(err.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 登录';
+            }
+        }
+
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+    </script>
+<!-- Cloudflare Pages Analytics --><!-- Cloudflare Pages Analytics --></body>
+</html>

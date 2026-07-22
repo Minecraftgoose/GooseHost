@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="查看 GooseHost 系统状态，了解各服务的运行情况。">
+    <title>系统状态 - GooseHost</title>
+    <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16x16.png">
+    <link rel="apple-touch-icon" href="icons/icon-180x180.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* 钉钉进步体字体 */
+        @font-face {
+            font-family: 'DingTalk JinBuTi';
+            src: url('fonts/DingTalk JinBuTi.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'DingTalk JinBuTi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; }
+
+        /* 美化滚动条 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(2,255,142,0.25); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(2,255,142,0.5); }
+        * { scrollbar-width: thin; scrollbar-color: rgba(2,255,142,0.25) rgba(255,255,255,0.03); }
+
+        /* 必应壁纸背景 */
+        .bg-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: #0a0f0d center/cover;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .bg-layer.loaded { opacity: 1; }
+        .bg-layer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(10,20,15,0.85) 0%, rgba(26,37,32,0.75) 100%);
+        }
+
+        /* 主容器 */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 80px 20px 40px;
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+        .header h1 i { color: #02ff8e; margin-right: 0.5rem; }
+
+        /* 状态徽章 */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            border: 2px solid;
+        }
+        .status-badge.operational {
+            background: rgba(2, 255, 142, 0.12);
+            border-color: #02ff8e;
+            color: #02ff8e;
+        }
+        .status-badge.degraded {
+            background: rgba(255, 165, 0, 0.12);
+            border-color: #ffa500;
+            color: #ffa500;
+        }
+        .status-badge.outage {
+            background: rgba(255, 82, 82, 0.12);
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+        .status-badge .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        .status-badge.operational .dot { background: #02ff8e; }
+        .status-badge.degraded .dot { background: #ffa500; }
+        .status-badge.outage .dot { background: #ff6b6b; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.9); }
+        }
+
+        /* 维护公告 */
+        .maintenance-banner {
+            background: rgba(255, 165, 0, 0.15);
+            border: 1px solid rgba(255, 165, 0, 0.4);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            text-align: center;
+            color: #ffa500;
+        }
+        .maintenance-banner i { margin-right: 0.5rem; }
+
+        /* 功能卡片 */
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.9);
+            margin: 2rem 0 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-title i { color: #02ff8e; }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .service-card {
+            background: rgba(20, 35, 25, 0.6);
+            border: 1px solid rgba(2, 255, 142, 0.15);
+            border-radius: 6px;
+            padding: 1.25rem;
+            transition: all 0.3s ease;
+        }
+        .service-card:hover {
+            background: rgba(20, 35, 25, 0.8);
+            border-color: rgba(2, 255, 142, 0.3);
+        }
+
+        .service-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+        .service-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .service-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 1.1rem;
+        }
+        .service-icon.auth { background: rgba(2, 255, 142, 0.15); color: #02ff8e; }
+        .service-icon.sites { background: rgba(88, 166, 255, 0.15); color: #58a6ff; }
+        .service-icon.file { background: rgba(255, 165, 0, 0.15); color: #ffa500; }
+
+        .service-name { font-weight: 600; color: #fff; font-size: 1rem; }
+        .service-path {
+            font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+            background: rgba(0,0,0,0.3);
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+        .service-desc {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-weight: 600;
+        }
+        .service-status.up { color: #02ff8e; }
+        .service-status.down { color: #ff6b6b; }
+        .service-status.testing { color: #ffa500; }
+
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            color: rgba(255,255,255,0.6);
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(2, 255, 142, 0.2);
+            border-top-color: #02ff8e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 错误提示 */
+
+        /* 底部 */
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(2, 255, 142, 0.1);
+            color: rgba(255,255,255,0.4);
+            font-size: 0.85rem;
+        }
+        .footer a { color: #02ff8e; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        .last-update { margin-top: 0.5rem; color: rgba(255,255,255,0.3); }
+
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .container { padding: 70px 15px 30px; }
+            .header h1 { font-size: 1.5rem; }
+            .services-grid { grid-template-columns: 1fr; }
+        }
+        /* ===== 图标微动效 ===== */
+        i.fas, i.far, i.fab {
+            transition: color 0.15s ease, transform 0.15s ease;
+        }
+        i.fas:not(.fa-spin):hover,
+        i.far:not(.fa-spin):hover,
+        i.fab:not(.fa-spin):hover {
+            transform: scale(1.08);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="bg-layer" id="bgLayer"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-server"></i> GooseHost 系统状态</h1>
+            <div id="mainStatus" class="status-badge operational">
+                <span class="dot"></span>
+                <span id="mainStatusText">加载中...</span>
+            </div>
+            <div id="maintenanceBanner" class="maintenance-banner" style="display: none;">
+                <i class="fas fa-tools"></i>
+                <span id="maintenanceMessage"></span>
+            </div>
+        </div>
+
+        <div id="loadingBox" class="loading">
+            <div class="spinner"></div>
+            <span>正在检查服务状态...</span>
+        </div>
+
+        <div id="servicesBox" style="display: none;">
+            <!-- 认证功能 -->
+            <div class="section-title"><i class="fas fa-lock"></i> 认证功能</div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon auth"><i class="fas fa-sign-in-alt"></i></div>
+                            <div class="service-name">用户登录</div>
+                        </div>
+                        <div class="service-status up" id="status-login"><i class="fas fa-check-circle"></i> 正常</div>
+                    </div>
+                    <div class="service-path">POST /auth/login</div>
+                    <div class="service-desc">用户登录，获取访问令牌</div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon auth"><i class="fas fa-user-plus"></i></div>
+                            <div class="service-name">用户注册</div>
+                        </div>
+                        <div class="service-status up" id="status-register"><i class="fas fa-check-circle"></i> 正常</div>
+                    </div>
+                    <div class="service-path">POST /auth/register</div>
+                    <div class="service-desc">新用户注册账号</div>
+                </div>
+
+            </div>
+
+            <!-- 网站管理功能 -->
+            <div class="section-title"><i class="fas fa-globe"></i> 网站管理功能</div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon sites"><i class="fas fa-plus"></i></div>
+                            <div class="service-name">创建网站</div>
+                        </div>
+                        <div class="service-status up" id="status-create"><i class="fas fa-check-circle"></i> 正常</div>
+                    </div>
+                    <div class="service-path">POST /api/create</div>
+                    <div class="service-desc">创建新的静态网站（HTML/Markdown）</div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon sites"><i class="fas fa-list"></i></div>
+                            <div class="service-name">网站列表</div>
+                        </div>
+                        <div class="service-status up" id="status-my-sites"><i class="fas fa-check-circle"></i> 正常</div>
+                    </div>
+                    <div class="service-path">GET /api/my-sites</div>
+                    <div class="service-desc">获取当前用户的网站列表</div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon sites"><i class="fas fa-edit"></i></div>
+                            <div class="service-name">更新网站</div>
+                        </div>
+                        <div class="service-status up" id="status-update"><i class="fas fa-check-circle"></i> 正常</div>
+                    </div>
+                    <div class="service-path">POST /api/update</div>
+                    <div class="service-desc">更新网站内容或设置</div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon sites"><i class="fas fa-trash"></i></div>
+                            <div class="service-name">删除网站</div>
+                        </div>
+                        <div class="service-status up" id="status-delete"><i class="fas fa-check-circle"></i> 正常</div>
+                    </div>
+                    <div class="service-path">POST /api/delete</div>
+                    <div class="service-desc">删除指定的网站</div>
+                </div>
+            </div>
+
+            <!-- 文件访问功能 -->
+            <div class="section-title"><i class="fas fa-folder-open"></i> 文件访问功能</div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon file"><i class="fas fa-globe-americas"></i></div>
+                            <div class="service-name">访问HTML网站</div>
+                        </div>
+                        <div class="service-status up" id="status-serve-html"><i class="fas fa-check-circle"></i> 正常</div>
+                    </div>
+                    <div class="service-path">GET /s/:slug</div>
+                    <div class="service-desc">公开访问HTML静态网站</div>
+                </div>
+
+                <div class="service-card">
+                    <div class="service-header">
+                        <div class="service-info">
+                            <div class="service-icon file"><i class="fas fa-file-alt"></i></div>
+                            <div class="service-name">访问Markdown</div>
+                        </div>
+                        <div class="service-status up" id="status-serve-md"><i class="fas fa-check-circle"></i> 正常</div>
+                    </div>
+                    <div class="service-path">GET /md/:slug</div>
+                    <div class="service-desc">公开访问Markdown渲染网站</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>由 <a href="https://goosecode.surge.sh">GooseCode</a> 提供支持 · <a href="https://host.goose.cc.cd" style="color: var(--accent);">返回首页</a></p>
+            <p class="last-update">最后更新: <span id="lastUpdate">-</span></p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://page.goose.cc.cd';
+
+        async function checkStatus() {
+            const loadingBox = document.getElementById('loadingBox');
+            const servicesBox = document.getElementById('servicesBox');
+            const mainStatus = document.getElementById('mainStatus');
+            const mainStatusText = document.getElementById('mainStatusText');
+            const maintenanceBanner = document.getElementById('maintenanceBanner');
+            const maintenanceMessage = document.getElementById('maintenanceMessage');
+            const lastUpdate = document.getElementById('lastUpdate');
+
+            try {
+                // 只读取 admin 设定的状态，不再自检
+                const statusRes = await fetch(API_URL + '/api/admin/system-status');
+                const statusData = await statusRes.json();
+
+                loadingBox.style.display = 'none';
+
+                // 检查是否有维护公告
+                if (statusData.maintenance_mode && statusData.maintenance_message) {
+                    maintenanceMessage.textContent = statusData.maintenance_message;
+                    maintenanceBanner.style.display = 'block';
+                } else {
+                    maintenanceBanner.style.display = 'none';
+                }
+
+                // 获取服务状态
+                const services = statusData.services || {};
+
+                // 计算正常率
+                const serviceKeys = ['login', 'register', 'create', 'my-sites', 'update', 'delete', 'serve-html', 'serve-md'];
+                const upCount = serviceKeys.filter(k => services[k] !== false).length;
+                const allUp = upCount === serviceKeys.length;
+
+                // 更新主状态
+                if (allUp && !statusData.maintenance_mode) {
+                    mainStatus.className = 'status-badge operational';
+                    mainStatusText.textContent = '运行正常';
+                } else if (upCount > serviceKeys.length / 2) {
+                    mainStatus.className = 'status-badge degraded';
+                    mainStatusText.textContent = `部分服务维护中 (${upCount}/${serviceKeys.length})`;
+                } else {
+                    mainStatus.className = 'status-badge outage';
+                    mainStatusText.textContent = `大部分服务维护中 (${upCount}/${serviceKeys.length})`;
+                }
+
+                // 更新各端点状态
+                const statusMap = {
+                    'status-login': services.login,
+                    'status-register': services.register,
+                    'status-create': services.create,
+                    'status-my-sites': services['my-sites'],
+                    'status-update': services.update,
+                    'status-delete': services.delete,
+                    'status-serve-html': services['serve-html'],
+                    'status-serve-md': services['serve-md'],
+                };
+
+                Object.entries(statusMap).forEach(([id, status]) => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        if (status !== false && !statusData.maintenance_mode) {
+                            el.className = 'service-status up';
+                            el.innerHTML = '<i class="fas fa-check-circle"></i> 正常';
+                        } else {
+                            el.className = 'service-status down';
+                            el.innerHTML = '<i class="fas fa-tools"></i> 维护中';
+                        }
+                    }
+                });
+
+                // 更新最后检查时间
+                lastUpdate.textContent = new Date().toLocaleString('zh-CN');
+
+                servicesBox.style.display = 'block';
+            } catch (err) {
+                loadingBox.style.display = 'none';
+                servicesBox.style.display = 'block';
+                mainStatusText.textContent = '状态未知';
+                mainStatus.className = 'status-badge outage';
+            }
+        }
+
+        // 必应壁纸
+        (function setBingWallpaper() {
+            const bgLayer = document.getElementById('bgLayer');
+            const timestamp = new Date().getTime();
+            const wallpaperUrl = 'https://bing.img.run/uhd.php?t=' + timestamp;
+            const img = new Image();
+            img.onload = function() {
+                bgLayer.style.backgroundImage = 'url(\'' + wallpaperUrl + '\')';
+                bgLayer.classList.add('loaded');
+            };
+            img.onerror = function() {
+                bgLayer.classList.add('loaded');
+            };
+            img.src = wallpaperUrl;
+        })();
+
+        // 初始加载
+        checkStatus();
+
+        // 每30秒刷新一次
+        setInterval(checkStatus, 30000);
+    </script>
+<!-- Cloudflare Pages Analytics --><!-- Cloudflare Pages Analytics --></body>
+</html>
