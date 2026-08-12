@@ -1,0 +1,8 @@
+# dashboard 前端路由：200 rewrite 目标必须写目录（写 index.html 会被 Pages 规范化 308）
+/dashboard /dashboard-app/ 200
+/dashboard/* /dashboard-app/ 200
+/dashboard.html /dashboard 301
+# 系统状态页：同样指向目录（status.html 会触发 Pages 规范化 308 循环）
+/status /status/ 200
+/status/* /status/ 200
+/status.html /status 301

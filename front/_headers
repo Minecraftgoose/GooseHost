@@ -1,0 +1,16 @@
+# Cloudflare Pages 响应头配置
+
+# 字体文件：浏览器长期缓存（一年 + immutable），避免每次访问重复下载 2MB 字体
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff
+
+# 图标：一周缓存
+/icons/*
+  Cache-Control: public, max-age=604800
+
+# 品牌静态资源：一周缓存
+/logo.svg
+  Cache-Control: public, max-age=604800
+/manifest.json
+  Cache-Control: public, max-age=604800
