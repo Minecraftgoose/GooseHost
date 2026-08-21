@@ -504,7 +504,23 @@
                     showMsg('邮箱已验证成功！', 'success');
                     localStorage.setItem('sb_token', token);
                     if (refresh) localStorage.setItem('sb_refresh_token', refresh);
-                    setTimeout(function() { location.href = '/dashboard'; }, 1500);
+                    // 补齐 sb_user：dashboard 守卫要求 token+user 同时存在，缺 user 会被踢回登录造成死循环
+                    fetch((window.API_URL || API_URL) + '/api/me', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) {
+                        if (d && d.email) {
+                            localStorage.setItem('sb_user', JSON.stringify({
+                                email: d.email,
+                                raw_user_meta_data: { nickname: d.nickname || '' }
+                            }));
+                        }
+                    })
+                    .catch(function () {})
+                    .finally(function () {
+                        setTimeout(function() { location.href = '/dashboard'; }, 1500);
+                    });
                 }
             }
         })();

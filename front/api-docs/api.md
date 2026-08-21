@@ -1,685 +1,497 @@
-# GooseHost API 文档
+<p style="text-align: center;"><img src="https://host.goose.gs.cn/logo.svg" alt="GooseHost Logo" style="height:auto; width:auto;"></p>
 
-> **更新时间**: 2026-08-06
->
-> **API 基础地址**: `https://page.goose.gs.cn`
->
-> **覆盖功能**：HTML / Markdown / 多文件网站，账号昵称、找回密码、注销账号、公告与全站统计
->
+<h1 style="text-align: center;">API文档</h1>
+
+> **基础 URL**：`https://page.goose.gs.cn`
+> **响应格式**：JSON（UTF-8）
+> **认证方式**：Bearer Token
+> **最后更新** : 2026/8/20
 
 ---
 
-## 认证
+## 1. 认证与账号
 
+### 1.1 用户登录
 
-### 登录
-```
-POST /auth/login
-Content-Type: application/json
+**端点**：`POST /auth/login`
 
-{
-  "email": "your@email.com",
-  "password": "yourpassword"
-}
-```
+**请求体**：
 
-**响应 200**
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| email | string | 是 | 注册邮箱 |
+| password | string | 是 | 密码 |
+
+**限流**：每 IP 每 60 秒 **20** 次。
+
+**成功响应（200）**：
+
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiJ9...",
+  "access_token": "eyJ...",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "refresh_token": "def...",
   "user": {
-    "id": "b34e5979-...",
-    "email": "your@email.com",
-    "nickname": "我的昵称"
+    "id": "uuid",
+    "email": "user@example.com",
+    "nickname": "大鹅"
   }
 }
 ```
 
-**响应 400**: `{ "error": "邮箱或密码格式不正确" }`
+**错误示例**：
 
-> 获取到的 `access_token` 即为后续 API 请求中的 `Authorization: Bearer <token>`。
+- `400`：`{"error":"邮箱或密码格式不正确"}`
+- `429`：`{"error":"请求过于频繁，请在 X 秒后重试","retryAfter":X}`
 
-### 注册
-```
-POST /api/register
-Content-Type: application/json
+---
 
-{
-  "email": "new@email.com",
-  "password": "yourpassword",
-  "nickname": "我的昵称"
-}
-```
+### 1.2 刷新 Token
 
-**参数说明**
-| 字段 | 必填 | 说明 |
+**端点**：`POST /auth/refresh`
+
+**请求体**：
+
+| 字段 | 类型 | 必填 |
 |------|------|------|
-| email | 是 | 邮箱地址，需真实邮箱（临时邮箱域名被拦截） |
-| password | 是 | 密码 |
-| nickname | 是 | 昵称，2-20 个字符，支持中文、字母、数字、`_` `-` 空格 |
+| refresh_token | string | 是 |
 
-**响应 200**: `{ "success": true, "message": "验证邮件已发送，请查收" }`
-**响应 400**: `{ "error": "昵称不能为空" }`、`{ "error": "暂不支持该临时邮箱，请使用真实邮箱" }` 等
+**响应**：同登录成功响应，返回新的 `access_token` 和 `refresh_token`。
 
 ---
 
-以后所有网站管理接口带上 Token：
-```
-Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
-```
+### 1.3 用户注册
 
----
+**端点**：`POST /api/register`
 
-## 网站类型
+**请求体**：
 
-GooseHost 支持三种网站类型：
+| 字段 | 类型 | 校验规则 |
+|------|------|----------|
+| email | string | 符合邮箱格式；禁止临时邮箱（黑名单含数百个域名，如 `mailinator.com`、`10minutemail.com` 等） |
+| password | string | 至少 6 个字符 |
+| nickname | string | 长度 2~20；仅允许中英文、数字、空格、`_`、`-`（正则：`/^[一-龥a-zA-Z0-9_ \-]+$/`） |
 
-| 类型 | 创建方式 | 访问路径 | 内容格式 |
-|------|----------|----------|----------|
-| HTML 网站 | `html` 字段 | `/s/<slug>` | 完整 HTML 代码 |
-| Markdown 网站 | `md` 字段 | `/md/<slug>` | Markdown 格式 |
-| 多文件网站 | `zip` 字段（base64） | `/p/<slug>` | zip 压缩包（代码/文本文件） |
+**限流**：
 
----
+- 每 IP 每小时 **5** 次（`reg_ip`），超限锁定 1 小时。
+- 全局创建类限流：每 IP 每 60 秒 **2** 次，超限锁定 10 分钟。
 
-## 创建网站
+**成功响应（200）**：
 
-### 创建 HTML 网站
-```
-POST /api/create
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "slug": "my-site",
-  "html": "<!DOCTYPE html><html><body><h1>Hello</h1></body></html>"
-}
-```
-
-**响应 200**
 ```json
 {
   "success": true,
-  "name": "my-site",
-  "url": "https://page.goose.gs.cn/s/my-site"
+  "message": "验证邮件已发送，请查收"
 }
 ```
 
-### 创建 Markdown 网站
-```
-POST /api/create
-Authorization: Bearer <token>
-Content-Type: application/json
+**常见错误**：
 
+- `{"error":"昵称不能为空"}`
+- `{"error":"昵称长度需为 2-20 个字符"}`
+- `{"error":"暂不支持该临时邮箱，请使用真实邮箱"}`
+- `{"error":"邮箱格式不正确"}`
+
+---
+
+### 1.4 获取当前用户信息
+
+**端点**：`GET /api/me`（需登录）
+
+**响应（200）**：
+
+```json
 {
-  "slug": "my-doc",
+  "id": "uuid",
+  "email": "user@example.com",
+  "nickname": "大鹅"
+}
+```
+
+---
+
+### 1.5 修改昵称
+
+**端点**：`PUT /api/me`（需登录）
+
+**请求体**：`{ "nickname": "新昵称" }`
+**校验**：同注册。
+
+**限流**：每 IP 每 60 秒 **20** 次。
+
+**成功响应**：`{"success": true, "nickname": "新昵称"}`
+
+---
+
+### 1.6 忘记密码（发送重置邮件）
+
+**端点**：`POST /api/forgot-password`（**无需登录**）
+
+**请求体**：`{ "email": "user@example.com" }`
+
+**限流**：
+
+- 每 IP 每小时 **5** 次。
+- 每邮箱每小时 **3** 次。
+
+**成功响应（200）**（无论邮箱是否存在）：
+
+```json
+{
+  "success": true,
+  "message": "如果该邮箱已注册，重置链接已发送，请查收垃圾邮件"
+}
+```
+
+---
+
+### 1.7 重置密码
+
+**端点**：`POST /api/reset-password`（**无需登录**）
+
+**请求体**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| token | string | 邮件链接中的 `access_token` 参数（JWT） |
+| password | string | 新密码，至少 6 位 |
+
+**限流**：每 IP 每小时 **10** 次。
+
+**成功响应**：`{"success": true}`
+
+**失败响应**：`{"error":"重置失败，链接可能已过期"}`（400）
+
+---
+
+### 1.8 注销账号
+
+**端点**：`POST /api/delete-account`（需登录）
+
+**操作**：永久删除该用户及其所有站点（含存储文件），不可逆。
+
+**限流**：每 IP 每小时 **3** 次。
+
+**成功响应**：`{"success": true}`
+
+---
+
+## 2. 网站管理（需登录）
+
+所有接口需携带 `Authorization: Bearer <access_token>`。
+
+### 2.1 通用规则
+
+- **Slug 规则**：长度 1~64，仅允许 `a-zA-Z0-9_-.~`（**不支持中文**）。
+- **内容大小限制**：
+  - HTML / Markdown 内容：≤ **500 KB**。
+  - 多文件站点：单文件 ≤ **200 KB**，总解压后 ≤ **2 MB**，文件数 ≤ **50**。
+
+---
+
+### 2.2 创建网站
+
+**端点**：`POST /api/create`
+
+根据请求体字段决定类型：
+
+#### 2.2.1 HTML 站点
+
+```json
+{
+  "slug": "my-blog",
+  "html": "<!DOCTYPE html>..."
+}
+```
+
+**访问 URL**：`/s/<slug>`
+
+#### 2.2.2 Markdown 站点
+
+```json
+{
+  "slug": "my-docs",
   "md": "# 标题\n\n内容"
 }
 ```
 
-**响应 200**
+**访问 URL**：`/md/<slug>`（自动渲染为美观的 HTML 页面）
+
+#### 2.2.3 多文件站点（Project-BETA）
+
 ```json
-{
-  "success": true,
-  "name": "md/my-doc",
-  "url": "https://page.goose.gs.cn/md/my-doc"
-}
-```
-
-> 注意：Markdown 网站会自动添加 `md/` 前缀存储，访问 URL 使用 `/md/` 路径
-
-### 创建多文件网站（zip 压缩包）
-```
-POST /api/create
-Authorization: Bearer <token>
-Content-Type: application/json
-
 {
   "slug": "my-app",
-  "zip": "<zip 文件的 base64 编码>"
+  "type": "project",
+  "zip": "<Base64 编码的 Zip>"
 }
 ```
 
-**响应 200**
+**Zip 包要求**：
+
+- 必须包含 `index.html` 或 `index.md`。
+- 允许的扩展名（白名单）：`html, htm, css, js, mjs, cjs, md, markdown, json, txt, text, svg, xml, yml, yaml, toml, ini, conf, cfg, csv, ts, tsx, jsx, py, c, cpp, cc, h, hpp, java, go, rs, sh, bash, zsh, vue, svelte, wasm`
+- 禁止绝对路径、`..` 穿越、反斜杠。
+- Base64 编码后长度 ≤ **3 MB**。
+
+**访问 URL**：`/p/<slug>`（子路径自动支持，如 `/p/<slug>/sub/page.html`）
+
+**成功响应（统一）**：
+
 ```json
 {
   "success": true,
-  "name": "my-app",
-  "url": "https://page.goose.gs.cn/p/my-app"
+  "name": "my-blog",
+  "type": "html",      // 或 "md" / "project"
+  "url": "https://page.goose.gs.cn/s/my-blog"
 }
 ```
 
-**zip 包要求**
-- 压缩包内只支持代码/文本文件：`html htm css js mjs cjs md markdown json txt svg xml yml yaml toml ini conf cfg csv ts tsx jsx py c cpp h java go rs sh vue svelte wasm` 等
-- 需包含 `index.html` 或 `index.md` 作为入口
-- 单文件 ≤ 200KB，总大小 ≤ 2MB，最多 50 个文件
-- 图片、视频、音频、压缩包等二进制资源不支持（白名单拦截）
+**限流**：每 IP 每 60 秒 **2** 次，超限锁定 10 分钟。
 
-**访问**：`https://page.goose.gs.cn/p/my-app` 或 `/p/my-app/<路径>`（如 `/p/my-app/join/index.html`）
+**错误码**：
 
----
-
-**slug 规则**：1-64 字符，只允许中文、英文、数字、`_` `-` `.` `~`
-
-**内容限制**：
-- HTML 内容：最大 500KB
-- Markdown 内容：最大 500KB
-- 多文件 zip：单文件 ≤200KB，总 ≤2MB，最多 50 个文件
-
-**响应码**
-| 状态码 | 说明 |
-|--------|------|
-| 200 | 成功 |
-| 400 | 参数错误（如 slug 包含非法字符、zip 解压失败、文件类型不允许） |
-| 401 | 未登录或 Token 无效 |
-| 409 | 名称已被占用 |
-| 429 | 限流（创建：每 IP 每 60 秒 2 次） |
+- `400`：slug 非法、文件类型不允许、Zip 损坏、大小超限等。
+- `409`：slug 已被占用。
+- `429`：触发限流。
 
 ---
 
-### 获取我的网站列表
-```
-GET /api/my-sites
-Authorization: Bearer <token>
-```
+### 2.3 获取我的站点列表
 
-**响应 200**
+**端点**：`GET /api/my-sites`
+
+**响应（200）**：数组，按 `updated_at` 降序。
+
 ```json
 [
   {
-    "id": "51b380e5-d298-4d7a-9099-8f7712e3a49f",
-    "name": "my-site",
+    "id": "uuid",
+    "name": "my-blog",
     "type": "html",
     "visit_count": 128,
-    "created_at": "2026-06-19T01:45:41.860125Z",
-    "updated_at": "2026-06-19T02:00:00.000000Z",
-    "ip_address": "12.34.56.78"
-  },
-  {
-    "id": "...",
-    "name": "my-doc",
-    "type": "md",
-    "visit_count": 56,
-    "created_at": "...",
-    "updated_at": "..."
-  },
-  {
-    "id": "...",
-    "name": "my-app",
-    "type": "project",
-    "visit_count": 89,
-    "created_at": "...",
-    "updated_at": "..."
+    "created_at": "2026-08-20T10:00:00Z",
+    "updated_at": "2026-08-20T10:30:00Z",
+    "ip_address": "1.2.3.4"
   }
 ]
 ```
 
 ---
 
-### 多文件网站：获取文件列表
-```
-GET /api/site-files/<slug>
-Authorization: Bearer <token>
-```
+### 2.4 获取站点原始内容（用于编辑）
 
-**响应 200**
+**端点**：`GET /api/file/<slug>`
+
+- 自动识别类型，返回 `html` 或 `md` 字段。
+- **限流**：每 IP 每 10 秒 **10** 次。
+
+**响应（200）**：
+
+- HTML 站点：`{ "html": "<!DOCTYPE html>..." }`
+- Markdown 站点：`{ "md": "# 标题\n\n内容" }`
+
+**错误**：`404`（站点不存在或无权限）
+
+---
+
+### 2.5 更新站点内容
+
+**端点**：`POST /api/update`
+
+**请求体**：
+
 ```json
 {
-  "site": {
-    "name": "my-app",
-    "type": "project",
-    "owner_id": "de90a631-...",
-    "visit_count": 89
-  },
+  "slug": "my-blog",
+  "html": "<h1>Updated</h1>"   // 或 "md": "## 新标题"
+}
+```
+
+- 自动匹配类型，无需指定。
+- 内容大小 ≤ **500 KB**。
+
+**限流**：每 IP 每 60 秒 **10** 次。
+
+**成功响应**：`{"success": true}`
+
+---
+
+### 2.6 删除站点
+
+**端点**：`POST /api/delete`
+
+**请求体**：`{ "slug": "my-blog" }`
+
+**操作**：删除数据库记录及存储桶文件。
+
+**成功响应**：`{"success": true}`
+
+---
+
+## 3. 多文件站点（Project）操作
+
+以下接口仅适用于 `type = "project"` 的站点，需要登录。
+
+### 3.1 获取文件列表
+
+**端点**：`GET /api/site-files/<slug>`
+
+**响应（200）**：
+
+```json
+{
+  "site": { /* 站点基本信息 */ },
   "files": [
     { "name": "index.html", "size": 12463 },
-    { "name": "join/index.html", "size": 36191 },
-    { "name": "style.css", "size": 27927 }
+    { "name": "css/style.css", "size": 27927 }
   ]
 }
 ```
 
-### 多文件网站：文件级操作
-文件路径需 URL 编码，支持多级目录（如 `join/index.html`）。
-
-```
-# 读取文件内容
-GET /api/proj-file/<slug>/<路径>
-
-# 写入/替换文件（body: { "content": "文件内容" }）
-PUT /api/proj-file/<slug>/<路径>
-
-# 删除文件
-DELETE /api/proj-file/<slug>/<路径>
-```
-
-**PUT 响应 200**: `{ "success": true }`
-**GET 响应 200**: `{ "name": "index.html", "content": "<内容>", "size": 12463 }`
-**错误**：400 路径无效/类型不允许/超过 200KB，404 文件不存在，403 无权操作
-
 ---
 
-### 获取网站内容
-```
-GET /api/file/<slug>
-Authorization: Bearer <token>
+### 3.2 文件级 CRUD
 
-# HTML 网站
-GET /api/file/my-site
+基础路径：`/api/proj-file/<slug>/<路径>`（路径支持多级目录，需 URL 编码）
 
-# Markdown 网站（slug 为 md/ 开头的完整名称）
-GET /api/file/md/my-doc
-```
+#### 3.2.1 读取文件
 
-**响应 200**
-```json
-// HTML 网站
-{
-  "html": "<!DOCTYPE html>..."
-}
+`GET /api/proj-file/<slug>/<路径>`
 
-// Markdown 网站
-{
-  "md": "# 标题\n\n内容"
-}
-```
+**成功（200）**：
 
-**响应 404**: 站点不存在或无权访问
-
----
-
-### 更新网站内容
-```
-POST /api/update
-Authorization: Bearer <token>
-Content-Type: application/json
-
-# 更新 HTML 网站
-{
-  "slug": "my-site",
-  "html": "<!DOCTYPE html><html><body><h1>Updated!</h1></body></html>"
-}
-
-# 更新 Markdown 网站（slug 为 md/ 开头的完整名称）
-{
-  "slug": "md/my-doc",
-  "md": "# 新标题\n\n新内容"
-}
-```
-
-**响应 200**: `{ "success": true }`
-
----
-
-### 删除网站
-```
-POST /api/delete
-Authorization: Bearer <token>
-Content-Type: application/json
-
-# 删除 HTML 网站
-{ "slug": "my-site" }
-
-# 删除 Markdown 网站（slug 为 md/ 开头的完整名称）
-{ "slug": "md/my-doc" }
-```
-
-**响应 200**: `{ "success": true }`
-
----
-
-## 账号
-
-### 获取当前用户信息
-```
-GET /api/me
-Authorization: Bearer <token>
-```
-
-**响应 200**
 ```json
 {
-  "id": "b34e5979-...",
-  "email": "your@email.com",
-  "nickname": "我的昵称"
+  "name": "index.html",
+  "content": "<html>...</html>",
+  "size": 12463
 }
 ```
 
-### 修改昵称
-```
-PUT /api/me
-Authorization: Bearer <token>
-Content-Type: application/json
+#### 3.2.2 写入/替换文件
 
-{ "nickname": "新昵称" }
-```
+`PUT /api/proj-file/<slug>/<路径>`
+**请求体**：`{ "content": "新内容" }`
 
-**响应 200**: `{ "success": true }`
-**限制**：昵称 2-20 字符，支持中文、字母、数字、`_` `-` 空格
+- 扩展名必须在白名单内。
+- 内容 ≤ 200 KB。
 
-### 忘记密码（发送重置邮件）
-```
-POST /api/forgot-password
-Content-Type: application/json
+**成功（200）**：`{"success": true, "name": "index.html"}`
 
-{ "email": "your@email.com" }
-```
+#### 3.2.3 删除文件
 
-**响应 200**: `{ "success": true, "message": "重置邮件已发送，请查收" }`
-**防刷**：每 IP 每小时 5 次，每邮箱每小时 3 次
+`DELETE /api/proj-file/<slug>/<路径>`
 
-### 重置密码
-```
-POST /api/reset-password
-Content-Type: application/json
+**成功（200）**：`{"success": true, "name": "old.js"}`
 
-{
-  "email": "your@email.com",
-  "token": "<邮件中的重置 token>",
-  "new_password": "newpassword123"
-}
-```
+**通用错误**：
 
-**响应 200**: `{ "success": true }`
-
-### 注销账号
-```
-POST /api/delete-account
-Authorization: Bearer <token>
-```
-
-**响应 200**: `{ "success": true, "message": "账号已注销" }`
-**注意**：永久删除账号及全部站点，不可恢复。每 IP 每小时最多 3 次。
+- `400`：路径无效、文件类型不允许、文件过大。
+- `404`：文件不存在。
+- `403`：非所有者。
 
 ---
 
-## 公开接口
+## 4. 公开接口（无需登录）
 
-以下接口无需登录。
+### 4.1 获取公告
 
-### 获取公告
-```
-GET /api/announcement
-```
+**端点**：`GET /api/announcement`
 
-**响应 200**
+**响应（200）**：
+
 ```json
 {
-  "announcement": "服务器将于周末维护",
-  "created_at": "2026-08-01T12:00:00Z"
+  "announcement": "维护通知...",
+  "created_at": "2026-08-20T12:00:00Z"
 }
 ```
-无公告时返回 `{ "announcement": null }`
 
-### 全站统计
-```
-GET /api/stats
-```
+无公告时 `"announcement": null`。
 
-**响应 200**
+---
+
+### 4.2 全站统计
+
+**端点**：`GET /api/stats`
+
+**响应（200）**：
+
 ```json
 {
-  "total_sites": 69,
-  "total_visits": 1280
+  "total_sites": 256,
+  "total_visits": 10240
 }
 ```
 
-### 获取 API 地址配置
-```
-GET /api/config
-```
+---
 
-**响应 200**: `{ "apiUrl": "https://page.goose.gs.cn" }`
-> 前端可动态获取 API 地址，避免硬编码。
+### 4.3 获取 API 基础地址
+
+**端点**：`GET /api/config`
+
+**响应（200）**：`{ "apiUrl": "https://page.goose.gs.cn" }`
 
 ---
 
-## 访问网站
+## 5. 站点访问（浏览器）
 
-### HTML 网站
-```
-https://page.goose.gs.cn/s/my-site
-```
+| 类型 | URL 模式 | 说明 |
+|------|----------|------|
+| HTML | `/s/` | 直接返回 HTML，自动注入 `` 修复相对路径。 |
+| Markdown | `/md/` | 渲染为带导航、复制按钮的完整页面。 |
+| 多文件 | `/p/` 或 `/p//<子路径>` | 返回对应文件，入口页自动注入 ``。 |
 
-### Markdown 网站
-```
-https://page.goose.gs.cn/md/my-doc
-```
-
-Markdown 网站会自动渲染为带有标题导航的 HTML 页面。
+**访问计数**：仅对 `/s/<slug>`、`/md/<slug>`、`/p/<slug>/index.html`（或 `index.md`）递增 `visit_count`，静态资源不计。
 
 ---
 
-## 错误码
+## 6. 错误码与限流速查
 
-| 状态码 | 说明 |
+### HTTP 状态码
+
+| 状态码 | 含义 |
 |--------|------|
 | 200 | 成功 |
-| 400 | 请求参数错误 |
+| 400 | 参数错误（字段缺失、格式非法、文件超限等） |
 | 401 | 未登录或 Token 无效 |
-| 403 | 无权操作（无权修改/删除他人网站） |
-| 404 | 站点不存在 |
-| 409 | 站点名称已被占用 |
-| 429 | 请求过于频繁（见下方限流说明） |
-| 5xx | 服务器内部错误 |
+| 403 | 无权限（非所有者） |
+| 404 | 资源不存在 |
+| 409 | Slug 已被占用 |
+| 429 | 触发限流（响应体含 `retryAfter` 秒数） |
+| 500 | 服务器内部错误 |
 
-**限流档位**
+### 限流明细
 
 | 接口 | 限制 |
 |------|------|
-| 创建网站 `/api/create` | 每 IP 每 60 秒 2 次，超限锁定 10 分钟 |
-| 注册 `/api/register` | 每 IP 每小时 5 次，超限锁定 1 小时 |
-| 登录 `/auth/login` | 每 IP 每 60 秒 20 次 |
-| 更新 `/api/update` | 每 IP 每 60 秒 10 次 |
-| 修改昵称 `/api/me` (PUT) | 每 IP 每 60 秒 20 次 |
-| 忘记密码 `/api/forgot-password` | 每 IP 每小时 5 次 + 每邮箱每小时 3 次 |
-| 重置密码 `/api/reset-password` | 每 IP 每小时 10 次 |
-| 注销 `/api/delete-account` | 每 IP 每小时 3 次 |
-| 其他普通接口 | 每 IP 每 60 秒 100 次 |
+| `/api/register` | 每 IP 每小时 5 次（锁定 1 小时） |
+| `/api/create` | 每 IP 每 60 秒 2 次（锁定 10 分钟） |
+| `/auth/login` | 每 IP 每 60 秒 20 次 |
+| `/auth/refresh` | 每 IP 每 60 秒 100 次 |
+| `/api/update` | 每 IP 每 60 秒 10 次 |
+| `/api/me` (PUT) | 每 IP 每 60 秒 20 次 |
+| `/api/forgot-password` | IP 每小时 5 次 + 邮箱每小时 3 次 |
+| `/api/reset-password` | 每 IP 每小时 10 次 |
+| `/api/delete-account` | 每 IP 每小时 3 次 |
+| `/api/file` (GET) | 每 IP 每 10 秒 10 次 |
+| 其他 GET 接口 | 每 IP 每 60 秒 100 次 |
 
 ---
 
-## 调用示例
+## 7. 补充说明
 
-### JavaScript
-```javascript
-const API_URL = 'https://page.goose.gs.cn';
+- **时区**：所有时间戳为 UTC（ISO 8601）。
+- **Slug 唯一性**：三种站点类型共享同一命名空间。
 
-// 登录
-const authRes = await fetch(API_URL + '/auth/login', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email: 'you@email.com', password: '***' })
-});
-const { access_token: token } = await authRes.json();
-localStorage.setItem('sb_token', token);
 
-// 注册
-const regRes = await fetch(API_URL + '/auth/signup', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ email: 'you@email.com', password: '***' })
-});
-const regData = await regRes.json();
-
-// 创建 HTML 网站
-const res = await fetch(API_URL + '/api/create', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({ slug: 'my-site', html: '<h1>Hello</h1>' })
-});
-const data = await res.json();
-console.log(data.url); // https://page.goose.gs.cn/s/my-site
-
-// 创建 Markdown 网站
-const mdRes = await fetch(API_URL + '/api/create', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({ slug: 'my-doc', md: '# 标题\n\n内容' })
-});
-const mdData = await mdRes.json();
-console.log(mdData.url); // https://page.goose.gs.cn/md/my-doc
-
-// 获取网站列表
-const sites = await fetch(API_URL + '/api/my-sites', {
-  headers: { 'Authorization': `Bearer ${token}` }
-}).then(r => r.json());
-
-// 获取网站内容
-const content = await fetch(API_URL + '/api/file/my-site', {
-  headers: { 'Authorization': `Bearer ${token}` }
-}).then(r => r.json());
-
-// 更新 HTML 网站
-await fetch(API_URL + '/api/update', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({ slug: 'my-site', html: '<h1>Updated!</h1>' })
-});
-
-// 更新 Markdown 网站
-await fetch(API_URL + '/api/update', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({ slug: 'md/my-doc', md: '# 新标题\n\n新内容' })
-});
-
-// 删除网站
-await fetch(API_URL + '/api/delete', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({ slug: 'my-site' })
-});
-```
-
-### Python
-```python
-import requests
-
-API_URL = 'https://page.goose.gs.cn'
-HEADERS_JSON = {'Content-Type': 'application/json'}
-
-# 登录
-r = requests.post(f'{API_URL}/auth/login',
-    json={'email': 'you@email.com', 'password': '***'})
-token = r.json()['access_token']
-HEADERS_API = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
-
-# 注册
-r = requests.post(f'{API_URL}/auth/signup',
-    json={'email': 'you@email.com', 'password': '***'})
-print(r.json())
-
-# 创建 HTML 网站
-r = requests.post(f'{API_URL}/api/create', json={
-    'slug': 'my-site',
-    'html': '<h1>Hello</h1>'
-}, headers=HEADERS_API)
-print(r.json())
-
-# 创建 Markdown 网站
-r = requests.post(f'{API_URL}/api/create', json={
-    'slug': 'my-doc',
-    'md': '# 标题\n\n内容'
-}, headers=HEADERS_API)
-print(r.json())
-
-# 获取网站列表
-r = requests.get(f'{API_URL}/api/my-sites', headers=HEADERS_API)
-
-# 获取网站内容
-r = requests.get(f'{API_URL}/api/file/my-site', headers=HEADERS_API)
-r = requests.get(f'{API_URL}/api/file/md/my-doc', headers=HEADERS_API)
-
-# 更新网站
-requests.post(f'{API_URL}/api/update', json={
-    'slug': 'my-site',
-    'html': '<h1>Updated!</h1>'
-}, headers=HEADERS_API)
-requests.post(f'{API_URL}/api/update', json={
-    'slug': 'md/my-doc',
-    'md': '# 新标题\n\n新内容'
-}, headers=HEADERS_API)
-
-# 删除网站
-requests.post(f'{API_URL}/api/delete', json={
-    'slug': 'my-site'
-}, headers=HEADERS_API)
-requests.post(f'{API_URL}/api/delete', json={
-    'slug': 'md/my-doc'
-}, headers=HEADERS_API)
-```
-
-### curl
-```bash
-# 登录获取 token
-TOKEN=$(curl -s -X POST \
-  https://page.goose.gs.cn/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"you@email.com","password":"***"}' \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
-
-# 注册
-curl -X POST https://page.goose.gs.cn/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{"email":"you@email.com","password":"***"}'
-
-# 创建 HTML 网站
-curl -X POST https://page.goose.gs.cn/api/create \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"slug":"my-site","html":"<h1>Hello</h1>"}'
-
-# 创建 Markdown 网站
-curl -X POST https://page.goose.gs.cn/api/create \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"slug":"my-doc","md":"# 标题\n\n内容"}'
-
-# 获取网站列表
-curl https://page.goose.gs.cn/api/my-sites \
-  -H "Authorization: Bearer $TOKEN"
-
-# 获取网站内容
-curl https://page.goose.gs.cn/api/file/my-site \
-  -H "Authorization: Bearer $TOKEN"
-curl https://page.goose.gs.cn/api/file/md/my-doc \
-  -H "Authorization: Bearer $TOKEN"
-
-# 更新 HTML 网站
-curl -X POST https://page.goose.gs.cn/api/update \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"slug":"my-site","html":"<h1>Updated!</h1>"}'
-
-# 更新 Markdown 网站
-curl -X POST https://page.goose.gs.cn/api/update \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"slug":"md/my-doc","md":"# 新标题\n\n新内容"}'
-
-# 删除网站
-curl -X POST https://page.goose.gs.cn/api/delete \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"slug":"my-site"}'
-curl -X POST https://page.goose.gs.cn/api/delete \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"slug":"md/my-doc"}'
-```
+<footer style="text-align: center; color: #888; font-size: 14px; padding: 20px 0; border-top: 1px solid #ddd;">
+  <p>© 2026 GooseHost. </p>
+  <p>
+    <a href="https://host.goose.gs.cn/" style="color: #02ff8e; text-decoration: none;">官网</a> &nbsp;|&nbsp;
+    <a href="mailto:support@mail.goose.gs.cn" style="color: #02ff8e; text-decoration: none;">联系我们</a>
+  </p>
+</footer>

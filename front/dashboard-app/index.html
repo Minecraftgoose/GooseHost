@@ -47,15 +47,22 @@
         ::-webkit-scrollbar-thumb:hover { background: rgba(2,255,142,0.5); }
         * { scrollbar-width: thin; scrollbar-color: rgba(2,255,142,0.25) rgba(255,255,255,0.03); }
 
-        /* ===== 动效设计令牌（统一缓动与时长，性能优先） ===== */
         :root {
             --accent: #02ff8e;
-            --ease-out: cubic-bezier(0.22, 1, 0.36, 1);  /* 顺滑减速，用于入场与交互动效 */
+            --ease-out: cubic-bezier(0.22, 1, 0.36, 1);  
             --dur-fast: 0.2s;
             --dur-base: 0.3s;
+            --bg-card: #1a1e24;
+            --border: rgba(2, 255, 142, 0.15);
+            --border-focus: rgba(2, 255, 142, 0.35);
+            --radius: 6px;
+            --input-height: 44px;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --color-fg: #eafff5;
+            --error: #ff5252;
+            --ann-duration: 20s;
         }
 
-        /* 全局防横向溢出兜底 */
         html, body { overflow-x: hidden; max-width: 100%; }
 
         /* ===== 必应壁纸背景 ===== */
@@ -255,7 +262,6 @@
             animation: deployEnter 0.55s var(--ease-out) both;
         }
 
-        /* 偏好 / 账户页分层入场 —— 右侧拉入 */
         @keyframes pullIn {
             from { opacity: 0; transform: translateX(32px) scale(0.97); }
             to   { opacity: 1; transform: translateX(0) scale(1); }
@@ -274,7 +280,6 @@
             animation: deployEnter 0.4s var(--ease-out) both;
         }
 
-        /* 概览页统计卡 —— 弹入 */
         @keyframes popReveal {
             from { opacity: 0; transform: scale(0.92); }
             to   { opacity: 1; transform: scale(1); }
@@ -1591,7 +1596,7 @@
             transform: scale(1.08);
         }
 
-        /* ===== 欢迎全屏动画（开屏后接入） ===== */
+        /* ===== 全屏 ===== */
         .welcome-screen {
             position: fixed;
             inset: 0;
@@ -1613,7 +1618,7 @@
         @keyframes welcome-in { from { opacity: 0; } to { opacity: 1; } }
         @keyframes welcome-out { from { opacity: 1; } to { opacity: 0; } }
 
-        /* ===== 公告横幅（无缝跑马灯，参考 gooseblog） ===== */
+        /* ===== 公告横幅 ===== */
         .announcement-bar {
             display: flex;
             align-items: center;
@@ -1663,14 +1668,12 @@
     </style>
 </head>
 <body class="splash-active">
-    <!-- 开屏加载 -->
     <div class="splash-screen" id="splashScreen">
         <svg class="infinity-wrap" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
             <path class="infinity-path" d="M 50,50 C 50,20 80,20 100,50 C 120,80 150,80 150,50 C 150,20 120,20 100,50 C 80,80 50,80 50,50 Z" />
         </svg>
         <img src="/logo.svg" class="splash-logo" alt="GooseHost">
     </div>
-    <!-- 欢迎全屏动画（开屏结束后接入） -->
     <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-text" id="welcomeText"></div>
     </div>
@@ -1690,7 +1693,6 @@
         </div>
     </nav>
 
-    <!-- 移动端遮罩层 -->
     <div class="sidebar-overlay" onclick="toggleSidebarMobile()"></div>
 
     <!-- 主布局 -->
@@ -1734,7 +1736,6 @@
 
         <!-- 主内容区 -->
         <main class="content">
-            <!-- 全局公告横幅（单行无缝跑马灯，参考 gooseblog 实现；不可关闭） -->
             <div class="announcement-bar" id="announcementBanner" style="display:none">
                 <span class="announcement-icon"><i class="fas fa-bullhorn"></i></span>
                 <div class="announcement-scroll" id="announcementScroll">
@@ -1790,7 +1791,7 @@
                         </div>
                         <div class="quick-action splash-action" style="animation: fadeInUp 0.4s ease forwards; opacity: 0; animation-delay: 0.5s" onclick="navigateTo('preferences')">
                             <i class="fas fa-cog"></i>
-                            <span>编辑器设置</span>
+                            <span>设置</span>
                         </div>
                     </div>
                 </div>
@@ -1810,6 +1811,10 @@
                         <a href="https://host.goose.gs.cn/docs/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.8s" target="_blank">
                             <i class="fas fa-file-contract"></i>
                             <span>用户协议</span>
+                        </a>
+						<a href="https://page.goose.gs.cn/md/cli/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.9s" target="_blank">
+                            <i class="fas fa-code"></i>
+                            <span>CLI 文档</span>
                         </a>
                     </div>
                 </div>
@@ -1919,7 +1924,7 @@
                         </div>
                     </div>
 
-                    <!-- MD 输入区（默认隐藏） -->
+                    <!-- MD 输入区 -->
                     <div id="md-input-group" style="display:none;">
                         <div class="form-group drop-target">
                             <label class="form-label">Markdown 内容</label>
@@ -1933,7 +1938,7 @@
                         </div>
                     </div>
 
-                    <!-- 多文件输入区（默认隐藏） -->
+                    <!-- 多文件输入区 -->
                     <div id="project-input-group" style="display:none;">
                         <div class="form-group">
                             <label class="form-label">多文件上传</label>
@@ -1985,12 +1990,12 @@
                 
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title"><i class="fas fa-code"></i> 编辑器设置</div>
+                        <div class="card-title"><i class="fas fa-code"></i> 设置</div>
                     </div>
                     <div class="setting-item">
                         <div class="setting-info">
                             <div class="setting-title">显示欢迎动画</div>
-                            <div class="setting-desc">开屏后展示全屏欢迎语与打字机效果</div>
+                            <div class="setting-desc">开屏后展示全屏欢迎语</div>
                         </div>
                         <label class="toggle">
                             <input type="checkbox" id="toggle-welcome" onchange="savePreferences()">
@@ -2212,7 +2217,6 @@
         document.getElementById('account-email').textContent = user?.email || '';
         document.getElementById('account-nickname').textContent =
             (user?.raw_user_meta_data && user.raw_user_meta_data.nickname) || '未设置';
-        // 从服务端拉取最新昵称（兜底 localStorage 旧数据）
         refreshNickname();
 
         // 加载设置
@@ -2240,7 +2244,6 @@
                 if (!confirmed) return;
                 const keys = ['preferences'];
                 keys.forEach(k => localStorage.removeItem(k));
-                // 清理活动记录
                 for (let i = localStorage.length - 1; i >= 0; i--) {
                     const key = localStorage.key(i);
                     if (key && key.startsWith('activities_')) {
@@ -2251,7 +2254,6 @@
             })();
         }
 
-        // 路径 → 页面 映射（history 路由）
         const ROUTES = {
             overview: '/dashboard',
             deploy: '/dashboard/deploy',
@@ -2260,49 +2262,41 @@
             account: '/dashboard/account'
         };
 
-        // 导航切换（导航项已通过内联 onclick 绑定，兼容 iOS/移动端非原生可点击元素）
         function navigateTo(page) {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             const navItem = document.querySelector(`[data-page="${page}"]`);
             if (navItem) navItem.classList.add('active');
 
-            // 更新浏览器地址栏（history 路由）
             const url = ROUTES[page] || '/dashboard';
             if (location.pathname !== url) history.pushState({ page }, '', url);
 
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(`page-${page}`).classList.add('active');
 
-            // 滚动到顶部
             window.scrollTo(0, 0);
             document.documentElement.scrollTop = 0;
             document.body.scrollTop = 0;
             document.getElementById('sidebar').scrollTop = 0;
 
-            // 关闭移动端侧边栏
             closeSidebar();
 
-            // 页面特定初始化
             if (page === 'sites') loadSites();
             if (page === 'deploy') updateEditorVisibility();
 
             // 打字机效果
             runPageTypewriter(page);
 
-            // 部署区域入场动画：强制重排以重新触发 CSS 动画
             if (page === 'deploy') {
                 document.querySelectorAll('#page-deploy .page-header, #page-deploy .card').forEach(el => {
                     el.style.animation = 'none';
-                    void el.offsetWidth; // 触发重排
+                    void el.offsetWidth; 
                     el.style.animation = '';
                 });
             }
         }
 
-        // ----- 前端路由：解析 URL 路径并导航 -----
         function parseRoute() {
             const raw = location.pathname.replace(/\/+$/, '');
-            // /dashboard 或 /dashboard.html
             if (raw === '/dashboard' || raw.endsWith('/dashboard.html')) return navigateTo('overview');
             const m = raw.match(/^\/dashboard\/(deploy|mysite|settings|account|preferences|overview)(?:\/(.+))?$/);
             if (m) {
@@ -2320,7 +2314,6 @@
 
         window.addEventListener('popstate', parseRoute);
 
-        // ===== 全局公告（单行无缝跑马灯，参考 gooseblog） =====
         (function loadAnnouncement() {
             try {
                 fetch(API_URL + '/api/announcement').then(r => r.json()).then(d => {
@@ -2332,7 +2325,6 @@
                         if (!bar || !textEl || !scrollEl || !trackEl) return;
                         textEl.textContent = d.announcement;
                         bar.style.display = 'flex';
-                        // 内容比容器宽才滚动：克隆一份放进 track，-50% 位移即无缝循环
                         if (textEl.scrollWidth > scrollEl.clientWidth + 4) {
                             var clone = textEl.cloneNode(true);
                             trackEl.appendChild(clone);
@@ -2347,12 +2339,10 @@
         document.addEventListener('DOMContentLoaded', parseRoute);
         if (document.readyState !== 'loading') parseRoute();
 
-        // ----- 修复：侧边栏关闭逻辑（移动端） -----
         function closeSidebarOnMobile(event) {
             if (window.innerWidth <= 768) {
                 const target = event.target;
                 const sidebar = document.getElementById('sidebar');
-                // 如果点击的是侧边栏内部，不做任何操作，防止误关
                 if (sidebar && sidebar.contains(target)) {
                     return;
                 }
@@ -2363,7 +2353,6 @@
         function closeSidebar() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.remove('open');
-            // 移动端清理 collapsed 类，避免残留
             if (window.innerWidth <= 768) {
                 sidebar.classList.remove('collapsed');
             }
@@ -2375,7 +2364,6 @@
                 closeSidebar();
             } else {
                 sidebar.classList.add('open');
-                // 确保移动端没有 collapsed 类影响显示
                 if (window.innerWidth <= 768) {
                     sidebar.classList.remove('collapsed');
                 }
@@ -2399,14 +2387,11 @@
             }
         }
 
-        // 移动端侧边栏切换（修复：移除 collapsed 类）
         function toggleSidebarMobile() {
             const sidebar = document.getElementById('sidebar');
-            // 移除可能残留的 collapsed 类，确保宽度正常
             sidebar.classList.remove('collapsed');
             sidebar.classList.toggle('open');
         }
-        // ----- 修复结束 -----
 
         // Toast
         function showToast(msg, type = 'success') {
@@ -2477,7 +2462,7 @@
                         localStorage.setItem('sb_user', JSON.stringify(user));
                     }
                 }
-            } catch { /* 忽略，使用 localStorage 兜底 */ }
+            } catch {  }
         }
 
         // 修改昵称
@@ -2554,7 +2539,7 @@
         const projDropZone = document.getElementById('projDropZone');
         window.projFiles = [];
 
-        // 收集多文件（input 选择 / 拖拽共用）
+        // 收集多文件
         function setProjFiles(fileList) {
             window.projFiles = Array.from(fileList || []).filter(f => f.size > 0);
             const names = window.projFiles.map(f => f.webkitRelativePath || f.name);
@@ -2570,7 +2555,7 @@
 
         projInput.addEventListener('change', (e) => setProjFiles(e.target.files));
 
-        // 多文件拖拽（支持整个文件夹：webkitRelativePath 带目录结构）
+        // 多文件拖拽
         projDropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             projDropZone.classList.add('dragover');
@@ -2589,7 +2574,7 @@
             }
         });
 
-        // Blob → base64（zip 上传用）
+        // Blob → base64
         function blobToBase64(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -2599,7 +2584,7 @@
             });
         }
 
-        // 拖拽合体：.drop-target 统一委托（deploy HTML/MD + 编辑弹窗 HTML/MD）
+        // 拖拽合体
         document.addEventListener('dragover', (e) => {
             const t = e.target.closest ? e.target.closest('.drop-target') : null;
             if (t && t.offsetParent !== null) {
@@ -2618,18 +2603,15 @@
             t.classList.remove('dragover');
             const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
             if (!file) { showToast('无法读取拖入的文件', 'error'); return; }
-            // 判断是 deploy 还是编辑弹窗、html 还是 md
             if (t.querySelector('#deploy-html')) handleFile(file, 'html');
             else if (t.querySelector('#deploy-md')) handleFile(file, 'md');
             else if (t.querySelector('#editHtml')) handleEditFile(file, 'html');
             else if (t.querySelector('#editMd')) handleEditFile(file, 'md');
         });
 
-        // 编辑弹窗：文件选择
         const editFileInput = document.getElementById('editFileInput');
         const editMdFileInput = document.getElementById('editMdFileInput');
 
-        // 编辑弹窗文件处理（写入对应的编辑框/Monaco 编辑器）
         function handleEditFile(file, target) {
             if (!file) return;
             const isMd = target === 'md';
@@ -2686,13 +2668,11 @@
             if (step3 && typeof deployStep !== 'undefined' && deployStep === 3) step3.classList.add('active');
         }
 
-        // ===== 引导式创建（wizard）：分步面板切换 =====
         let deployStep = 1;
 
         function goDeployStep(next) {
             if (next < 1 || next > 3) return;
 
-            // 从第 1 步前进前校验名称
             if (next > deployStep && deployStep === 1) {
                 const slug = document.getElementById('deploy-slug').value.trim();
                 if (!slug) { showToast('请输入网站名称', 'error'); return; }
@@ -2714,7 +2694,6 @@
             if (next === 3) {
                 setTimeout(() => {
                     try {
-                        // 预留：第三步可见时的后续处理
                     } catch (e) {}
                 }, 300);
             }
@@ -2740,7 +2719,6 @@
         }
         updateDeployNav();
 
-        // 提交站点到 macOS 开发者计划（部署成功后调用）
         async function submitToMacos(slug) {
             try {
                 const name = document.getElementById('macosName') ? document.getElementById('macosName').value.trim() : '';
@@ -2789,7 +2767,6 @@
                 showToast('名称格式不正确', 'error'); return;
             }
 
-            // 多文件：直接读用户上传的 zip 文件（base64 传给后端解压）
             if (siteType === 'project') {
                 const f = window.projFiles[0];
                 if (!f || !/\.zip$/i.test(f.name)) { showToast('请选择 .zip 压缩包', 'error'); return; }
@@ -2803,7 +2780,6 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="infinity-btn"></span> 部署中...';
 
-            // 嵌入 ♾️ 按钮内动画样式
             if (!document.getElementById('infinityBtnStyle')) {
                 const style = document.createElement('style');
                 style.id = 'infinityBtnStyle';
@@ -2854,11 +2830,9 @@
                         document.getElementById('deploy-html').value = '';
                     }
                     showToast('部署成功!');
-                    // 勾选了 macOS 开发者计划 → 自动提交审核
                     if (document.getElementById('macosSubmit') && document.getElementById('macosSubmit').checked) {
                         submitToMacos(slug);
                     }
-                    // 跳转到"我的网站"并刷新
                     navigateTo('sites');
                 } else {
                     showToast(data.error || '部署失败', 'error');
@@ -2870,10 +2844,8 @@
                 btn.innerHTML = '<i class="fas fa-rocket"></i> 部署网站';
             }
         }
-        // ===== 会话刷新：access_token 过期前自动换新（Supabase 双 token 机制） =====
         let refreshPromise = null;
 
-        // 解码 JWT payload 拿 exp
         function jwtExpiry(token) {
             try {
                 const parts = token.split('.');
@@ -2886,7 +2858,6 @@
             } catch { return null; }
         }
 
-        // 用 refresh_token 换新 access_token；成功返回 true
         async function refreshSession() {
             const rt = localStorage.getItem('sb_refresh_token');
             if (!rt) return false;
@@ -2903,7 +2874,6 @@
                     if (data.user) localStorage.setItem('sb_user', JSON.stringify(data.user));
                     return true;
                 }
-                // refresh_token 也失效 → 清掉强制重新登录
                 localStorage.removeItem('sb_refresh_token');
                 return false;
             } catch {
@@ -2911,15 +2881,12 @@
             }
         }
 
-        // 全局 fetch 封装（超时 + 401 自动刷新重试 + 过期前预刷新）
         async function apiFetch(url, options = {}) {
-            // 预刷新：access_token 剩余不足 5 分钟时先换新
             const cur = localStorage.getItem('sb_token');
             const exp = cur ? jwtExpiry(cur) : null;
             if (cur && exp && (exp - Date.now() < 5 * 60 * 1000)) {
                 await refreshSession();
             }
-            // 统一注入最新 token（覆盖调用方可能携带的旧值）
             const latest = localStorage.getItem('sb_token');
             const hdr = new Headers(options.headers || {});
             if (latest) hdr.set('Authorization', 'Bearer ' + latest);
@@ -2927,7 +2894,6 @@
             const timeout = setTimeout(() => controller.abort(), 15000);
             try {
                 let res = await fetch(url, { ...options, headers: hdr, signal: controller.signal });
-                // 401：先尝试刷新一次再重试；仍失败才踢去登录
                 if (res.status === 401 && localStorage.getItem('sb_refresh_token')) {
                     const ok = await refreshSession();
                     if (ok) {
@@ -3022,9 +2988,8 @@
             }
         }
 
-        // 站点详情（独立页面，URL: /dashboard/mysite/:slug）
+        // 站点详情
         async function showSiteDetail(slug) {
-            // 切换页面视图 + 更新地址栏
             history.pushState({ page: 'detail', slug }, '', `/dashboard/mysite/${encodeURIComponent(slug)}`);
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             const navSites = document.querySelector('[data-page="sites"]');
@@ -3649,7 +3614,6 @@
             });
         }
 
-        // 开屏动画结束后：接入欢迎全屏动画，再进入 dashboard
         setTimeout(() => {
             const splash = document.getElementById('splashScreen');
             if (splash) splash.remove();
@@ -3697,7 +3661,6 @@
         }
     </script>
 
-    <!-- 注销账号确认弹窗（自定义对话框） -->
     <div id="deleteAccountDialog" class="custom-dialog">
         <div class="dialog-card">
             <div class="dialog-header">
@@ -3709,7 +3672,7 @@
                     此操作将<strong style="color:var(--error);">永久删除</strong>你的账户、全部站点与存储文件，且<strong style="color:var(--error);">不可恢复</strong>。确定要继续吗？
                 </p>
                 <div id="deleteMsg" class="msg"></div>
-                <button id="deleteConfirmBtn" class="btn btn-danger ripple-btn" onclick="deleteAccount()">
+                <button id="deleteConfirmBtn" class="btn btn-danger ripple-btn" style="width:100%;justify-content:center;" onclick="deleteAccount()">
                     <i class="fas fa-user-slash"></i> 我确定，注销
                 </button>
                 <button onclick="closeDeleteModal()" style="margin-top:0.5rem;width:100%;height:var(--input-height);border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text-secondary);cursor:pointer;font-size:1rem;">取消</button>
