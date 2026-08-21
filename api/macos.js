@@ -1,14 +1,11 @@
 // ===== macOS 开发者计划提交 =====
-// 用户部署网站后可勾选"提交到 macOS 开发者计划"：
-// 部署后自动把站点 URL 提交给 dev.macos.goose.cc.cd 的审核 API，
-// 提交 ID 存 gh_site.macos_submit_id，详情页显示审核状态。
 
 import { getUserId } from './utils/jwt.js';
 import { jsonResp } from './utils/response.js';
 import { makeSupabase } from './utils/supabase.js';
 import { checkRateLimit } from './utils/rate-limit.js';
 
-const MACOS_API = 'https://dev.macos.goose.cc.cd';
+const MACOS_API = 'https://dev.macos.goose.gs.cn';
 
 // 站点 URL 拼接（与前端逻辑一致）
 function siteUrl(site) {
