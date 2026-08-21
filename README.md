@@ -32,7 +32,7 @@
 
 而有些人be like ：哎，你看我做的网页`https://localhost:8080`!
 
-![](https://tse1.explicit.bing.net/th/id/OIP.fDLRpe7hxXGkp0Gk-8cVLAHaII?r=0&rs=1&pid=ImgDetMain&o=7&rm=3)
+<p><img src="https://tse1.explicit.bing.net/th/id/OIP.fDLRpe7hxXGkp0Gk-8cVLAHaII?r=0&rs=1&pid=ImgDetMain&o=7&rm=3" alt="GooseHost Logo" width="100"></a></p>
 
 somebody get html belike ：我靠咋打开啊，这啥啊？
 
@@ -109,9 +109,12 @@ GooseHost/
 请阅读[使用手册](https://host.goose.gs.cn/docs/)
 > 不是这玩意啥子都会吧
 
-### 技术栈
-
-不写，没啥可写的
+### 文档页
+- [API文档](https://host.goose.gs.cn/api-docs/)
+- [更新日志](https://host.goose.gs.cn/changelog/)
+- [用户协议](https://host.goose.gs.cn/docs/?doc=terms)
+  > 是的有用户协议
+- [CLI文档](https://page.goose.gs.cn/md/cli/)
 
 ### 许可
 
