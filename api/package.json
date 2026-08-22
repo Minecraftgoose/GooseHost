@@ -1,10 +1,11 @@
 {
-  "name": "api",
+  "name": "goosehost-worker",
   "version": "1.0.0",
-  "description": "",
-  "main": "src/index.js",
+  "description": "GooseHost API Worker (CI 构建: esbuild -> worker.js -> Cloudflare)",
+  "main": "worker.js",
   "scripts": {
-    "deploy": "wrangler deploy --name gh-site-api-production",
+    "build": "esbuild index.js --bundle --format=esm --target=es2022 --outfile=worker.js --log-level=info",
+    "deploy": "npm run build && wrangler deploy",
     "dev": "wrangler dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -19,6 +20,6 @@
   },
   "devDependencies": {
     "esbuild": "^0.21.5",
-    "wrangler": "^3.114.17"
+    "wrangler": "^4.125.0"
   }
 }
