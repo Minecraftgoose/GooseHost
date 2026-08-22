@@ -46,7 +46,7 @@ export async function handleUpdate(request, env, corsHeaders) {
       return jsonResp({ error: 'Forbidden' }, 403, corsHeaders);
     }
 
-    // 按站点类型决定写哪个桶（type 驱动，不依赖请求内容判断）
+    // 按站点类型决定写哪个桶
     const isMd = site.type === 'md';
     let html = htmlInput;
     let storageContent = htmlInput;

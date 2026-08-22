@@ -12,7 +12,7 @@ export async function handleAdminStats(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 尝试使用 RPC 函数进行服务端聚合统计
+    //  RPC 函数
     const { data, error } = await supabase.rpc('get_site_stats');
 
     if (error) {

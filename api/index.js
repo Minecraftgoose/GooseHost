@@ -1,5 +1,4 @@
 ﻿// ===== GooseHost API 主入口 =====
-// 重构版：模块化路由分发
 
 import { getCorsHeaders } from './utils/cors.js';
 import { jsonResp } from './utils/response.js';
@@ -78,18 +77,17 @@ export default {
       return await handleGetMe(request, env, corsHeaders);
     }
 
-    // GET /api/config - 前端动态获取 API 地址
-    // 注意：不能用 env.API_URL（当前配的是已失效的 goose.gs.cn，会 522），直接返回请求来源域名
+    // GET /api/config
     if (url.pathname === '/api/config' && method === 'GET') {
       return jsonResp({ apiUrl: url.origin }, 200, corsHeaders);
     }
 
-    // GET /api/announcement - 用户端拉最新公告（公开）
+    // GET /api/announcement - 公告
     if (url.pathname === '/api/announcement' && method === 'GET') {
       return await handleGetAnnouncement(request, env, corsHeaders);
     }
 
-    // GET /api/stats - 全站统计（官网首页，公开）
+    // GET /api/stats - 全站统计
     if (url.pathname === '/api/stats' && method === 'GET') {
       return await handlePublicStats(request, env, corsHeaders);
     }
@@ -111,7 +109,7 @@ export default {
 
     // POST /auth/login - 代理登录
     if (url.pathname === '/auth/login' && method === 'POST') {
-      return await handleLogin(request, env, corsHeaders);   // 传递 corsHeaders
+      return await handleLogin(request, env, corsHeaders);  
     }
 
     // POST /auth/refresh - 刷新会话（refresh_token 换新 access_token）
@@ -119,14 +117,14 @@ export default {
       return await handleRefresh(request, env, corsHeaders);
     }
 
-    // POST /auth/signup - 代理注册（增强版）
+    // POST /auth/signup - 代理注册
     if (url.pathname === '/auth/signup' && method === 'POST') {
-      return await handleSignup(request, env, corsHeaders);  // 传递 corsHeaders
+      return await handleSignup(request, env, corsHeaders);  
     }
 
     // === 需要认证的路由 ===
 
-    // POST /api/delete-account - 注销账号（删除全部站点 + Auth 用户）
+    // POST /api/delete-account - 销号
     if (url.pathname === '/api/delete-account' && method === 'POST') {
       return await handleDeleteAccount(request, env, corsHeaders);
     }
@@ -144,11 +142,11 @@ export default {
     // GET /api/file/:slug - 获取站点文件 (支持 md/:slug)
     if (pathParts[0] === 'api' && pathParts[1] === 'file' && method === 'GET') {
       let slug = pathParts[2] || '';
-      if (pathParts[3]) slug = pathParts[3]; // /api/file/md/:slug 已是纯 slug
+      if (pathParts[3]) slug = pathParts[3];
       if (slug) return await handleGetFile(request, env, corsHeaders, slug);
     }
 
-    // GET /api/site-files/:slug - 站点文件列表（详情页）
+    // GET /api/site-files/:slug - 站点文件列表
     if (pathParts[0] === 'api' && pathParts[1] === 'site-files' && pathParts[2] && method === 'GET') {
       return await handleSiteFiles(request, env, corsHeaders, pathParts[2]);
     }
@@ -211,7 +209,6 @@ export default {
 
     // DELETE /api/admin/user/:userId - 删除用户（遗留路由）
     if (pathParts[0] === 'api' && pathParts[1] === 'admin' && pathParts[2] === 'user' && pathParts[3] && !pathParts[4] && method === 'DELETE') {
-      // 复用 delete-user 的逻辑
       return await handleAdminDeleteUser(request, env, corsHeaders);
     }
 
@@ -283,7 +280,7 @@ export default {
       return await handleServeProject(request, env, pathParts[1], pathParts.slice(2).join('/'));
     }
 
-    // GET /md/:slug - 访问 Markdown 站点（slug 为纯 slug，type 由 DB 决定）
+    // GET /md/:slug - 访问 Markdown 站点
     if (pathParts[0] === 'md' && pathParts[1] && !pathParts[2] && method === 'GET') {
       return await handleServeSite(request, env, pathParts[1]);
     }

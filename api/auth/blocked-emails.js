@@ -1,4 +1,4 @@
-// ===== 一次性邮箱黑名单 =====
+// ===== 黑名单 =====
 
 const BLOCKED_DOMAINS = [
   'text.com', 'tempmail.com', 'guerrillamail.com', 'mailinator.com',

@@ -1,6 +1,4 @@
-// ===== 多文件站点（project 类型）=====
-// 上传：前端 JSZip 打包 zip（base64）→ 这里 fflate 解压 → 白名单校验 → 写入 projects 桶
-// 访问：GET /p/:slug/... → 按路径返回 projects/<owner>/<slug>/<path>
+// ===== 多文件站点=====
 
 import { unzipSync } from 'fflate';
 import { isValidSlug } from '../utils/jwt.js';
@@ -72,7 +70,7 @@ function b64ToBytes(b64) {
   return out;
 }
 
-// 路径安全校验：防目录穿越 / 绝对路径 / 反斜杠
+// 路径安全校验
 function isSafePath(p) {
   if (!p || p.startsWith('/') || p.includes('\\')) return false;
   return !p.split('/').includes('..');
@@ -112,7 +110,7 @@ export async function handleCreateProject(request, env, corsHeaders, body, userI
   let hasIndex = false;
 
   for (const [path, data] of entries) {
-    if (data.length === 0) continue; // 空文件/目录项
+    if (data.length === 0) continue; 
     if (!isSafePath(path)) {
       return jsonResp({ error: `非法路径: ${path}` }, 400, corsHeaders);
     }
@@ -158,7 +156,7 @@ export async function handleCreateProject(request, env, corsHeaders, body, userI
       return jsonResp({ error: siteError?.message || '创建站点失败' }, 500, corsHeaders);
     }
 
-    // 写桶（逐个）
+    // 写桶
     const uploaded = [];
     for (const [path, data] of toUpload) {
       const storagePath = `projects/${userId}/${slugInput}/${path}`;
@@ -172,7 +170,6 @@ export async function handleCreateProject(request, env, corsHeaders, body, userI
         body: data,
       });
       if (!res.ok) {
-        // 回滚：删已上传文件 + DB 记录
         const written = uploaded.map(u => `projects/${userId}/${slugInput}/${u}`);
         if (written.length) {
           await supabase.storage.from('projects').remove(written).catch(() => {});
@@ -213,12 +210,10 @@ export async function handleServeProject(request, env, slug, subPath) {
     return new Response('Not Found', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
   }
 
-  // 兜底：请求目录时补 index.html；index.html 不存在时试 index.md
   let candidates = [rel];
   if (rel.endsWith('/')) {
     candidates = [rel + 'index.html', rel + 'index.md'];
   } else if (!rel.includes('.')) {
-    // 无扩展名路径（如 /p/gc/join）：可能是目录尾斜杠被吞，试目录下的 index
     candidates = [rel, rel + '/index.html', rel + '/index.md'];
   }
   if (rel === 'index.html') candidates = ['index.html', 'index.md'];
@@ -229,7 +224,6 @@ export async function handleServeProject(request, env, slug, subPath) {
     const storagePath = `projects/${site.owner_id}/${slug}/${cand}`;
     const res = await fetch(storageUrl(env, storagePath), { headers: anonHeaders });
     if (!res.ok) continue;
-    // 仅页面入口计数（index.html / index.md），静态资源不重复计
     if (cand === 'index.html' || cand === 'index.md') {
       try {
         await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/increment_visit`, {
@@ -246,7 +240,7 @@ export async function handleServeProject(request, env, slug, subPath) {
     const dot = cand.lastIndexOf('.');
     const ext = dot === -1 ? '' : cand.slice(dot + 1).toLowerCase();
     const mime = MIME[ext] || 'text/plain; charset=utf-8';
-    // HTML 注入 <base href>：用户上传的 HTML 多用相对路径，浏览器在带 query/尾斜杠访问时解析错位（href="style.css" → /p/style.css 而非 /p/wzq/style.css）
+
     if (mime === 'text/html; charset=utf-8') {
       const baseTag = `<base href="/p/${slug}/">`;
       const buf = await res.arrayBuffer();

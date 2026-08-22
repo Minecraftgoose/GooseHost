@@ -28,7 +28,7 @@ export async function handleDelete(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 先获取站点信息（需要 owner_id/type 来删除存储文件）
+    // 先获取站点信息
     const { data: site, error: fetchError } = await supabase
       .from('gh_site')
       .select('owner_id, type')
@@ -49,7 +49,7 @@ export async function handleDelete(request, env, corsHeaders) {
 
     if (delError) throw delError;
 
-    // 删除存储文件（按站点类型）
+    // 删除存储文件
     const isMarkdown = site.type === 'md';
     const bucket = isMarkdown ? 'md' : 'sites';
     const filePath = isMarkdown 
@@ -60,7 +60,6 @@ export async function handleDelete(request, env, corsHeaders) {
       await supabase.storage.from(bucket).remove([filePath]);
     } catch (err) {
       console.error('删除存储文件失败:', err.message);
-      // 不影响整体操作，只记录错误
     }
 
     return jsonResp({ success: true }, 200, corsHeaders);

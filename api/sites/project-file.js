@@ -1,11 +1,11 @@
-// ===== 多文件站点文件级操作（编辑/替换/删除）=====
+// ===== 多文件站点文件级操作=====
 
 import { getUserId } from '../utils/jwt.js';
 import { makeSupabase, storageUrl } from '../utils/supabase.js';
 import { jsonResp } from '../utils/response.js';
 import { getClientIP } from '../utils/rate-limit.js';
 
-// 与 project.js 保持一致的扩展名白名单
+//白名单
 const ALLOWED_EXTS = new Set([
   'html', 'htm', 'css', 'js', 'mjs', 'cjs', 'md', 'markdown',
   'json', 'txt', 'text', 'svg', 'xml', 'yml', 'yaml', 'toml',
@@ -57,20 +57,20 @@ const MIME = {
 
 const MAX_FILE_SIZE = 200 * 1024; // 单文件 200KB
 
-// 路径安全校验：防目录穿越 / 绝对路径 / 反斜杠
+// 路径安全校验
 function isSafePath(p) {
   if (!p || p.startsWith('/') || p.includes('\\')) return false;
   return !p.split('/').includes('..');
 }
 
-// 校验文件扩展名白名单
+// 校验文件白名单
 function checkExt(path) {
   const dot = path.lastIndexOf('.');
   const ext = dot === -1 ? '' : path.slice(dot + 1).toLowerCase();
   return ALLOWED_EXTS.has(ext);
 }
 
-// 鉴权：站点归属 + project 类型（admin 放行）
+// 鉴权：站点归属p类型
 async function authSite(env, request, slug, corsHeaders) {
   const userId = await getUserId(request, env);
   if (!userId) return { err: jsonResp({ error: 'Unauthorized' }, 401, corsHeaders) };
@@ -82,7 +82,6 @@ async function authSite(env, request, slug, corsHeaders) {
     .maybeSingle();
   if (error || !site) return { err: jsonResp({ error: 'Site not found' }, 404, corsHeaders) };
   if (site.type !== 'project') return { err: jsonResp({ error: '仅支持多文件站点' }, 400, corsHeaders) };
-  // admin 或 owner 可操作
   const adminIds = (env.ADMIN_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
   const isAdmin = adminIds.includes(userId);
   if (!isAdmin && site.owner_id !== userId) return { err: jsonResp({ error: 'Forbidden' }, 403, corsHeaders) };

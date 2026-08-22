@@ -1,10 +1,10 @@
-// ===== 获取站点文件列表（详情页用）=====
+// ===== 获取站点文件列表）=====
 
 import { getUserId } from '../utils/jwt.js';
 import { makeSupabase } from '../utils/supabase.js';
 import { jsonResp } from '../utils/response.js';
 
-// 递归列出桶内文件，返回相对路径（剥掉 owner/<slug>/ 前缀）
+// 递归列出桶内文件，返回相对路径
 async function listAllFiles(env, bucket, prefix) {
   const out = [];
   async function walk(pfx, rel) {
@@ -23,7 +23,6 @@ async function listAllFiles(env, bucket, prefix) {
       if (isDir) {
         await walk(pfx + it.name + '/', rel + it.name + '/');
       } else {
-        // 文件名只用相对路径，不带 owner/slug 前缀
         out.push({ name: rel + it.name, size: it.metadata?.size || 0 });
       }
     }
@@ -57,7 +56,6 @@ export async function handleSiteFiles(request, env, corsHeaders, slug) {
     if (site.type === 'project') {
       files = await listAllFiles(env, 'projects', `${site.owner_id}/${actualSlug}/`);
     } else {
-      // 单文件站点：固定 index 文件
       files = [{ name: site.type === 'md' ? 'index.md' : 'index.html', size: null }];
     }
 

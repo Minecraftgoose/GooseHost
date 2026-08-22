@@ -73,11 +73,10 @@ export async function handleAdminDeleteUser(request, env, corsHeaders) {
     const { error: authError } = await supabase.auth.admin.deleteUser(targetUserId);
     if (authError) {
       console.error('删除 Auth 用户失败:', authError.message);
-      // Auth 删除失败时，不清理邮箱映射，避免不一致
       return jsonResp({ error: '删除 Auth 用户失败: ' + authError.message }, 500, corsHeaders);
     }
 
-    // 5. 从邮箱映射中删除（仅在 Auth 删除成功后执行）
+    // 5. 从邮箱映射中删除
     try {
       const map = await fetchEmailMap(env);
       if (map[targetUserId]) {
@@ -86,7 +85,6 @@ export async function handleAdminDeleteUser(request, env, corsHeaders) {
       }
     } catch (err) {
       console.error('更新邮箱映射失败:', err.message);
-      // 不影响整体成功，仅记录错误
     }
 
     return jsonResp({
@@ -119,7 +117,7 @@ export async function handleAdminDeleteSite(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 先获取站点信息（需要 owner_id 来删除存储文件）
+    // 先获取站点信息
     const { data: site, error: fetchError } = await supabase
       .from('gh_site')
       .select('owner_id, type')
@@ -138,7 +136,7 @@ export async function handleAdminDeleteSite(request, env, corsHeaders) {
 
     if (delError) throw delError;
 
-    // 删除存储文件（按站点类型）
+    // 删除存储文件
     const isMarkdown = site.type === 'md';
     const bucket = isMarkdown ? 'md' : 'sites';
     const filePath = isMarkdown 

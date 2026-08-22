@@ -2,12 +2,6 @@
 
 const ALLOWED_ORIGINS = [
   'https://host.goose.gs.cn',
-  'https://chat.goose.gs.cn',
-  'https://0bd05515.gh-site-frontend.pages.dev',
-  'https://fd8f279a.gh-site-frontend.pages.dev',
-  'https://c5d1aff2.gh-site-frontend.pages.dev',
-  'https://9a2676c5.gh-site-frontend.pages.dev',
-  'https://2a9941ab.gh-site-frontend.pages.dev',
 ];
 
 function getCorsHeaders(request) {

@@ -3,7 +3,7 @@
 import { makeSupabase } from '../utils/supabase.js';
 import { fetchEmailMap, saveEmailMap } from '../utils/email-map.js';
 
-// 清理孤立用户（注册超过3小时且无站点的账户）
+// 3小时消户
 export async function cleanupOrphanUsers(env) {
   const supabase = makeSupabase(env);
 
@@ -23,7 +23,6 @@ export async function cleanupOrphanUsers(env) {
     console.error('无法获取 Auth 用户列表，使用 email-map 回退:', err.message);
     const map = await fetchEmailMap(env);
     authUserIds = Object.keys(map);
-    // email-map 无创建时间，跳过时间检查，仅清理无站点用户
   }
 
   if (!authUserIds.length) return { cleaned: 0, total: 0 };
@@ -37,10 +36,8 @@ export async function cleanupOrphanUsers(env) {
 
   // 筛选出需要删除的用户
   const toDelete = authUserIds.filter(id => {
-    // 有站点的用户保留
     if (ownersWithSites.has(id)) return false;
 
-    // 若无创建时间（回退到 email-map），则直接删除（无站点）
     if (!userCreations[id]) return true;
 
     const age = now - new Date(userCreations[id]).getTime();
@@ -63,7 +60,6 @@ export async function cleanupOrphanUsers(env) {
     } catch (_) {}
   }
 
-  // 统一保存邮箱映射（避免循环内重复 fetch/save）
   try {
     await saveEmailMap(env, map);
   } catch (_) {}

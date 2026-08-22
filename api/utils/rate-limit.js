@@ -9,7 +9,7 @@ const RATE_LIMIT = {
   login:  { limit: 20, windowSec: 60 },
   // 新功能防刷
   forgot_ip:    { limit: 5,  windowSec: 3600 },          // 每 IP 每小时最多 5 次找回密码
-  forgot_email: { limit: 3,  windowSec: 3600 },          // 每邮箱每小时最多 3 次（防轰炸单一邮箱）
+  forgot_email: { limit: 3,  windowSec: 3600 },          // 每邮箱每小时最多 3 次
   reset:        { limit: 10, windowSec: 3600 },          // 每 IP 每小时最多 10 次重置密码
   me_update:    { limit: 20, windowSec: 60 },            // 昵称修改：每 IP 每分钟最多 20 次
   delete_acct:  { limit: 3,  windowSec: 3600 },          // 注销账号：每 IP 每小时最多 3 次
@@ -26,7 +26,6 @@ async function checkRateLimit(request, env, action = 'normal', keyExtra = null) 
   const cfg = RATE_LIMIT[action] || RATE_LIMIT.normal;
   const now = Math.floor(Date.now() / 1000);
   const windowStart = Math.floor(now / cfg.windowSec) * cfg.windowSec;
-  // 若传了 keyExtra（如邮箱），则按该维度限流（跨 IP 共享计数）；否则按 IP 限流
   const dim = keyExtra ? keyExtra : ip;
   const countKey = `rl:${action}:${windowStart}:${dim}`;
 

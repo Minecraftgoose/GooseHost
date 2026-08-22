@@ -1,5 +1,4 @@
 // GooseHost 旧域名搬家提示 Worker
-// 部署到 page.goose.cc.cd，任意路径都返回搬家提示页
 
 const NEW_HOST = 'page.goose.gs.cn';
 

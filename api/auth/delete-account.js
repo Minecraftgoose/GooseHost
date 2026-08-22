@@ -1,4 +1,4 @@
-// ===== 注销账号：删除该用户全部站点 + 存储文件 + Auth 用户 =====
+// ===== 注销账号 =====
 
 import { getUserId } from '../utils/jwt.js';
 import { checkRateLimit } from '../utils/rate-limit.js';
@@ -17,7 +17,7 @@ export async function handleDeleteAccount(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 1. 查出该用户所有站点（name 即 slug，md 站带 md/ 前缀）
+    // 1. 用户所有站点
     const { data: sites, error: selErr } = await supabase
       .from('gh_site')
       .select('name, type')
@@ -49,7 +49,7 @@ export async function handleDeleteAccount(request, env, corsHeaders) {
       .eq('owner_id', userId);
     if (delErr) throw delErr;
 
-    // 4. 删除 Supabase Auth 用户（Admin API，必须使用 service_role）
+    // 4. 删除 Supabase Auth 用户
     const delRes = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
       method: 'DELETE',
       headers: {

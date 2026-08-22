@@ -9,7 +9,7 @@ function isValidSlugWithSlash(slug) {
   return slug && slug.length >= 1 && slug.length <= 128 && /^[\u4e00-\u9fa5a-zA-Z0-9_\-.~/]+$/.test(slug);
 }
 
-// 递归列出 project 桶内文件（相对路径 + 大小 + 总计）
+// 递归列出 project 桶内文件
 async function listProjectFiles(env, ownerId, slug) {
   const out = [];
   let total = 0;
@@ -146,7 +146,7 @@ export async function handleAdminSiteUpdate(request, env, corsHeaders, slugEncod
         return jsonResp({ success: true, message: '没有内容需要更新' }, 200, corsHeaders);
       }
       if (md.length > 500 * 1024) {
-        return jsonResp({ error: 'Markdown 内容超过 500KB' }, 400, corsHeaders);
+        return jsonResp({ error: 'Markdown 内容超过 500KB，你想撑死GooseHost吗？' }, 400, corsHeaders);
       }
       storagePath = `md/${site.owner_id}/${cleanSlug}/index.md`;
       contentType = 'text/markdown; charset=utf-8';
@@ -157,7 +157,7 @@ export async function handleAdminSiteUpdate(request, env, corsHeaders, slugEncod
         return jsonResp({ success: true, message: '没有内容需要更新' }, 200, corsHeaders);
       }
       if (html.length > 500 * 1024) {
-        return jsonResp({ error: 'HTML 超过 500KB' }, 400, corsHeaders);
+        return jsonResp({ error: 'HTML 超过 500KB，你想撑死GooseHost吗？' }, 400, corsHeaders);
       }
       storagePath = `sites/${site.owner_id}/${cleanSlug}/index.html`;
       contentType = 'text/html; charset=utf-8';

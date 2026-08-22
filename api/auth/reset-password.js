@@ -25,7 +25,6 @@ export async function handleResetPassword(request, env, corsHeaders) {
   }
 
   try {
-    // Supabase Auth: PUT /auth/v1/user 用邮件里的 access_token 更新密码
     const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
       method: 'PUT',
       headers: {

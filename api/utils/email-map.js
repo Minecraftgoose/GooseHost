@@ -26,10 +26,10 @@ async function saveEmailMap(env, map) {
       },
       body: JSON.stringify(map),
     });
-  } catch { /* best effort */ }
+  } catch {  }
 }
 
-// 同步邮箱映射（从 Supabase Auth）
+// 同步邮箱映射
 async function syncEmailMap(env) {
   try {
     const supabase = makeSupabase(env);

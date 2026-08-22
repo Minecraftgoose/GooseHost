@@ -1,4 +1,4 @@
-// ===== 管理员 - 用户列表（分页）=====
+// ===== 管理员 - 用户列表=====
 
 import { isAdmin } from '../utils/jwt.js';
 import { makeSupabase } from '../utils/supabase.js';
@@ -6,7 +6,6 @@ import { fetchEmailMap } from '../utils/email-map.js';
 import { jsonResp } from '../utils/response.js';
 import { getPublicBaseUrl } from '../utils/site-url.js';
 
-// 辅助：根据站点类型构建正确的 URL 路径
 function buildSiteUrl(s) {
   if (s.type === 'md') {
     return `/md/${encodeURIComponent(s.name)}`;

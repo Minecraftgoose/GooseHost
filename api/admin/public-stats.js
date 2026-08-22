@@ -1,8 +1,8 @@
-// ===== 公开统计（官网首页用）=====
+// ===== 公开统计=====
 
 import { makeSupabase } from '../utils/supabase.js';
 
-// GET /api/stats - 全站统计（公开，纯 DB 查询避免子请求超限）
+// GET /api/stats - 全站统计
 export async function handlePublicStats(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);

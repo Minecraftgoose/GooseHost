@@ -30,7 +30,7 @@ export async function handleCreate(request, env, corsHeaders) {
   const htmlInput = body?.html || '';
   const mdInput = body?.md || '';
 
-  // 多文件站点（project 类型）单独处理
+  // 多文件站点单独处理
   if (body?.type === 'project') {
     return await handleCreateProject(request, env, corsHeaders, body, userId);
   }
@@ -62,7 +62,7 @@ export async function handleCreate(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 检查站点名是否已被占用（name 已统一为纯 slug，不带 md/ 前缀）
+    // 检查站点名是否已被占用
     const { data: existing } = await supabase.from('gh_site').select('id').eq('name', actualSlug).maybeSingle();
     if (existing) return jsonResp({ error: '该站点名称已被占用' }, 409, corsHeaders);
 
@@ -94,7 +94,6 @@ export async function handleCreate(request, env, corsHeaders) {
     });
 
     if (!storageRes.ok) {
-      // 回滚：删除站点记录
       await supabase.from('gh_site').delete().eq('id', site.id);
       return jsonResp({ error: '文件上传失败，请稍后重试' }, 500, corsHeaders);
     }

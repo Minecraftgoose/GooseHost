@@ -3,19 +3,17 @@
 import { marked } from 'marked';
 import { makeSupabaseAnon, storageUrl } from '../utils/supabase.js';
 
-// 配置 marked 生成 URL-safe 的 heading ID（旧版 serve.js 配置，更稳定）
+// 配置 marked 生成 URL-safe 的 heading ID
 marked.use({
   renderer: {
     heading(token) {
       const text = token.text || '';
       const level = token.depth || 1;
       const raw = token.raw || '';
-      // 提取标题原始文本（去掉开头的 ## 和空格，处理 ## - xxx 的情况）
       const rawText = raw
         .replace(/^#{1,6}[\s]*/, '')
         .replace(/[#*_`~]/g, '')
         .trim();
-      // 生成 URL-safe slug，保留标题中的 - 分隔符
       const id = rawText
         .toLowerCase()
         .replace(/[^a-z0-9\u4e00-\u9fa5\s-]/g, '')
@@ -130,7 +128,7 @@ export async function handleServeSite(request, env, slug) {
   // 兼容旧格式：slug 带 md/ 前缀时剥掉
   const actualSlug = slug.startsWith('md/') ? slug.replace('md/', '') : slug;
 
-  // 查询站点（name 已是纯 slug，type 由 DB 决定）
+  // 查询站点
   const { data: site, error: siteError } = await supabase
     .from('gh_site')
     .select('owner_id, type')
@@ -169,9 +167,6 @@ export async function handleServeSite(request, env, slug) {
     });
   } catch (e) {}
 
-  // HTML 注入 <base>：用户上传的 HTML 多用相对路径（href="style.css"），浏览器在带 query string
-  // 或尾斜杠变体访问时解析会错位（href="style.css" → /p/style.css 而非 /p/wzq/style.css）。
-  // 显式注入 base href 让所有相对 URL 都按站点根解析，彻底避免这个坑。
   const injectBase = (html, prefix) => {
     const baseTag = `<base href="${prefix}">`;
     if (/<head>/i.test(html)) return html.replace(/<head>/i, '<head>' + baseTag);
@@ -180,7 +175,7 @@ export async function handleServeSite(request, env, slug) {
   };
   const content = await storageRes.text();
 
-  // Markdown 站点需要渲染为 HTML 并套上 API 文档同款样式框架
+  // Markdown 站点
   if (isMdSite) {
     const body = marked.parse(content);
     const title = escapeHtml(actualSlug) + ' - GooseHost';
@@ -376,7 +371,6 @@ export async function handleServeSite(request, env, slug) {
             .container { padding: 20px 12px 16px; }
             #md-content h1 { font-size: 19px; }
         }
-        /* 竖屏表格竖起来 */
         @media (max-width: 640px) {
             #md-content table,
             #md-content tbody,
@@ -423,11 +417,9 @@ export async function handleServeSite(request, env, slug) {
     </main>
     <footer class="md-footer"><a href="https://host.goose.gs.cn/" target="_blank">GooseHost</a></footer>
     <script>
-    // 修复 Markdown 锚点兼容：支持 #xxx 和 #-xxx 两种写法
     document.querySelectorAll('a[href^="#-"]').forEach(a => a.href = a.href.replace('#-', '#'));
     if (location.hash.startsWith('#-')) location.hash = location.hash.slice(1);
 
-    // 复制按钮功能：始终显示，点击复制，图标切换
     document.querySelectorAll('#md-content pre').forEach(pre => {
       if (pre.querySelector('.copy-btn')) return;
       const btn = document.createElement('button');
@@ -456,7 +448,7 @@ export async function handleServeSite(request, env, slug) {
     });
   }
 
-  // HTML 站点直接返回（注入 <base href> 修复相对路径解析问题）
+  // HTML 站点直接返回
   return new Response(injectBase(content, `/s/${actualSlug}/`), {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',

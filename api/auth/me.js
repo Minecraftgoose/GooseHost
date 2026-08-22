@@ -1,4 +1,4 @@
-// ===== 当前用户信息（读取 / 更新昵称）=====
+// ===== 当前用户信息=====
 
 import { jsonResp } from '../utils/response.js';
 import { checkRateLimit } from '../utils/rate-limit.js';

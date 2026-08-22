@@ -1,8 +1,8 @@
-﻿// ===== 代理注册（含临时邮箱拦截 + MX 验证）=====
+﻿// ===== 代理注册=====
 
 import { jsonResp } from '../utils/response.js';
 
-// 一次性邮箱黑名单（完整版）
+// 黑名单
 const DISPOSABLE = new Set([
   'mailinator.com','guerrillamail.com','guerrillamail.net','10minutemail.com',
   'tempmail.com','temp-mail.org','yopmail.com','maildrop.cc','harakirimail.com',
@@ -127,7 +127,7 @@ export async function handleSignup(request, env, corsHeaders) {
       return jsonResp({ error: '邮箱格式错误' }, 400, corsHeaders);
     }
 
-    // 一次性邮箱黑名单
+    // 黑名单
     if (DISPOSABLE.has(domain)) {
       return jsonResp({ error: '不支持临时邮箱注册' }, 400, corsHeaders);
     }
@@ -144,10 +144,9 @@ export async function handleSignup(request, env, corsHeaders) {
         return jsonResp({ error: '邮箱域名无效，请检查拼写' }, 400, corsHeaders);
       }
     } catch {
-      // MX 检查失败时放过，避免因 DNS 查询超时阻断正常注册
     }
 
-    // 代理到 Supabase Auth
+    //Supabase Auth
     const supabaseRes = await fetch(`${env.SUPABASE_URL}/auth/v1/signup`, {
       method: 'POST',
       headers: {
@@ -162,7 +161,7 @@ export async function handleSignup(request, env, corsHeaders) {
       return jsonResp({ error: supabaseData.msg || supabaseData.message || '注册失败' }, 400, corsHeaders);
     }
 
-    return jsonResp({ success: true, message: '验证邮件已发送，请查收' }, 200, corsHeaders);
+    return jsonResp({ success: true, message: '验证邮件发给你了，请查收' }, 200, corsHeaders);
   } catch {
     return jsonResp({ error: '服务器错误' }, 500, corsHeaders);
   }

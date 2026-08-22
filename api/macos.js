@@ -1,4 +1,4 @@
-// ===== macOS 开发者计划提交 =====
+// ===== macOS 开发者计划 =====
 
 import { getUserId } from './utils/jwt.js';
 import { jsonResp } from './utils/response.js';
@@ -7,7 +7,7 @@ import { checkRateLimit } from './utils/rate-limit.js';
 
 const MACOS_API = 'https://dev.macos.goose.gs.cn';
 
-// 站点 URL 拼接（与前端逻辑一致）
+// 站点 URL 拼接
 function siteUrl(site) {
   const prefix = site.type === 'md' ? '/md/' : (site.type === 'project' ? '/p/' : '/s/');
   return 'https://page.goose.gs.cn' + prefix + encodeURIComponent(site.name);
@@ -26,7 +26,7 @@ export async function handleMacosSubmit(request, env, corsHeaders) {
   const slug = (body?.slug || '').trim();
   if (!slug) return jsonResp({ error: '缺少 slug' }, 400, corsHeaders);
 
-  // 必填字段（前端表单必填，后端强制校验）
+  // 必填字段）
   const name = (body?.name || '').trim();
   const icon_url = (body?.icon_url || '').trim();
   const description = (body?.description || '').trim();
@@ -58,7 +58,7 @@ export async function handleMacosSubmit(request, env, corsHeaders) {
     if (error || !site) return jsonResp({ error: '站点不存在' }, 404, corsHeaders);
     if (site.owner_id !== userId) return jsonResp({ error: 'Forbidden' }, 403, corsHeaders);
 
-    // 已提交过：返回现有 ID，不重复提交
+    // 已提交过
     if (site.macos_submit_id) {
       return jsonResp({ already_submitted: true, id: site.macos_submit_id, message: '该站点已提交过审核' }, 200, corsHeaders);
     }

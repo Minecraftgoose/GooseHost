@@ -1,4 +1,4 @@
-// ===== 刷新登录会话（代理 Supabase refresh_token 换新 access_token） =====
+// ===== 刷新登录会话 =====
 
 import { checkRateLimit } from '../utils/rate-limit.js';
 import { jsonResp } from '../utils/response.js';

@@ -1,4 +1,4 @@
-// ===== 管理员模块导出 =====
+// ===== 管理员模块 =====
 
 export * from './stats.js';
 export * from './users.js';

@@ -1,6 +1,4 @@
 // ===== JWT 工具 =====
-// 验证方式：将 JWT 发给 Supabase Auth 服务端验证
-// 兼容 HS256 / ES256 任何签名算法
 
 function decodeJWTPayload(token) {
   try {
@@ -21,7 +19,6 @@ async function getUserId(request, env) {
   // 向 Supabase Auth 验证 token
   const supabaseUrl = (env.SUPABASE_URL || '').replace(/\/$/, '');
   if (!supabaseUrl) {
-    // 降级：不解签，仅 decode（无 SUPABASE_URL ��）
     return decodeJWTPayload(token)?.sub || null;
   }
 

@@ -1,4 +1,4 @@
-// ===== 管理员 - 站点列表（分页）=====
+// ===== 管理员 - 站点列表=====
 
 import { isAdmin } from '../utils/jwt.js';
 import { checkRateLimit } from '../utils/rate-limit.js';
@@ -29,7 +29,7 @@ export async function handleAdminSites(request, env, corsHeaders) {
     // 获取 email map
     const emailMap = await fetchEmailMap(env);
 
-    // 尝试使用 RPC 函数获取分页站点列表
+    //  RPC 函数
     const { data, error } = await supabase
       .rpc('get_sites_paginated', {
         p_limit: limit,

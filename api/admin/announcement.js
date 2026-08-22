@@ -4,7 +4,7 @@ import { isAdmin } from '../utils/jwt.js';
 import { makeSupabase } from '../utils/supabase.js';
 import { jsonResp } from '../utils/response.js';
 
-// GET /api/announcement - 用户端拉最新激活公告（公开）
+// GET /api/announcement - 激活公告
 export async function handleGetAnnouncement(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
@@ -46,7 +46,7 @@ export async function handleAdminAnnouncement(request, env, corsHeaders) {
       return jsonResp({ success: true, message: '公告已清除' }, 200, corsHeaders);
     }
 
-    // set：停用旧的，发新的
+    // 停旧发新
     const content = (body?.content || '').trim();
     if (!content) return jsonResp({ error: '公告内容不能为空' }, 400, corsHeaders);
     if (content.length > 500) return jsonResp({ error: '公告内容超过 500 字符' }, 400, corsHeaders);
