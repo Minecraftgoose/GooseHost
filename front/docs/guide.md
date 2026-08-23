@@ -1,4 +1,6 @@
-# GooseHost 用户使用手册
+<p style="text-align: center;"><img src="https://host.goose.gs.cn/logo.svg" alt="GooseHost Logo" style="height:auto; width:auto;"></p>
+
+<h1 style="text-align: center;">使用手册</h1>
 
 > 最后更新：2026-08-08
 >
@@ -116,3 +118,12 @@ Dashboard → 账户设置 → 注销账号。确认后**永久删除账号及�
 - **用户协议与隐私政策**：本站顶部导航「用户协议」
 
 有问题欢迎反馈，我们会持续完善手册。
+
+
+<footer style="text-align: center; color: #888; font-size: 14px; padding: 20px 0; border-top: 1px solid #ddd;">
+  <p>© 2026 GooseHost. </p>
+  <p>
+    <a href="https://host.goose.gs.cn/" style="color: #02ff8e; text-decoration: none;">官网</a> &nbsp;|&nbsp;
+    <a href="mailto:support@mail.goose.gs.cn" style="color: #02ff8e; text-decoration: none;">联系我们</a>
+  </p>
+</footer>

@@ -1,6 +1,23 @@
-# GooseHost 更新日志
+<p style="text-align: center;"><img src="https://host.goose.gs.cn/logo.svg" alt="GooseHost Logo" style="height:auto; width:auto;"></p>
+
+<h1 style="text-align: center;">更新日志</h1>
 
 > 记录 GooseHost 的每一次更新。
+
+---
+
+## 🚀 v1.2.1 - 2026年8月20日
+
+### 美化
+- 文档页面全部使用GooseHostlogo
+### 修复
+- 修复dashboard仍显示**编辑器设置**问题
+- 修复无法上传至macOS开发者计划问题
+- 修复注册显示注册失败问题
+### 关于GooseHostCLI
+- GooseHostCLI恢复维护
+> 当前版本1.0.31,[CLI文档](https://page.goose.gs.cn/md/cli)
+- GooseHostdesktop暂时没有维护计划
 
 ---
 
@@ -15,7 +32,7 @@
 - **Admin 站点详情**：多文件站点文件树、存储占用预览、删除前展示文件清单
 - **多文件站点 IP 记录**：修复多文件站点创建时未记录来源 IP 的问题
 - **首页全站统计**：官网首页展示托管网站数与累计访问量
-- **引导式创建向导**：部署页三步引导（填名称 → 选类型 → 传内容），支持 Monaco 编辑器
+- **引导式创建向导**：部署页三步引导（填名称 → 选类型 → 传内容）
 
 ### 修复
 - **相对路径解析**：用户站点 HTML 内相对路径（style.css 等）在带参数访问时解析错位导致 404，已注入 `<base>` 修复
@@ -266,3 +283,11 @@
 - 账户设置 - 用户信息
 
 ---
+
+<footer style="text-align: center; color: #888; font-size: 14px; padding: 20px 0; border-top: 1px solid #ddd;">
+  <p>© 2026 GooseHost. </p>
+  <p>
+    <a href="https://host.goose.gs.cn/" style="color: #02ff8e; text-decoration: none;">官网</a> &nbsp;|&nbsp;
+    <a href="mailto:support@mail.goose.gs.cn" style="color: #02ff8e; text-decoration: none;">联系我们</a>
+  </p>
+</footer>
