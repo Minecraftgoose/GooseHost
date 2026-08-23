@@ -57,52 +57,123 @@ SUPABASE负责用户认证和储存（有1GB空间）（其实cloudflareR2更好
 ### 项目结构
 
 ```
-GooseHost/
-├── api/                          
-│   ├── src/
-│   │   ├── index.js             
-│   │   ├── auth/                
-│   │   │   ├── login.js         
-│   │   │   ├── register.js      
-│   │   │   ├── refresh.js       
-│   │   │   └── reset.js         
-│   │   ├── sites/               
-│   │   │   ├── create.js        
-│   │   │   ├── list.js    
-│   │   │   ├── update.js   
-│   │   │   ├── delete.js     
-│   │   │   └── files.js         
-│   │   ├── admin/
-│   │   ├── macos/  
-│   │   └── utils/            
-│   │       ├── rate-limit.js   
-│   │       └── config.js       
-│   └── package.json           
-│
-├── front/                     
-│   ├── index.html               
-│   ├── login.html               
-│   ├── register.html            
-│   ├── reset-password.html       
-│   ├── admin.html               
-│   ├── dashboard-app/           
-│   │   └── index.html            
-│   ├── docs/                    
-│   ├── api-docs/               
-│   ├── changelog/            
-│   ├── status/                   
-│   ├── fonts/                  
-│   ├── icons/                 
-│   ├── logo.svg                
-│   ├── manifest.json             
-│   ├── sw.js                   
-│   ├── moved-banner.js          
-│   ├── _headers                  
-│   ├── _redirects                
-│   ├── robots.txt
-│   └── sitemap.xml             
-│
-└── LICENSE                     
+GooseHost
+├─ front
+│  ├─ app.js
+│  ├─ BingSiteAuth.xml
+│  ├─ index.html
+│  ├─ logo.svg
+│  ├─ manifest.json
+│  ├─ moved-banner.js
+│  ├─ robots.txt
+│  ├─ sitemap.xml
+│  ├─ style.css
+│  ├─ sw.js
+│  ├─ _headers
+│  ├─ _redirects
+│  ├─ status
+│  │  ├─ app.js
+│  │  ├─ index.html
+│  │  └─ style.css
+│  ├─ reset-password
+│  │  ├─ app.js
+│  │  ├─ index.html
+│  │  └─ style.css
+│  ├─ register
+│  │  ├─ app.js
+│  │  ├─ index.html
+│  │  └─ style.css
+│  ├─ login
+│  │  ├─ app.js
+│  │  ├─ index.html
+│  │  └─ style.css
+│  ├─ icons
+│  │  ├─ favicon.ico
+│  │  ├─ icon-1024x1024.png
+│  │  ├─ icon-128x128.png
+│  │  ├─ icon-16x16.png
+│  │  ├─ icon-180x180.png
+│  │  ├─ icon-192x192.png
+│  │  ├─ icon-256x256.png
+│  │  ├─ icon-32x32.png
+│  │  ├─ icon-48x48.png
+│  │  ├─ icon-512x512.png
+│  │  ├─ icon-64x64.png
+│  │  └─ social-avatar-500x500.png
+│  ├─ fonts
+│  │  └─ DingTalk JinBuTi.ttf
+│  ├─ docs
+│  │  ├─ guide.md
+│  │  ├─ index.html
+│  │  └─ terms.md
+│  ├─ dashboard
+│  │  ├─ app.js
+│  │  ├─ index.html
+│  │  └─ style.css
+│  ├─ changelog
+│  │  ├─ changelog.md
+│  │  └─ index.html
+│  ├─ api-docs
+│  │  ├─ api.md
+│  │  └─ index.html
+│  └─ admin
+│     ├─ app.js
+│     ├─ index.html
+│     └─ style.css
+└─ api
+   ├─ .gitignore
+   ├─ debug.js
+   ├─ index.js
+   ├─ macos.js
+   ├─ moved-worker.js
+   ├─ package-lock.json
+   ├─ package.json
+   ├─ wrangler.toml
+   ├─ utils
+   │  ├─ cors.js
+   │  ├─ email-map.js
+   │  ├─ index.js
+   │  ├─ jwt.js
+   │  ├─ rate-limit.js
+   │  ├─ response.js
+   │  ├─ site-url.js
+   │  └─ supabase.js
+   ├─ sites
+   │  ├─ create.js
+   │  ├─ delete.js
+   │  ├─ file.js
+   │  ├─ files.js
+   │  ├─ index.js
+   │  ├─ my-sites.js
+   │  ├─ project-file.js
+   │  ├─ project.js
+   │  ├─ serve.js
+   │  └─ update.js
+   ├─ jobs
+   │  ├─ cleanup.js
+   │  └─ index.js
+   ├─ auth
+   │  ├─ blocked-emails.js
+   │  ├─ delete-account.js
+   │  ├─ forgot-password.js
+   │  ├─ index.js
+   │  ├─ login.js
+   │  ├─ me.js
+   │  ├─ refresh.js
+   │  ├─ register.js
+   │  ├─ reset-password.js
+   │  └─ signup.js
+   └─ admin
+      ├─ announcement.js
+      ├─ delete-user.js
+      ├─ index.js
+      ├─ public-stats.js
+      ├─ site-detail.js
+      ├─ sites.js
+      ├─ stats.js
+      ├─ sync-emails.js
+      ├─ system-status.js
+      └─ users.js                 
 ```
 
 ### 快速开始
