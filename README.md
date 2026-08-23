@@ -40,7 +40,7 @@ somebody get html belike ：我靠咋打开啊，这啥啊？
 - cloudflare：笑而不语
 - netlify：我高兴给你墙两天
 - vercel：哦，你滴邮箱有问题
-- surge：你把电脑打开在给我下载个Node.js。。。
+- surge：你把电脑打开再给我下载个Node.js。。。
 
 所以GooseHost 就是为了给那些拿着一个HTML着急变成URL的friends用的
 
