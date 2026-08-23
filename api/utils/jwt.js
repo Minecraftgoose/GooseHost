@@ -16,7 +16,6 @@ async function getUserId(request, env) {
   if (!header || !header.startsWith('Bearer ')) return null;
   const token = header.substring(7);
 
-  // 向 Supabase Auth 验证 token
   const supabaseUrl = (env.SUPABASE_URL || '').replace(/\/$/, '');
   if (!supabaseUrl) {
     return decodeJWTPayload(token)?.sub || null;

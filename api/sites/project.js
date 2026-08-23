@@ -7,7 +7,6 @@ import { jsonResp } from '../utils/response.js';
 import { getPublicBaseUrl } from '../utils/site-url.js';
 import { getClientIP } from '../utils/rate-limit.js';
 
-// 只允许代码/文本类文件（图片、视频、音频、压缩包一律拒绝）
 const ALLOWED_EXTS = new Set([
   'html', 'htm', 'css', 'js', 'mjs', 'cjs', 'md', 'markdown',
   'json', 'txt', 'text', 'svg', 'xml', 'yml', 'yaml', 'toml',
@@ -60,9 +59,8 @@ const MIME = {
 const MAX_FILES = 50;
 const MAX_FILE_SIZE = 200 * 1024;      // 单文件 200KB
 const MAX_TOTAL = 2 * 1024 * 1024;     // 总 2MB
-const MAX_ZIP_B64 = 3 * 1024 * 1024;   // base64 后 zip 上限（约 2.2MB 原始）
+const MAX_ZIP_B64 = 3 * 1024 * 1024;   // base64 后 zip 上限，约 2.2MB 原始
 
-// base64 → Uint8Array
 function b64ToBytes(b64) {
   const bin = atob(b64);
   const out = new Uint8Array(bin.length);
@@ -70,7 +68,6 @@ function b64ToBytes(b64) {
   return out;
 }
 
-// 路径安全校验
 function isSafePath(p) {
   if (!p || p.startsWith('/') || p.includes('\\')) return false;
   return !p.split('/').includes('..');
@@ -140,11 +137,9 @@ export async function handleCreateProject(request, env, corsHeaders, body, userI
   try {
     const supabase = makeSupabase(env);
 
-    // 检查占用
     const { data: existing } = await supabase.from('gh_site').select('id').eq('name', slugInput).maybeSingle();
     if (existing) return jsonResp({ error: '该站点名称已被占用' }, 409, corsHeaders);
 
-    // 建记录
     const ip = getClientIP(request);
     const { data: site, error: siteError } = await supabase.from('gh_site').insert({
       name: slugInput,
@@ -156,7 +151,6 @@ export async function handleCreateProject(request, env, corsHeaders, body, userI
       return jsonResp({ error: siteError?.message || '创建站点失败' }, 500, corsHeaders);
     }
 
-    // 写桶
     const uploaded = [];
     for (const [path, data] of toUpload) {
       const storagePath = `projects/${userId}/${slugInput}/${path}`;

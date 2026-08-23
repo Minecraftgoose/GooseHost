@@ -3,11 +3,9 @@
 import { makeSupabase } from '../utils/supabase.js';
 import { fetchEmailMap, saveEmailMap } from '../utils/email-map.js';
 
-// 3小时消户
 export async function cleanupOrphanUsers(env) {
   const supabase = makeSupabase(env);
 
-  // 获取所有 auth 用户
   let authUserIds = [];
   let userCreations = {};
 
@@ -27,14 +25,12 @@ export async function cleanupOrphanUsers(env) {
 
   if (!authUserIds.length) return { cleaned: 0, total: 0 };
 
-  // 获取有站点的所有 owner
   const { data: allSites } = await supabase.from('gh_site').select('owner_id');
   const ownersWithSites = new Set(allSites?.map(s => s.owner_id) || []);
 
   const now = Date.now();
   const THREE_HOURS = 3 * 60 * 60 * 1000;
 
-  // 筛选出需要删除的用户
   const toDelete = authUserIds.filter(id => {
     if (ownersWithSites.has(id)) return false;
 
@@ -48,7 +44,6 @@ export async function cleanupOrphanUsers(env) {
   const map = await fetchEmailMap(env);
 
   for (const userId of toDelete) {
-    // 删除 Auth 用户
     try {
       const { error } = await supabase.auth.admin.deleteUser(userId);
       if (!error) {

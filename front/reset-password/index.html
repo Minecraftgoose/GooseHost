@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>重置密码 - GooseHost</title>
+    <link rel="icon" type="image/x-icon" href="../icons/favicon.ico" />
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="page">
+        <div class="card">
+            <div class="logo">
+                <img src="../logo.svg" alt="GooseHost" />
+            </div>
+
+            <div id="msg" class="msg"></div>
+
+            <div id="formBox">
+                <h3>设置新密码</h3>
+                <p class="tip">请输入你的新密码，完成后即可用新密码登录。</p>
+
+                <div class="form-group">
+                    <div class="input-wrap floating">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder=" " autocomplete="new-password" />
+                        <label for="password">新密码</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-wrap floating">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="confirm" placeholder=" " autocomplete="new-password" />
+                        <label for="confirm">确认新密码</label>
+                    </div>
+                </div>
+
+                <button id="submitBtn" class="btn btn-primary" onclick="submitReset()">
+                    <i class="fas fa-check"></i> 重置密码
+                </button>
+
+                <div class="link-row">
+                    <a href="../login/">返回登录</a>
+                </div>
+            </div>
+
+            <div id="doneBox" style="display:none;">
+                <i class="fas fa-check-circle"></i>
+                <p>密码已重置，正在跳转到登录页...</p>
+                <a href="../login/" class="btn btn-primary">立即登录</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="../moved-banner.js"></script>
+</body>
+</html>

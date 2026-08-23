@@ -37,7 +37,6 @@ export async function handleAdminAnnouncement(request, env, corsHeaders) {
 
   try {
     if (action === 'clear') {
-      // 停用所有公告
       const { error } = await supabase
         .from('gh_announcement')
         .update({ is_active: false })
@@ -46,7 +45,6 @@ export async function handleAdminAnnouncement(request, env, corsHeaders) {
       return jsonResp({ success: true, message: '公告已清除' }, 200, corsHeaders);
     }
 
-    // 停旧发新
     const content = (body?.content || '').trim();
     if (!content) return jsonResp({ error: '公告内容不能为空' }, 400, corsHeaders);
     if (content.length > 500) return jsonResp({ error: '公告内容超过 500 字符' }, 400, corsHeaders);

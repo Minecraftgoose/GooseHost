@@ -5,7 +5,6 @@ import { makeSupabase, storageUrl } from '../utils/supabase.js';
 import { jsonResp } from '../utils/response.js';
 import { getClientIP } from '../utils/rate-limit.js';
 
-//白名单
 const ALLOWED_EXTS = new Set([
   'html', 'htm', 'css', 'js', 'mjs', 'cjs', 'md', 'markdown',
   'json', 'txt', 'text', 'svg', 'xml', 'yml', 'yaml', 'toml',
@@ -57,20 +56,17 @@ const MIME = {
 
 const MAX_FILE_SIZE = 200 * 1024; // 单文件 200KB
 
-// 路径安全校验
 function isSafePath(p) {
   if (!p || p.startsWith('/') || p.includes('\\')) return false;
   return !p.split('/').includes('..');
 }
 
-// 校验文件白名单
 function checkExt(path) {
   const dot = path.lastIndexOf('.');
   const ext = dot === -1 ? '' : path.slice(dot + 1).toLowerCase();
   return ALLOWED_EXTS.has(ext);
 }
 
-// 鉴权：站点归属p类型
 async function authSite(env, request, slug, corsHeaders) {
   const userId = await getUserId(request, env);
   if (!userId) return { err: jsonResp({ error: 'Unauthorized' }, 401, corsHeaders) };

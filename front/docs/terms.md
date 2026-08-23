@@ -186,6 +186,6 @@
   <p>© 2026 GooseHost. </p>
   <p>
     <a href="https://host.goose.gs.cn/" style="color: #02ff8e; text-decoration: none;">官网</a> &nbsp;|&nbsp;
-    <a href="mailto:support@mail.goose.gs.cn" style="color: #02ff8e; text-decoration: none;">联系我们</a>
+    <a href="mailto:support@goose2.cc.cd" style="color: #02ff8e; text-decoration: none;">联系我们</a>
   </p>
 </footer>

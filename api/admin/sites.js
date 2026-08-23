@@ -13,7 +13,6 @@ export async function handleAdminSites(request, env, corsHeaders) {
 
   await checkRateLimit(request, env, 'normal');
 
-  // 解析分页参数
   const urlParams = new URL(request.url).searchParams;
   const limit = Math.min(100, Math.max(1, parseInt(urlParams.get('limit')) || 50));
   const offsetParam = urlParams.get('offset');
@@ -26,10 +25,8 @@ export async function handleAdminSites(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 获取 email map
     const emailMap = await fetchEmailMap(env);
 
-    //  RPC 函数
     const { data, error } = await supabase
       .rpc('get_sites_paginated', {
         p_limit: limit,
@@ -51,7 +48,6 @@ export async function handleAdminSites(request, env, corsHeaders) {
 
       if (fetchError) throw fetchError;
 
-      // 获取总数
       const { count } = await supabase
         .from('gh_site')
         .select('id', { count: 'exact', head: true });
@@ -72,7 +68,6 @@ export async function handleAdminSites(request, env, corsHeaders) {
       }, 200, corsHeaders);
     }
 
-    // 格式化 RPC 返回数据
     const sites = (data || []).map(row => ({
       id: row.id,
       name: row.name,
@@ -85,7 +80,6 @@ export async function handleAdminSites(request, env, corsHeaders) {
     }));
 
     const totalCount = sites.length > 0 ? sites[0].totalCount : 0;
-    // 移除 totalCount 字段
     sites.forEach(s => delete s.totalCount);
 
     return jsonResp({

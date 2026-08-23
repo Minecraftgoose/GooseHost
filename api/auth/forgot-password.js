@@ -7,7 +7,6 @@ import { fetchEmailMap } from '../utils/email-map.js';
 const RESET_PAGE = 'https://host.goose.gs.cn/reset-password.html';
 
 export async function handleForgotPassword(request, env, corsHeaders) {
-  // 每小时最多 5 次
   const rl_ip = await checkRateLimit(request, env, 'forgot_ip');
   if (!rl_ip.allowed) {
     return jsonResp({ error: `请求过于频繁，请在 ${Math.ceil(rl_ip.resetIn / 60)} 分钟后重试，有问题请联系support@mail.goose.gs.cn` }, 429, corsHeaders);
@@ -23,7 +22,6 @@ export async function handleForgotPassword(request, env, corsHeaders) {
     return jsonResp({ error: '邮箱格式不正确' }, 400, corsHeaders);
   }
 
-  // 每小时最多 3 次
   const rl_email = await checkRateLimit(request, env, 'forgot_email', email);
   if (!rl_email.allowed) {
     return jsonResp({ error: '该邮箱请求过于频繁，请稍后再试' }, 429, corsHeaders);
@@ -39,7 +37,6 @@ export async function handleForgotPassword(request, env, corsHeaders) {
       }, 200, corsHeaders);
     }
 
-    // 邮箱存在，发送重置邮件
     await fetch(`${env.SUPABASE_URL}/auth/v1/recover`, {
       method: 'POST',
       headers: {

@@ -1,8 +1,5 @@
-/* GooseHost 旧域名搬家提示条 */
 (function () {
-  // 只在旧域名下显示
   if (!location.hostname.includes('goose.cc.cd')) return;
-  // 已是新域名或非浏览器环境直接跳过
   if (location.hostname.includes('goose.gs.cn')) return;
 
   var newHost = location.hostname.replace('goose.cc.cd', 'goose.gs.cn');
@@ -41,7 +38,6 @@
   bar.appendChild(closeBtn);
   document.documentElement.appendChild(bar);
 
-  // 给页面留出顶部空间，避免遮挡内容
   var pad = document.createElement('style');
   pad.textContent = '@media (max-width:480px){#gh-moved-bar{font-size:12px;padding:8px 10px}#gh-moved-bar a{margin-left:8px;padding:4px 10px;font-size:12px}}';
   document.head.appendChild(pad);

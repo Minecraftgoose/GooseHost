@@ -9,7 +9,6 @@ function isValidSlugWithSlash(slug) {
   return slug && slug.length >= 1 && slug.length <= 128 && /^[\u4e00-\u9fa5a-zA-Z0-9_\-.~/]+$/.test(slug);
 }
 
-// 递归列出 project 桶内文件
 async function listProjectFiles(env, ownerId, slug) {
   const out = [];
   let total = 0;
@@ -44,7 +43,6 @@ export async function handleAdminSiteDetail(request, env, corsHeaders, slugEncod
     return jsonResp({ error: 'Admin only' }, 403, corsHeaders);
   }
 
-  // 解码 slug
   let slug;
   try {
     slug = decodeURIComponent(slugEncoded);
@@ -105,7 +103,6 @@ export async function handleAdminSiteUpdate(request, env, corsHeaders, slugEncod
     return jsonResp({ error: 'Admin only' }, 403, corsHeaders);
   }
 
-  // 解码 slug
   let slug;
   try {
     slug = decodeURIComponent(slugEncoded);

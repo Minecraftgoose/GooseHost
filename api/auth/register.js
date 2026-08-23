@@ -33,7 +33,6 @@ export async function handleRegister(request, env, corsHeaders) {
     return jsonResp({ error: '邮箱和密码不能为空' }, 400, corsHeaders);
   }
 
-  // Basic email format validation
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return jsonResp({ error: '邮箱格式不正确' }, 400, corsHeaders);
   }
@@ -69,7 +68,6 @@ export async function handleRegister(request, env, corsHeaders) {
     return jsonResp({ error: authData.msg || authData.error || '注册失败' }, authRes.status, corsHeaders);
   }
 
-  // Save email to the map
   if (authData.id) {
     const map = await fetchEmailMap(env);
     map[authData.id] = email;

@@ -28,7 +28,6 @@ export async function handleDelete(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 先获取站点信息
     const { data: site, error: fetchError } = await supabase
       .from('gh_site')
       .select('owner_id, type')
@@ -40,7 +39,6 @@ export async function handleDelete(request, env, corsHeaders) {
       return jsonResp({ error: 'Site not found' }, 404, corsHeaders);
     }
 
-    // 删除数据库记录
     const { error: delError } = await supabase
       .from('gh_site')
       .delete()
@@ -49,7 +47,6 @@ export async function handleDelete(request, env, corsHeaders) {
 
     if (delError) throw delError;
 
-    // 删除存储文件
     const isMarkdown = site.type === 'md';
     const bucket = isMarkdown ? 'md' : 'sites';
     const filePath = isMarkdown 

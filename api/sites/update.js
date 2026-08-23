@@ -31,7 +31,6 @@ export async function handleUpdate(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 检查站点是否存在且属于当前用户
     const { data: site, error: siteError } = await supabase
       .from('gh_site')
       .select('owner_id, type')
@@ -46,7 +45,6 @@ export async function handleUpdate(request, env, corsHeaders) {
       return jsonResp({ error: 'Forbidden' }, 403, corsHeaders);
     }
 
-    // 按站点类型决定写哪个桶
     const isMd = site.type === 'md';
     let html = htmlInput;
     let storageContent = htmlInput;

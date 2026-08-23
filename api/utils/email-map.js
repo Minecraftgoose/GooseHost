@@ -2,7 +2,6 @@
 
 import { storageUrl, makeSupabase } from './supabase.js';
 
-// 获取邮箱映射
 async function fetchEmailMap(env) {
   try {
     const res = await fetch(storageUrl(env, 'admin/email-map.json'), {
@@ -14,7 +13,6 @@ async function fetchEmailMap(env) {
   } catch { return {}; }
 }
 
-// 保存邮箱映射
 async function saveEmailMap(env, map) {
   try {
     await fetch(storageUrl(env, 'admin/email-map.json'), {
@@ -29,7 +27,6 @@ async function saveEmailMap(env, map) {
   } catch {  }
 }
 
-// 同步邮箱映射
 async function syncEmailMap(env) {
   try {
     const supabase = makeSupabase(env);

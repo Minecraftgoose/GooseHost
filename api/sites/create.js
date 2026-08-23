@@ -30,12 +30,10 @@ export async function handleCreate(request, env, corsHeaders) {
   const htmlInput = body?.html || '';
   const mdInput = body?.md || '';
 
-  // 多文件站点单独处理
   if (body?.type === 'project') {
     return await handleCreateProject(request, env, corsHeaders, body, userId);
   }
 
-  // 检测是否为 Markdown 站点
   const isMd = !!mdInput;
   // 兼容旧格式：slug 带 md/ 前缀时剥掉
   const isMdPrefix = slugInput.startsWith('md/');
@@ -48,7 +46,6 @@ export async function handleCreate(request, env, corsHeaders) {
   const siteType = isMd ? 'md' : 'html';
   let html = htmlInput;
 
-  // 如果是 Markdown 模式，先转换为 HTML
   if (isMd) {
     html = marked.parse(mdInput);
   }
@@ -62,11 +59,9 @@ export async function handleCreate(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 检查站点名是否已被占用
     const { data: existing } = await supabase.from('gh_site').select('id').eq('name', actualSlug).maybeSingle();
     if (existing) return jsonResp({ error: '该站点名称已被占用' }, 409, corsHeaders);
 
-    // 创建站点记录
     const { data: site, error: siteError } = await supabase.from('gh_site').insert({
       name: actualSlug,
       type: siteType,

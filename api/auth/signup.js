@@ -2,7 +2,6 @@
 
 import { jsonResp } from '../utils/response.js';
 
-// 黑名单
 const DISPOSABLE = new Set([
   'mailinator.com','guerrillamail.com','guerrillamail.net','10minutemail.com',
   'tempmail.com','temp-mail.org','yopmail.com','maildrop.cc','harakirimail.com',
@@ -117,7 +116,6 @@ export async function handleSignup(request, env, corsHeaders) {
   try {
     const { email, password } = await request.json();
 
-    // 基础校验
     if (!email || !password || password.length < 6) {
       return jsonResp({ error: '邮箱或密码格式不正确' }, 400, corsHeaders);
     }
@@ -127,12 +125,10 @@ export async function handleSignup(request, env, corsHeaders) {
       return jsonResp({ error: '邮箱格式错误' }, 400, corsHeaders);
     }
 
-    // 黑名单
     if (DISPOSABLE.has(domain)) {
       return jsonResp({ error: '不支持临时邮箱注册' }, 400, corsHeaders);
     }
 
-    // MX 记录检查
     try {
       const mxRes = await fetch(`https://dns.alidns.com/resolve?name=${encodeURIComponent(domain)}&type=MX`, {
         headers: { 'accept': 'application/dns-json' },
@@ -146,7 +142,6 @@ export async function handleSignup(request, env, corsHeaders) {
     } catch {
     }
 
-    //Supabase Auth
     const supabaseRes = await fetch(`${env.SUPABASE_URL}/auth/v1/signup`, {
       method: 'POST',
       headers: {

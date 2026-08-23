@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - GooseHost</title>
+    <link rel="icon" type="image/x-icon" href="../icons/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-brand">
+            <img src="../logo.svg" alt="GooseHost" onerror="this.style.display='none'">
+            <span style="color: var(--color-fg-muted); font-weight: 400;">Admin</span>
+        </div>
+        <nav class="header-nav">
+            <span class="header-user"><i class="fas fa-user-circle"></i> <span id="adminNickname">…</span></span>
+            <a href="/dashboard" class="header-link">
+                <i class="fas fa-arrow-left"></i> 返回面板
+            </a>
+            <a href="../status" class="header-link">
+                <i class="fas fa-server"></i> 系统状态
+            </a>
+        </nav>
+    </header>
+
+    <!-- Main -->
+    <main class="container">
+        <!-- 站点详情页-->
+        <div id="siteDetailPage" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem;">
+                <div style="display:flex;align-items:center;gap:0.75rem;font-size:1.3rem;font-weight:600;">
+                    <button class="btn btn-secondary" onclick="backToAdmin()" style="padding:6px 12px;"><i class="fas fa-arrow-left"></i> 返回</button>
+                    <span id="detailPageName" style="font-family:monospace;"></span>
+                </div>
+                <div style="display:flex;gap:0.5rem;" id="detailPageActions"></div>
+            </div>
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title"><i class="fas fa-info-circle"></i> <span>站点信息</span></div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;margin-top:0.6rem;" id="detailPageMeta"></div>
+            </div>
+            <div class="section" id="detailPageFilesSection">
+                <div class="section-header">
+                    <div class="section-title"><i class="fas fa-folder-open"></i> <span>文件列表</span></div>
+                </div>
+                <div id="detailPageFiles" style="margin-top:0.6rem;"></div>
+            </div>
+            <div class="section" id="detailPageContentSection" style="display:none;">
+                <div class="section-header">
+                    <div class="section-title"><i class="fas fa-file-code"></i> <span>内容预览</span></div>
+                </div>
+                <pre id="detailPageContent" style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;padding:12px;font-size:12px;max-height:300px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin-top:0.6rem;"></pre>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalSites">-</div>
+                <div class="stat-label">网站总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalUsers">-</div>
+                <div class="stat-label">用户数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="todaySites">-</div>
+                <div class="stat-label">今日新增</div>
+            </div>
+        </div>
+
+        <!-- Announcement -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>全局公告</span>
+                </div>
+                <div class="section-actions">
+                    <button class="btn btn-secondary" onclick="clearAnnouncement()">
+                        <i class="fas fa-eraser"></i> 清除公告
+                    </button>
+                    <button class="btn btn-primary" onclick="saveAnnouncement()">
+                        <i class="fas fa-paper-plane"></i> 发布公告
+                    </button>
+                </div>
+            </div>
+            <div style="margin-top: 1rem;">
+                <textarea id="announcementContent" placeholder="输入公告内容，发布后所有用户 dashboard 顶部横幅显示（≤500 字符）" style="width: 100%; min-height: 80px; padding: 0.75rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-fg); resize: vertical;"></textarea>
+                <div style="margin-top: 0.5rem; font-size: 12px; color: rgba(255,255,255,0.4);">当前生效公告：<span id="currentAnnouncement" style="color: rgba(255,255,255,0.7);">—</span></div>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-server"></i>
+                    <span>系统状态控制</span>
+                </div>
+                <div class="section-actions">
+                    <button class="btn btn-primary" onclick="saveSystemStatus()">
+                        <i class="fas fa-save"></i> 保存设置
+                    </button>
+                </div>
+            </div>
+            <div style="margin-top: 1rem;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem 1rem; background: var(--color-bg); border-radius: 4px;">
+                        <input type="checkbox" id="maintenanceMode" onchange="saveSystemStatus()">
+                        <span><i class="fas fa-tools"></i> 维护模式</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem 1rem; background: var(--color-bg); border-radius: 4px;">
+                        <input type="checkbox" id="globalStatus" onchange="toggleAllServices()">
+                        <span><i class="fas fa-globe"></i> 总开关</span>
+                    </label>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="maintenanceMsg" placeholder="维护公告（可选）" style="width: 100%; padding: 0.75rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-fg);">
+                </div>
+                <div style="font-size: 0.85rem; color: var(--color-fg-muted); margin-bottom: 0.75rem;"><i class="fas fa-info-circle"></i> 填写公告文字后将在状态页显示，不受维护模式开关影响</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem;">
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-sign-in-alt"></i> 登录</span>
+                        <input type="checkbox" id="svc-login" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-user-plus"></i> 注册</span>
+                        <input type="checkbox" id="svc-register" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-plus"></i> 创建网站</span>
+                        <input type="checkbox" id="svc-create" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-list"></i> 网站列表</span>
+                        <input type="checkbox" id="svc-my-sites" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-edit"></i> 更新网站</span>
+                        <input type="checkbox" id="svc-update" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-trash"></i> 删除网站</span>
+                        <input type="checkbox" id="svc-delete" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-globe-americas"></i> HTML访问</span>
+                        <input type="checkbox" id="svc-serve-html" checked onchange="saveSystemStatus()">
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--color-bg); border-radius: 6px; border: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;"><i class="fas fa-file-alt"></i> MD访问</span>
+                        <input type="checkbox" id="svc-serve-md" checked onchange="saveSystemStatus()">
+                    </div>
+                </div>
+                <style>
+                    input[type="checkbox"] { width: 18px; height: 18px; accent-color: #02ff8e; cursor: pointer; }
+                </style>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="section">
+            <!-- Tab Nav -->
+            <div class="tab-nav">
+                <button class="tab-btn active" id="tabBtnSites" onclick="switchTab('sites')">
+                    <i class="fas fa-globe"></i> 网站列表
+                </button>
+                <button class="tab-btn" id="tabBtnUsers" onclick="switchTab('users')">
+                    <i class="fas fa-users"></i> 用户列表
+                </button>
+            </div>
+
+            <!-- Tab Header -->
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-database"></i>
+                    <span id="tabLabel">全部数据</span>
+                </div>
+                <div class="section-actions">
+                    <div class="search-wrap" id="searchWrap" style="display:none;">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="siteSearchInput" placeholder="搜索名称/邮箱/IP..." oninput="filterSites()">
+                    </div>
+                    <button class="btn btn-secondary" onclick="loadData()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                    <button class="btn btn-secondary" id="syncEmailsBtn" onclick="syncEmails()">
+                        <i class="fas fa-address-book"></i> 同步邮箱
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content -->
+            <div id="tab-sites"></div>
+            <div id="tab-users" style="display:none;"></div>
+        </div>
+    </main>
+
+    <!-- Edit Modal -->
+    <!-- Site Detail Modal -->
+    <div class="modal-overlay" id="siteDetailModal">
+        <div class="modal" style="max-width: 640px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-info-circle"></i> 站点详情
+                    <span id="detailSiteName" style="color: var(--color-accent-fg); font-family: monospace;"></span>
+                </div>
+                <button class="modal-close" onclick="closeSiteDetailModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="siteDetailBody" style="max-height: 420px; overflow-y: auto;">
+                加载中...
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSiteDetailModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin 文件编辑弹窗 -->
+    <div class="modal-overlay" id="projFileModal">
+        <div class="modal" style="max-width: 720px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-file-code"></i> 编辑文件
+                    <span id="projFileTitle" style="color: var(--color-accent-fg); font-family: monospace; font-size: 13px; margin-left: 8px;"></span>
+                </div>
+                <button class="modal-close" onclick="closeProjFileModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="projFileSlug">
+                <input type="hidden" id="projFilePath">
+                <textarea id="projFileContent" placeholder="文件内容..." style="min-height: 380px; font-family: Consolas, monospace; font-size: 13px; line-height: 1.6; width: 100%; padding: 12px; background: rgba(0,0,0,0.35); border: 1px solid var(--color-border); border-radius: 6px; color: var(--color-fg); resize: vertical; box-sizing: border-box;"></textarea>
+                <div style="margin-top: 8px; font-size: 12px; color: rgba(255,255,255,0.4);">
+                    <i class="fas fa-info-circle"></i> 保存将覆盖原文件，单文件上限 200KB
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeProjFileModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveProjFile()">
+                    <i class="fas fa-save"></i> 保存文件
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-edit"></i> 编辑网站
+                    <span id="editSiteName" style="color: var(--color-accent-fg); font-family: monospace;"></span>
+                </div>
+                <button class="modal-close" onclick="closeEditModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editType" value="html">
+                <div id="html-editor-panel">
+                    <textarea id="editHtml" placeholder="加载中..."></textarea>
+                </div>
+                <div id="md-editor-panel" style="display:none;">
+                    <textarea id="editMd" placeholder="加载中..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveSite()">
+                    <i class="fas fa-check"></i> 保存更改
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Site Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal" style="max-width: 440px;">
+            <div class="modal-header">
+                <div class="modal-title" style="color: var(--color-danger-fg);">
+                    <i class="fas fa-exclamation-triangle"></i> 确认删除
+                </div>
+                <button class="modal-close" onclick="closeDeleteModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <p style="margin-bottom: 8px;">确定删除网站</p>
+                <p id="deleteSiteNameDisplay" style="font-weight: 600; font-size: 16px; margin-bottom: 8px;"></p>
+                <div id="deleteStorageInfo" style="margin: 8px 0; text-align: left; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 8px 12px; font-size: 12px; color: rgba(255,255,255,0.6); max-height: 140px; overflow-y: auto;"></div>
+                <p style="color: var(--color-danger-fg); font-size: 13px;">此操作不可恢复</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">
+                    <i class="fas fa-trash"></i> 删除
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete User Modal -->
+    <div class="modal-overlay" id="deleteUserModal">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <div class="modal-title" style="color: var(--color-danger-fg);">
+                    <i class="fas fa-user-times"></i> 删除用户
+                </div>
+                <button class="modal-close" onclick="closeDeleteUserModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <p style="margin-bottom: 8px;">确定删除用户</p>
+                <p id="deleteUserEmailDisplay" style="font-weight: 600; font-size: 16px; margin-bottom: 8px;"></p>
+                <p id="deleteUserSitesNote" style="color: var(--color-danger-fg); font-size: 13px;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeleteUserModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmDeleteUser()">
+                    <i class="fas fa-trash"></i> 删除用户
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+    <script src="../moved-banner.js"></script>
+</body>
+</html>

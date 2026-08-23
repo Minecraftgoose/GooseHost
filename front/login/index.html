@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>登录 - GooseHost</title>
+    <link rel="icon" type="image/x-icon" href="../icons/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="../icons/icon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="../icons/icon-16x16.png" />
+    <link rel="apple-touch-icon" href="../icons/icon-180x180.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="../icons/icon-512x512.png" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0a0f0d" />
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="bgLayer" class="bg-layer"></div>
+
+    <div class="page">
+        <div class="card">
+            <div class="logo">
+                <img src="../logo.svg" alt="GooseHost" />
+            </div>
+
+            <div id="msg" class="msg"></div>
+
+            <div id="loginForm">
+                <div class="form-group">
+                    <div class="input-wrap floating">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="email" placeholder=" " autocomplete="email" />
+                        <label for="email">邮箱</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-wrap floating">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder=" " autocomplete="current-password" />
+                        <label for="password">密码</label>
+                    </div>
+                </div>
+
+                <button id="loginBtn" class="btn btn-primary" onclick="login()">
+                    <i class="fas fa-sign-in-alt"></i> 登录
+                </button>
+
+                <div class="link-row">
+                    没有账户？<a href="../register/">立即注册</a>
+                    · <a href="#" onclick="event.preventDefault();showForgot()">忘记密码？</a>
+                </div>
+                <div class="legal-notice">
+                    登录即代表你同意 <a href="https://host.goose.gs.cn/docs/?doc=terms" target="_blank">用户协议</a> 与 <a href="https://host.goose.gs.cn/docs/?doc=terms" target="_blank">隐私政策</a>
+                </div>
+                <div style="margin-top: 1rem; text-align: center;">
+                    <a href="../status" style="color: var(--text-secondary);">系统状态</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 找回密码弹窗 -->
+    <div id="forgotModal" class="modal-overlay">
+        <div class="card">
+            <h3>找回密码</h3>
+            <p class="tip">输入注册邮箱，我们将发送一封重置邮件。点击邮件中的链接即可设置新密码。</p>
+            <div id="forgotMsg" class="msg"></div>
+            <div class="form-group">
+                <div class="input-wrap floating">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="forgotEmail" placeholder=" " autocomplete="email" />
+                    <label for="forgotEmail">邮箱</label>
+                </div>
+            </div>
+            <button id="forgotBtn" class="btn btn-primary" onclick="submitForgot()">
+                <i class="fas fa-paper-plane"></i> 发送重置邮件
+            </button>
+            <button class="btn-ghost" onclick="hideForgot()">取消</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+<script src="../moved-banner.js"></script>
+</body>
+</html>

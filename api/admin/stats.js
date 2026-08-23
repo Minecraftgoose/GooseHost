@@ -12,7 +12,6 @@ export async function handleAdminStats(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    //  RPC 函数
     const { data, error } = await supabase.rpc('get_site_stats');
 
     if (error) {

@@ -1,4 +1,4 @@
-// ===== 获取站点文件列表）=====
+// ===== 获取站点文件列表 =====
 
 import { getUserId } from '../utils/jwt.js';
 import { makeSupabase } from '../utils/supabase.js';

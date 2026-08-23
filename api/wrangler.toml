@@ -4,7 +4,7 @@ compatibility_date = "2026-07-27"
 
 [vars]
 API_URL = "https://host.goose.gs.cn"
-ADMIN_USER_IDS = ""
+ADMIN_USER_IDS = "de90a631-30b0-4b4a-afe4-dba9dd72e288,4ee286ea-945e-44ad-8513-6dc5d4ec2955"
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"

@@ -22,7 +22,6 @@ export async function handleAdminDeleteUser(request, env, corsHeaders) {
     return jsonResp({ error: 'Missing userId' }, 400, corsHeaders);
   }
 
-  // 验证 UUID 格式
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId)) {
     return jsonResp({ error: '无效的用户ID格式' }, 400, corsHeaders);
   }
@@ -30,7 +29,6 @@ export async function handleAdminDeleteUser(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 1. 获取该用户的所有站点（包括 HTML 和 Markdown）
     const { data: sites, error: fetchError } = await supabase
       .from('gh_site')
       .select('name, type')
@@ -40,7 +38,6 @@ export async function handleAdminDeleteUser(request, env, corsHeaders) {
       console.error('获取用户站点失败:', fetchError.message);
     }
 
-    // 2. 删除数据库中的站点记录
     if (sites?.length) {
       const { error: delError } = await supabase
         .from('gh_site')
@@ -51,7 +48,6 @@ export async function handleAdminDeleteUser(request, env, corsHeaders) {
       }
     }
 
-    // 3. 删除存储桶中的文件（区分 HTML 和 Markdown）
     if (sites?.length) {
       for (const site of sites) {
         const siteName = site.name;
@@ -69,14 +65,12 @@ export async function handleAdminDeleteUser(request, env, corsHeaders) {
       }
     }
 
-    // 4. 从 Supabase Auth 删除用户
     const { error: authError } = await supabase.auth.admin.deleteUser(targetUserId);
     if (authError) {
       console.error('删除 Auth 用户失败:', authError.message);
       return jsonResp({ error: '删除 Auth 用户失败: ' + authError.message }, 500, corsHeaders);
     }
 
-    // 5. 从邮箱映射中删除
     try {
       const map = await fetchEmailMap(env);
       if (map[targetUserId]) {
@@ -117,7 +111,6 @@ export async function handleAdminDeleteSite(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 先获取站点信息
     const { data: site, error: fetchError } = await supabase
       .from('gh_site')
       .select('owner_id, type')
@@ -128,7 +121,6 @@ export async function handleAdminDeleteSite(request, env, corsHeaders) {
       return jsonResp({ error: '站点不存在' }, 404, corsHeaders);
     }
 
-    // 删除数据库记录
     const { error: delError } = await supabase
       .from('gh_site')
       .delete()
@@ -136,7 +128,6 @@ export async function handleAdminDeleteSite(request, env, corsHeaders) {
 
     if (delError) throw delError;
 
-    // 删除存储文件
     const isMarkdown = site.type === 'md';
     const bucket = isMarkdown ? 'md' : 'sites';
     const filePath = isMarkdown 

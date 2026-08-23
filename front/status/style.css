@@ -1,0 +1,237 @@
+        /* 钉钉进步体字体 */
+        @font-face {
+            font-family: 'DingTalk JinBuTi';
+            src: url('../fonts/DingTalk JinBuTi.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'DingTalk JinBuTi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif; }
+
+        /* 美化滚动条 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(2,255,142,0.25); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(2,255,142,0.5); }
+        * { scrollbar-width: thin; scrollbar-color: rgba(2,255,142,0.25) rgba(255,255,255,0.03); }
+
+        /* 必应壁纸背景 */
+        .bg-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: #0a0f0d center/cover;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .bg-layer.loaded { opacity: 1; }
+        .bg-layer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(10,20,15,0.85) 0%, rgba(26,37,32,0.75) 100%);
+        }
+
+        /* 主容器 */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 80px 20px 40px;
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+        .header h1 i { color: #02ff8e; margin-right: 0.5rem; }
+
+        /* 状态徽章 */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            border: 2px solid;
+        }
+        .status-badge.operational {
+            background: rgba(2, 255, 142, 0.12);
+            border-color: #02ff8e;
+            color: #02ff8e;
+        }
+        .status-badge.degraded {
+            background: rgba(255, 165, 0, 0.12);
+            border-color: #ffa500;
+            color: #ffa500;
+        }
+        .status-badge.outage {
+            background: rgba(255, 82, 82, 0.12);
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+        .status-badge .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        .status-badge.operational .dot { background: #02ff8e; }
+        .status-badge.degraded .dot { background: #ffa500; }
+        .status-badge.outage .dot { background: #ff6b6b; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.9); }
+        }
+
+        /* 维护公告 */
+        .maintenance-banner {
+            background: rgba(255, 165, 0, 0.15);
+            border: 1px solid rgba(255, 165, 0, 0.4);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            text-align: center;
+            color: #ffa500;
+        }
+        .maintenance-banner i { margin-right: 0.5rem; }
+
+        /* 功能卡片 */
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.9);
+            margin: 2rem 0 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-title i { color: #02ff8e; }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .service-card {
+            background: rgba(20, 35, 25, 0.6);
+            border: 1px solid rgba(2, 255, 142, 0.15);
+            border-radius: 6px;
+            padding: 1.25rem;
+            transition: all 0.3s ease;
+        }
+        .service-card:hover {
+            background: rgba(20, 35, 25, 0.8);
+            border-color: rgba(2, 255, 142, 0.3);
+        }
+
+        .service-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+        .service-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .service-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 1.1rem;
+        }
+        .service-icon.auth { background: rgba(2, 255, 142, 0.15); color: #02ff8e; }
+        .service-icon.sites { background: rgba(88, 166, 255, 0.15); color: #58a6ff; }
+        .service-icon.file { background: rgba(255, 165, 0, 0.15); color: #ffa500; }
+
+        .service-name { font-weight: 600; color: #fff; font-size: 1rem; }
+        .service-path {
+            font-family: 'SF Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+            background: rgba(0,0,0,0.3);
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+        .service-desc {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-weight: 600;
+        }
+        .service-status.up { color: #02ff8e; }
+        .service-status.down { color: #ff6b6b; }
+        .service-status.testing { color: #ffa500; }
+
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            color: rgba(255,255,255,0.6);
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(2, 255, 142, 0.2);
+            border-top-color: #02ff8e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 错误提示 */
+
+        /* 底部 */
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(2, 255, 142, 0.1);
+            color: rgba(255,255,255,0.4);
+            font-size: 0.85rem;
+        }
+        .footer a { color: #02ff8e; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        .last-update { margin-top: 0.5rem; color: rgba(255,255,255,0.3); }
+
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .container { padding: 70px 15px 30px; }
+            .header h1 { font-size: 1.5rem; }
+            .services-grid { grid-template-columns: 1fr; }
+        }
+        /* ===== 图标微动效 ===== */
+        i.fas, i.far, i.fab {
+            transition: color 0.15s ease, transform 0.15s ease;
+        }
+        i.fas:not(.fa-spin):hover,
+        i.far:not(.fa-spin):hover,
+        i.fab:not(.fa-spin):hover {
+            transform: scale(1.08);
+        }

@@ -17,14 +17,12 @@ export async function handleDeleteAccount(request, env, corsHeaders) {
   try {
     const supabase = makeSupabase(env);
 
-    // 1. 用户所有站点
     const { data: sites, error: selErr } = await supabase
       .from('gh_site')
       .select('name, type')
       .eq('owner_id', userId);
     if (selErr) throw selErr;
 
-    // 2. 收集需要删除的存储文件
     const sitesFiles = [];
     const mdFiles = [];
     for (const s of (sites || [])) {
@@ -42,14 +40,12 @@ export async function handleDeleteAccount(request, env, corsHeaders) {
       await supabase.storage.from('md').remove(mdFiles).catch(() => {});
     }
 
-    // 3. 删除 gh_site 表中的该用户记录
     const { error: delErr } = await supabase
       .from('gh_site')
       .delete()
       .eq('owner_id', userId);
     if (delErr) throw delErr;
 
-    // 4. 删除 Supabase Auth 用户
     const delRes = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
       method: 'DELETE',
       headers: {

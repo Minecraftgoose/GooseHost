@@ -9,7 +9,6 @@ export async function handleGetFile(request, env, corsHeaders, slug) {
   const userId = await getUserId(request, env);
   if (!userId) return jsonResp({ error: 'Unauthorized' }, 401, corsHeaders);
 
-  // 兼容旧格式
   const actualSlug = slug.startsWith('md/') ? slug.replace('md/', '') : slug;
 
   if (!isValidSlug(actualSlug)) {

@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="管理您的 GooseHost 网站，上传、部署、编辑和删除静态网站。">
+    <title>管理面板 - GooseHost</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png">
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/icons/icon-180x180.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128x128.png">
+    <!-- Android Chrome Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="/icons/icon-256x256.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png">
+    <!-- Open Graph Image -->
+    <meta property="og:image" content="icons/og-image-1200x630.png">
+    <meta property="og:title" content="GooseHost - 静态网站托管">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GooseHost">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="splash-active">
+    <div class="splash-screen" id="splashScreen">
+        <svg class="infinity-wrap" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+            <path class="infinity-path" d="M 50,50 C 50,20 80,20 100,50 C 120,80 150,80 150,50 C 150,20 120,20 100,50 C 80,80 50,80 50,50 Z" />
+        </svg>
+        <img src="/logo.svg" class="splash-logo" alt="GooseHost">
+    </div>
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-text" id="welcomeText"></div>
+    </div>
+    <div id="bgLayer" class="bg-layer"></div>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <button class="menu-toggle" id="menuToggle" onclick="toggleSidebarDesktop()">
+                <i class="fas fa-outdent"></i>
+            </button>
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" onclick="toggleSidebarMobile()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="navbar-icon">
+                <img src="/logo.svg" height="36" alt="Logo">
+            </div>
+        </div>
+    </nav>
+
+    <div class="sidebar-overlay" onclick="toggleSidebarMobile()"></div>
+
+    <!-- 主布局 -->
+    <div class="main-layout" id="mainContent" onclick="closeSidebarOnMobile(event)">
+        <!-- 侧边栏 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="nav-section">
+                <div class="nav-section-title">主菜单</div>
+                <div class="nav-item active" data-page="overview" onclick="navigateTo('overview')" role="button" tabindex="0">
+                    <i class="fas fa-home"></i>
+                    <span>概览</span>
+                </div>
+                <div class="nav-item" data-page="deploy" onclick="navigateTo('deploy')" role="button" tabindex="0">
+                    <i class="fas fa-rocket"></i>
+                    <span>部署</span>
+                </div>
+                <div class="nav-item" data-page="sites" onclick="navigateTo('sites')" role="button" tabindex="0">
+                    <i class="fas fa-globe"></i>
+                    <span>我的网站</span>
+                </div>
+            </div>
+
+            <div class="nav-divider"></div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">设置</div>
+                <div class="nav-item" data-page="preferences" onclick="navigateTo('preferences')" role="button" tabindex="0">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>偏好设置</span>
+                </div>
+                <div class="nav-item" data-page="account" onclick="navigateTo('account')" role="button" tabindex="0">
+                    <i class="fas fa-user-circle"></i>
+                    <span>账户</span>
+                </div>
+                <a href="/status" class="nav-item" style="text-decoration: none;">
+                    <i class="fas fa-server"></i>
+                    <span>系统状态</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="content">
+            <div class="announcement-bar" id="announcementBanner" style="display:none">
+                <span class="announcement-icon"><i class="fas fa-bullhorn"></i></span>
+                <div class="announcement-scroll" id="announcementScroll">
+                    <div class="announcement-track" id="announcementTrack">
+                        <span class="announcement-text" id="announcementText"></span>
+                    </div>
+                </div>
+            </div>
+            <!-- 概览页 -->
+            <div class="page active" id="page-overview">
+                <div class="page-header">
+                    <h1 class="page-title tw-target" data-tw="欢迎回来"></h1>
+                    <p class="page-desc tw-target" data-tw="这里是您的网站管理控制台"></p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-globe"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="stat-sites">0</div>
+                            <div class="stat-label">网站总数</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-eye"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="stat-visits">0</div>
+                            <div class="stat-label">总访问量</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="stat-latest">-</div>
+                            <div class="stat-label">最近更新</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-bolt"></i> 快捷操作</div>
+                    </div>
+                    <div class="quick-actions">
+                        <div class="quick-action splash-action" style="animation: fadeInUp 0.4s ease forwards; opacity: 0; animation-delay: 0.3s" onclick="navigateTo('deploy')">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>新建网站</span>
+                        </div>
+                        <div class="quick-action splash-action" style="animation: fadeInUp 0.4s ease forwards; opacity: 0; animation-delay: 0.4s" onclick="navigateTo('sites')">
+                            <i class="fas fa-list"></i>
+                            <span>管理网站</span>
+                        </div>
+                        <div class="quick-action splash-action" style="animation: fadeInUp 0.4s ease forwards; opacity: 0; animation-delay: 0.5s" onclick="navigateTo('preferences')">
+                            <i class="fas fa-cog"></i>
+                            <span>设置</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-book"></i> 帮助文档</div>
+                    </div>
+                    <div class="quick-actions">
+                        <a href="https://host.goose.gs.cn/changelog/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.6s" target="_blank">
+                            <i class="fas fa-clipboard-list"></i>
+                            <span>更新日志</span>
+                        </a>
+                        <a href="https://host.goose.gs.cn/api-docs/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.7s" target="_blank">
+                            <i class="fas fa-code"></i>
+                            <span>API 文档</span>
+                        </a>
+                        <a href="https://host.goose.gs.cn/docs/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.8s" target="_blank">
+                            <i class="fas fa-file-contract"></i>
+                            <span>用户协议</span>
+                        </a>
+						<a href="https://page.goose.gs.cn/md/cli/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.9s" target="_blank">
+                            <i class="fas fa-code"></i>
+                            <span>CLI 文档</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 部署页 -->
+            <div class="page" id="page-deploy">
+                <div class="page-header">
+                    <h1 class="page-title tw-target" data-tw="部署网站"></h1>
+                    <p class="page-desc tw-target" data-tw="快速创建和部署您的静态网站"></p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-upload"></i> 部署新网站</div>
+                    </div>
+                    <div class="deploy-steps">
+                        <div class="deploy-step active" id="ds-1" onclick="goDeployStep(1)"><span>1</span> 填写名称</div>
+                        <div class="deploy-step-line"></div>
+                        <div class="deploy-step" id="ds-2" onclick="goDeployStep(2)"><span>2</span> 选择类型</div>
+                        <div class="deploy-step-line"></div>
+                        <div class="deploy-step" id="ds-3" onclick="goDeployStep(3)"><span>3</span> 上传内容</div>
+                    </div>
+                    <div class="deploy-panels">
+                    <div class="deploy-panel active" id="deploy-panel-1">
+                        <div class="form-group">
+                            <div class="input-wrap floating">
+                                <i class="fas fa-link"></i>
+                                <input type="text" id="deploy-slug" placeholder=" ">
+                                <label for="deploy-slug">子域名（如 my-site）</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="deploy-panel" id="deploy-panel-2">
+                        <!-- 类型选择 -->
+                        <div class="form-group">
+                            <label class="form-label">网站类型</label>
+                            <div class="type-selector">
+                            <label class="type-option selected" onclick="selectSiteType('html')">
+                                <input type="radio" name="siteType" value="html" checked>
+                                <i class="fas fa-code"></i>
+                                <span class="type-name">HTML 网站</span>
+                                <span class="type-desc">粘贴单文件代码</span>
+                            </label>
+                            <label class="type-option" onclick="selectSiteType('md')">
+                                <input type="radio" name="siteType" value="md">
+                                <i class="fab fa-markdown"></i>
+                                <span class="type-name">Markdown 网站</span>
+                                <span class="type-desc">写作自动渲染</span>
+                            </label>
+                            <label class="type-option" onclick="selectSiteType('project')">
+                                <input type="radio" name="siteType" value="project">
+                                <i class="fas fa-folder-open"></i>
+                                <span class="type-name">多文件网站 <span class="beta-tag">BETA</span></span>
+                                <span class="type-desc">上传 zip 压缩包</span>
+                            </label>
+                            </div>
+                        </div>
+                        <!-- macOS 开发者计划 -->
+                        <div class="form-group" style="margin-top: 1rem; padding:0.8rem 1rem; background:rgba(2,255,142,0.05); border:1px solid rgba(2,255,142,0.15); border-radius:8px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:0.6rem;">
+                                <span style="color:rgba(255,255,255,0.8); font-size:0.85rem; font-weight:600;">加入 macOS 网页版 app 开发者计划</span>
+                                <label class="toggle" style="flex-shrink:0;">
+                                    <input type="checkbox" id="macosSubmit" onchange="document.getElementById('macosFields').style.display = this.checked ? 'block' : 'none';">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div id="macosFields" style="display:none; margin-top:0.8rem; border-top:1px solid rgba(2,255,142,0.12); padding-top:0.8rem;">
+                                <div class="form-group">
+                                    <label class="form-label">软件名称 <span style="color:#ff5252; font-weight:normal;">（必填，≤30 字符）</span></label>
+                                    <input type="text" id="macosName" maxlength="30" placeholder="应用在 macOS 商店显示的名称" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(2,255,142,0.2); border-radius:6px; color:var(--color-fg, #eafff5); font-size:0.85rem;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">图标 URL <span style="color:#ff5252; font-weight:normal;">（必填）</span></label>
+                                    <input type="url" id="macosIcon" placeholder="https://example.com/icon.png" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(2,255,142,0.2); border-radius:6px; color:var(--color-fg, #eafff5); font-size:0.85rem;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">一句话描述 <span style="color:#ff5252; font-weight:normal;">（必填，≤200 字符）</span></label>
+                                    <input type="text" id="macosDesc" maxlength="200" placeholder="用一句话介绍你的网站" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(2,255,142,0.2); border-radius:6px; color:var(--color-fg, #eafff5); font-size:0.85rem;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">分类 <span style="color:rgba(255,255,255,0.35); font-weight:normal;">（必填）</span></label>
+                                    <select id="macosCategory" style="width:100%; padding:8px 10px; background:rgba(0,0,0,0.3); border:1px solid rgba(2,255,142,0.2); border-radius:6px; color:var(--color-fg, #eafff5); font-size:0.85rem;">
+                                        <option value="工具">工具</option>
+                                        <option value="游戏">游戏</option>
+                                        <option value="社交">社交</option>
+                                        <option value="娱乐">娱乐</option>
+                                        <option value="购物">购物</option>
+                                        <option value="教育">教育</option>
+                                        <option value="新闻">新闻</option>
+                                        <option value="其他">其他</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="deploy-panel" id="deploy-panel-3">
+                    <!-- HTML 输入区 -->
+                    <div id="html-input-group">
+                        <div class="form-group drop-target">
+                            <label class="form-label">HTML 代码</label>
+                            <input type="file" id="fileInput" accept=".html,.htm" style="display:none;">
+                            <textarea id="deploy-html" placeholder="拖拽 .html 文件到此处，或粘贴代码..."></textarea>
+                            <div class="drop-hint"><i class="fas fa-cloud-upload-alt"></i> 拖拽文件到输入框，或 <label for="fileInput" class="file-link">点击选择</label></div>
+                        </div>
+                    </div>
+
+                    <!-- MD 输入区 -->
+                    <div id="md-input-group" style="display:none;">
+                        <div class="form-group drop-target">
+                            <label class="form-label">Markdown 内容</label>
+                            <input type="file" id="mdFileInput" accept=".md,.markdown" style="display:none;">
+                            <textarea id="deploy-md" placeholder="拖拽 .md 文件到此处，或粘贴内容..."></textarea>
+                            <div class="drop-hint"><i class="fas fa-cloud-upload-alt"></i> 拖拽文件到输入框，或 <label for="mdFileInput" class="file-link">点击选择</label></div>
+                            <div class="form-hint">
+                                <i class="fas fa-info-circle"></i>
+                                支持标准 Markdown 语法，将自动渲染为 HTML
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 多文件输入区 -->
+                    <div id="project-input-group" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">多文件上传</label>
+                            <div class="file-drop-zone" id="projDropZone">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>拖拽 zip 压缩包到此处，或 <label for="projInput" class="file-link">点击选择</label></p>
+                                <input type="file" id="projInput" accept=".zip" style="display:none;">
+                                <span id="projFileName" class="file-name"></span>
+                            </div>
+                            <div class="form-hint">
+                                <i class="fas fa-info-circle"></i>
+                                压缩包内只支持代码/文本文件（html/css/js/md/json/svg/xml 等），单文件 ≤200KB，总共 ≤2MB，最多 50 个文件，需包含 index.html 或 index.md
+                            </div>
+                        </div>
+                    </div>
+
+                    </div>
+                    </div>
+
+                    <div class="deploy-nav">
+                        <button class="btn btn-secondary" id="deployPrevBtn" onclick="goDeployStep(deployStep - 1)"><i class="fas fa-arrow-left"></i> 上一步</button>
+                        <button class="btn btn-primary" id="deployBtn" onclick="goDeployStep(deployStep + 1)">下一步 <i class="fas fa-arrow-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 我的网站页 -->
+            <div class="page" id="page-sites">
+                <div class="page-header">
+                    <h1 class="page-title tw-target" data-tw="我的网站"></h1>
+                    <p class="page-desc tw-target" data-tw="管理和编辑您所有的网站"></p>
+                </div>
+
+                <div id="siteList">
+                    <div class="loading">
+                        <svg class="infinity-svg" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                            <path class="infinity-path" d="M 50,50 C 50,20 80,20 100,50 C 120,80 150,80 150,50 C 150,20 120,20 100,50 C 80,80 50,80 50,50 Z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 偏好设置页 -->
+            <div class="page" id="page-preferences">
+                <div class="page-header">
+                    <h1 class="page-title tw-target" data-tw="偏好设置"></h1>
+                    <p class="page-desc tw-target" data-tw="自定义您的编辑体验"></p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-code"></i> 设置</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-title">显示欢迎动画</div>
+                            <div class="setting-desc">开屏后展示全屏欢迎语</div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="toggle-welcome" onchange="savePreferences()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+                
+                
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-database"></i> 本地存储</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-title">清除本地数据</div>
+                            <div class="setting-desc">删除所有保存在本地的数据</div>
+                        </div>
+                        <button class="btn btn-danger btn-sm no-ripple" onclick="clearLocalData()">
+                            <i class="fas fa-trash"></i> 清除
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 账户页 -->
+            <div class="page" id="page-account">
+                <div class="page-header">
+                    <h1 class="page-title tw-target" data-tw="账户设置"></h1>
+                    <p class="page-desc tw-target" data-tw="管理您的账户信息和安全设置"></p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-user"></i> 账户信息</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-title">昵称</div>
+                            <div class="setting-desc" id="account-nickname">-</div>
+                        </div>
+                        <button class="btn btn-sm no-ripple" onclick="editNickname()" style="border:1px solid var(--border-focus); background:transparent; color:var(--accent);">
+                            <i class="fas fa-edit"></i> 修改
+                        </button>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-title">登录邮箱</div>
+                            <div class="setting-desc" id="account-email">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-sign-out-alt"></i> 退出登录</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-title">退出当前账户</div>
+                            <div class="setting-desc">清除登录状态,返回登录页面</div>
+                        </div>
+                        <button class="btn btn-danger ripple-btn" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-user-slash"></i> 注销账号</div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-title">永久删除账户</div>
+                            <div class="setting-desc">将删除你的全部站点与文件，且不可恢复</div>
+                        </div>
+                        <button class="btn btn-danger ripple-btn" onclick="confirmDeleteAccount()">
+                            <i class="fas fa-user-slash"></i> 注销账号
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 站点详情页 -->
+            <div class="page" id="page-detail">
+                <div class="page-header" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+                    <button class="btn" onclick="navigateTo('sites')"><i class="fas fa-arrow-left"></i> 返回</button>
+                    <div>
+                        <h1 class="page-title" id="detailPageTitle">站点详情</h1>
+                        <p class="page-desc">站点信息与文件列表</p>
+                    </div>
+                </div>
+                <div id="pageDetailBody"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <!-- 多文件站点：文件编辑弹窗 -->
+    <div id="projFileModal" class="modal">
+        <div class="modal-content card" style="padding: 0; max-width: 720px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-file-code"></i> 编辑文件
+                    <span id="projFileTitle" style="color: #02ff8e; font-family: Consolas, monospace; font-size: 0.9rem; margin-left: 0.5rem;"></span>
+                </div>
+                <button class="modal-close no-ripple" onclick="closeProjFileModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="projFileSlug">
+                <input type="hidden" id="projFilePath">
+                <textarea id="projFileContent" placeholder="文件内容..." style="min-height: 380px; font-family: Consolas, 'Courier New', monospace; font-size: 0.85rem; line-height: 1.6; padding: 12px; width: 100%; background: rgba(0,0,0,0.35); border: 1px solid rgba(2,255,142,0.2); border-radius: 6px; color: #fff; resize: vertical;"></textarea>
+                <div id="projFileHint" style="margin-top: 0.5rem; font-size: 0.78rem; color: rgba(255,255,255,0.4); display: flex; align-items: center; gap: 0.3rem;">
+                    <i class="fas fa-info-circle"></i> 保存将覆盖原文件，单文件上限 200KB
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary no-ripple" onclick="closeProjFileModal()">取消</button>
+                <button class="btn btn-primary ripple-btn" id="projFileSaveBtn" onclick="saveProjFile()"><i class="fas fa-save"></i> 保存文件</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content card" style="padding: 0;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-edit"></i> 编辑网站
+                    <span id="edit-type-badge" class="type-tag" style="margin-left:8px;"></span>
+                </div>
+                <button class="modal-close no-ripple" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editSlug">
+                <input type="hidden" id="editType">
+
+                <!-- HTML 编辑面板 -->
+                <div id="html-editor-panel">
+                    <div class="form-group drop-target">
+                        <label class="form-label">HTML 代码</label>
+                        <input type="file" id="editFileInput" accept=".html,.htm" style="display:none;">
+                        <textarea id="editHtml" placeholder="拖拽 .html 文件到此处，或粘贴代码..." style="padding:12px;"></textarea>
+                        <div class="drop-hint"><i class="fas fa-cloud-upload-alt"></i> 拖拽文件到输入框，或 <label for="editFileInput" class="file-link">点击选择</label></div>
+                    </div>
+                </div>
+
+                <!-- MD 编辑面板 -->
+                <div id="md-editor-panel" style="display:none;">
+                    <div class="form-group drop-target">
+                        <label class="form-label">Markdown 内容</label>
+                        <input type="file" id="editMdFileInput" accept=".md,.markdown" style="display:none;">
+                        <textarea id="editMd" placeholder="拖拽 .md 文件到此处，或粘贴内容..." style="padding:12px;"></textarea>
+                        <div class="drop-hint"><i class="fas fa-cloud-upload-alt"></i> 拖拽文件到输入框，或 <label for="editMdFileInput" class="file-link">点击选择</label></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary ripple-btn" onclick="updateSite()"><i class="fas fa-save"></i> 保存修改</button>
+                <button class="btn btn-secondary no-ripple" onclick="closeModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <!-- 自定义确认对话框 -->
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-box">
+            <div class="confirm-icon danger" id="confirmIcon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="confirm-title" id="confirmTitle">确认操作</div>
+            <div class="confirm-message" id="confirmMessage"></div>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary" onclick="closeConfirm()">取消</button>
+                <button class="btn btn-danger-solid" id="confirmBtn" onclick="doConfirm()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+
+    <div id="deleteAccountDialog" class="custom-dialog">
+        <div class="dialog-card">
+            <div class="dialog-header">
+                <div class="dialog-title"><i class="fas fa-exclamation-triangle"></i> 确认注销账号</div>
+                <button class="dialog-close no-ripple" onclick="closeDeleteModal()">&times;</button>
+            </div>
+            <div class="dialog-body">
+                <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin-bottom:1rem;">
+                    此操作将<strong style="color:var(--error);">永久删除</strong>你的账户、全部站点与存储文件，且<strong style="color:var(--error);">不可恢复</strong>。确定要继续吗？
+                </p>
+                <div id="deleteMsg" class="msg"></div>
+                <button id="deleteConfirmBtn" class="btn btn-danger ripple-btn" style="width:100%;justify-content:center;" onclick="deleteAccount()">
+                    <i class="fas fa-user-slash"></i> 我确定，注销
+                </button>
+                <button onclick="closeDeleteModal()" style="margin-top:0.5rem;width:100%;height:var(--input-height);border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text-secondary);cursor:pointer;font-size:1rem;">取消</button>
+            </div>
+        </div>
+    </div>
+	    <script src="/moved-banner.js"></script>
+</body>
+</html>

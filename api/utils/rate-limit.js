@@ -7,7 +7,6 @@ const RATE_LIMIT = {
   update: { limit: 10, windowSec: 60 },
   normal: { limit: 100, windowSec: 60 },
   login:  { limit: 20, windowSec: 60 },
-  // 新功能防刷
   forgot_ip:    { limit: 5,  windowSec: 3600 },          // 每 IP 每小时最多 5 次找回密码
   forgot_email: { limit: 3,  windowSec: 3600 },          // 每邮箱每小时最多 3 次
   reset:        { limit: 10, windowSec: 3600 },          // 每 IP 每小时最多 10 次重置密码

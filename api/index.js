@@ -4,7 +4,6 @@ import { getCorsHeaders } from './utils/cors.js';
 import { jsonResp } from './utils/response.js';
 import { cleanupOrphanUsers } from './jobs/cleanup.js';
 
-// 导入路由处理器
 import { handleRegister } from './auth/register.js';
 import { handleLogin } from './auth/login.js';
 import { handleRefresh } from './auth/refresh.js';
@@ -38,8 +37,7 @@ import { handlePublicStats } from './admin/public-stats.js';
 import {
   handleDebugSyncEmails,
   handleDebugTestAuth,
-  handleDebugCleanup,
-  handleVersion
+  handleDebugCleanup
 } from './debug.js';
 
 // ===== Workers Entry =====
@@ -50,7 +48,6 @@ export default {
     const pathParts = url.pathname.split('/').filter(Boolean);
     const corsHeaders = getCorsHeaders(request);
 
-    // 处理 CORS preflight
     if (method === 'OPTIONS') {
       return new Response('', { status: 200, headers: corsHeaders });
     }
@@ -72,7 +69,7 @@ export default {
       return await handleResetPassword(request, env, corsHeaders);
     }
 
-    // GET /api/me - 获取当前用户信息（含昵称）
+    // GET /api/me - 获取当前用户信息
     if (url.pathname === '/api/me' && method === 'GET') {
       return await handleGetMe(request, env, corsHeaders);
     }
@@ -112,7 +109,7 @@ export default {
       return await handleLogin(request, env, corsHeaders);  
     }
 
-    // POST /auth/refresh - 刷新会话（refresh_token 换新 access_token）
+    // POST /auth/refresh - 刷新会话
     if (url.pathname === '/auth/refresh' && method === 'POST') {
       return await handleRefresh(request, env, corsHeaders);
     }
@@ -207,7 +204,7 @@ export default {
       return await handleAdminDeleteUser(request, env, corsHeaders);
     }
 
-    // DELETE /api/admin/user/:userId - 删除用户（遗留路由）
+    // DELETE /api/admin/user/:userId - 删除用户
     if (pathParts[0] === 'api' && pathParts[1] === 'admin' && pathParts[2] === 'user' && pathParts[3] && !pathParts[4] && method === 'DELETE') {
       return await handleAdminDeleteUser(request, env, corsHeaders);
     }
@@ -263,11 +260,6 @@ export default {
       }
     }
 
-    // GET /api/_version - 版本信息
-    if (url.pathname === '/api/_version' && method === 'GET') {
-      return await handleVersion(request, env, corsHeaders);
-    }
-
     // === 公共站点访问 ===
 
     // GET /s/:slug - 访问 HTML 站点
@@ -293,7 +285,6 @@ export default {
     });
   },
 
-  // Cloudflare Cron Trigger — 每 30 分钟清理孤立用户
   async scheduled(controller, env, ctx) {
     if (controller.cron) {
       console.log('Cron trigger: starting orphan cleanup at', new Date().toISOString());

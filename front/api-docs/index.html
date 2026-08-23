@@ -230,7 +230,6 @@
     </main>
 
     <script>
-        // Render copy buttons in all pre blocks
         function addCopyButtons() {
             document.querySelectorAll('#md-content pre').forEach(pre => {
                 if (pre.querySelector('.copy-btn')) return;
@@ -251,7 +250,6 @@
             });
         }
 
-        // 为表格 td 注入列标签（竖屏模式下显示为卡片）
         function addTableLabels() {
             document.querySelectorAll('#md-content table').forEach(table => {
                 const headers = [];
@@ -267,7 +265,6 @@
             });
         }
 
-        // Load and render markdown
         fetch('api.md')
             .then(r => r.text())
             .then(md => {
@@ -282,6 +279,6 @@
                     '<p style="margin-top:12px;">加载失败，请稍后刷新重试</p>';
             });
     </script>
-<!-- Cloudflare Pages Analytics --><!-- Cloudflare Pages Analytics --><!-- Cloudflare Pages Analytics --><!-- Cloudflare Pages Analytics -->    <script src="../moved-banner.js"></script>
+<script src="../moved-banner.js"></script>
 </body>
 </html>

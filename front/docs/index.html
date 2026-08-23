@@ -247,7 +247,6 @@
             });
         }
 
-        // 按 ?doc= 参数加载文档（guide 使用手册 / terms 用户协议）
         var doc = new URLSearchParams(location.search).get('doc') || 'guide';
         var docMap = {
             'guide': { file: 'guide.md', title: '用户使用手册' },

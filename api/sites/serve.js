@@ -128,7 +128,6 @@ export async function handleServeSite(request, env, slug) {
   // 兼容旧格式：slug 带 md/ 前缀时剥掉
   const actualSlug = slug.startsWith('md/') ? slug.replace('md/', '') : slug;
 
-  // 查询站点
   const { data: site, error: siteError } = await supabase
     .from('gh_site')
     .select('owner_id, type')
@@ -154,7 +153,7 @@ export async function handleServeSite(request, env, slug) {
     return new Response(render404Page('内容未找到'), { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 
-  // 计数（await：Worker 响应返回后未 await 的异步会被冻结，必须等待）
+  // 计数：Worker 会冻结未 await 的异步，须等响应返回
   try {
     await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/increment_visit`, {
       method: 'POST',
@@ -175,7 +174,6 @@ export async function handleServeSite(request, env, slug) {
   };
   const content = await storageRes.text();
 
-  // Markdown 站点
   if (isMdSite) {
     const body = marked.parse(content);
     const title = escapeHtml(actualSlug) + ' - GooseHost';
@@ -448,7 +446,6 @@ export async function handleServeSite(request, env, slug) {
     });
   }
 
-  // HTML 站点直接返回
   return new Response(injectBase(content, `/s/${actualSlug}/`), {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',

@@ -20,7 +20,6 @@ export async function handleDebugSyncEmails(request, env, corsHeaders) {
   return jsonResp({ success: true, count: Object.keys(map).length }, 200, corsHeaders);
 }
 
-// 测试 Supabase SDK deleteUser
 export async function handleDebugTestAuth(request, env, corsHeaders) {
   const url = new URL(request.url);
   const testId = url.searchParams.get('id') || '789c1a30-bd1d-4a4b-9c41-0e56d6ff536f';
@@ -38,7 +37,6 @@ export async function handleDebugTestAuth(request, env, corsHeaders) {
   }
 }
 
-// 手动触发清理孤立用户（带 Secret）
 export async function handleDebugCleanup(request, env, corsHeaders) {
   const secret = request.headers.get('X-Cron-Secret') || '';
   if (secret !== env.CRON_SECRET) {
@@ -51,11 +49,4 @@ export async function handleDebugCleanup(request, env, corsHeaders) {
   } catch (err) {
     return jsonResp({ error: err.message }, 500, corsHeaders);
   }
-}
-
-// 版本信息
-export async function handleVersion(request, env, corsHeaders) {
-  return new Response(JSON.stringify({ v: 6, ts: new Date().toISOString() }), {
-    headers: { 'Content-Type': 'application/json', ...corsHeaders }
-  });
 }
