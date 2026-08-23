@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "goosehost-cli"
+version = "1.0.31"
+description = "GooseHost CLI"
+readme = "README.MD"
+authors = [{ name = "Minecraft_goose", email = "goose-bai@outlook.com" }]
+license = { text = "MIT" }
+requires-python = ">=3.8"
+dependencies = [
+    "requests>=2.25",
+    "terminaltables>=3.1.0",
+]
+
+[project.optional-dependencies]
+color = ["colorama>=0.4.6"]
+
+[project.scripts]
+goosehost = "goosehost_cli:main"
+
+[tool.setuptools]
+py-modules = ["goosehost_cli"]
