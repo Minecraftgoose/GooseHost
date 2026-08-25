@@ -1,0 +1,97 @@
+name: 🐛 Bug 报告
+description: 报告一个让 GooseHost 出问题的 Bug
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 感谢你花时间填写这份 Bug 报告！
+        请尽可能填写完整信息，这能帮助我们更快定位和修复问题。
+
+  - type: input
+    id: summary
+    attributes:
+      label: 一句话总结
+      description: 用一句话概括这个 Bug
+      placeholder: 例如：重置密码邮件收不到
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 详细描述
+      description: 发生了什么？预期应该发生什么？
+      placeholder: 请详细描述问题
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 请一步一步描述如何复现这个 Bug
+      placeholder: |
+        1. 访问 https://host.goose.gs.cn/login
+        2. 点击「忘记密码」
+        3. 输入邮箱后点击提交
+        4. 没有收到邮件
+    validations:
+      required: true
+
+  - type: dropdown
+    id: site-type
+    attributes:
+      label: 是否涉及站点托管？
+      description: 如果这个 Bug 和站点托管相关，请选择站点类型
+      options:
+        - 不涉及站点托管
+        - HTML 单页
+        - Markdown 文档
+        - 多文件网站（zip）
+    validations:
+      required: false
+
+  - type: input
+    id: site-url
+    attributes:
+      label: 站点地址（如涉及）
+      description: 如果涉及具体站点，请提供域名
+      placeholder: 例如：my-site.host.goose.gs.cn
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: 浏览器
+      description: 你在哪个浏览器上遇到这个问题？
+      options:
+        - Chrome
+        - Firefox
+        - Edge
+        - Safari
+        - 其他（请在补充说明里填写）
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      placeholder: 例如：Windows 11 / macOS 14 / Ubuntu 22
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 控制台报错或截图
+      description: 如果有报错信息或截图，请贴在这里（敏感信息请打码）
+      placeholder: 粘贴报错内容或拖入截图
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充说明
+      description: 其他你觉得有用的信息
