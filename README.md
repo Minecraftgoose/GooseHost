@@ -181,6 +181,10 @@ GooseHost
 请阅读[使用手册](https://host.goose.gs.cn/docs/)
 > 不是这玩意啥子都会吧
 
+### 自托管GooseHost
+
+请阅读[维基文档](https://github.com/Minecraftgoose/GooseHost/wiki/GooseHost-%E8%87%AA%E6%89%98%E7%AE%A1%E6%96%87%E6%A1%A3)
+
 ### 文档页
 - [API文档](https://host.goose.gs.cn/api-docs/)
 - [更新日志](https://host.goose.gs.cn/changelog/)
