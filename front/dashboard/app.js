@@ -756,7 +756,7 @@
                             ? `${API_URL}/p/${encodeURIComponent(site.name)}`
                             : `${API_URL}/s/${encodeURIComponent(site.name)}`;
                         return `
-                        <div class="site-item splash-action" data-slug="${escapeHtml(site.name)}" onclick="showSiteDetail('${site.name.replace(/'/g, "\\'")}')" style="animation-delay: ${(window.__splashDone ? 0 : 2.5) + i * 0.08}s">
+                        <div class="site-item splash-action" data-slug="${escapeHtml(site.name)}" onclick="showSiteDetail('${site.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" style="animation-delay: ${(window.__splashDone ? 0 : 2.5) + i * 0.08}s">
                             <div class="site-info">
                                 <div class="site-name">${escapeHtml(site.name)}</div>
                                 <div class="site-meta">
@@ -822,8 +822,8 @@
                         <div class="detail-name">${escapeHtml(s.name)} <span class="type-tag ${siteType}">${siteType.toUpperCase()}</span></div>
                         <div class="detail-actions">
                             <a href="${visitUrl}" target="_blank" class="btn btn-primary"><i class="fas fa-external-link-alt"></i> 访问</a>
-                            ${siteType !== 'project' ? `<button class="btn" onclick="editSite('${s.name.replace(/'/g, "\\'")}','${s.type}');return false;"><i class="fas fa-edit"></i> 编辑</button>` : ''}
-                            <button class="btn btn-danger" onclick="confirmDelete('${s.name.replace(/'/g, "\\'")}');return false;"><i class="fas fa-trash"></i> 删除</button>
+                            ${siteType !== 'project' ? `<button class="btn" onclick="editSite('${s.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}','${s.type}');return false;"><i class="fas fa-edit"></i> 编辑</button>` : ''}
+                            <button class="btn btn-danger" onclick="confirmDelete('${s.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}');return false;"><i class="fas fa-trash"></i> 删除</button>
                         </div>
                     </div>
                     <div class="detail-meta">
@@ -840,8 +840,8 @@
                             <span class="file-size">${fmtSize(f.size)}</span>
                             ${siteType === 'project' ? `<span class="drag-hint"><i class="fas fa-upload"></i> 拖放替换</span>
                             <span class="file-actions">
-                                <button onclick="editProjectFile('${s.name.replace(/'/g, "\\'")}','${f.name.replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> 编辑</button>
-                                <button onclick="deleteProjectFile('${s.name.replace(/'/g, "\\'")}','${f.name.replace(/'/g, "\\'")}')" class="del"><i class="fas fa-trash"></i> 删除</button>
+                                <button onclick="editProjectFile('${s.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}','${f.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> 编辑</button>
+                                <button onclick="deleteProjectFile('${s.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}','${f.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" class="del"><i class="fas fa-trash"></i> 删除</button>
                             </span>` : ''}
                         </div>`).join('')}
                     </div>`;
