@@ -33,7 +33,7 @@ export async function handleRegister(request, env, corsHeaders) {
     return jsonResp({ error: '邮箱和密码不能为空' }, 400, corsHeaders);
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!/^[^@\s]{1,64}@[^@\s]{1,255}\.[^@\s]{1,64}$/.test(email)) {
     return jsonResp({ error: '邮箱格式不正确' }, 400, corsHeaders);
   }
 
