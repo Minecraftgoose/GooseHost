@@ -1,5 +1,5 @@
-name: 🐛 Bug 报告
-description: 报告一个让 GooseHost 出问题的 Bug
+name: Bug 报告
+description: 报告问题
 title: "[Bug]: "
 labels: ["bug", "needs-triage"]
 assignees: []
@@ -15,7 +15,6 @@ body:
     attributes:
       label: 一句话总结
       description: 用一句话概括这个 Bug
-      placeholder: 例如：重置密码邮件收不到
     validations:
       required: true
 
@@ -33,11 +32,6 @@ body:
     attributes:
       label: 复现步骤
       description: 请一步一步描述如何复现这个 Bug
-      placeholder: |
-        1. 访问 https://host.goose.gs.cn/login
-        2. 点击「忘记密码」
-        3. 输入邮箱后点击提交
-        4. 没有收到邮件
     validations:
       required: true
 
@@ -59,7 +53,7 @@ body:
     attributes:
       label: 站点地址（如涉及）
       description: 如果涉及具体站点，请提供域名
-      placeholder: 例如：my-site.host.goose.gs.cn
+      placeholder: 例如：page.goose.gs.cn/s/xxx
 
   - type: dropdown
     id: browser
@@ -87,7 +81,7 @@ body:
     id: logs
     attributes:
       label: 控制台报错或截图
-      description: 如果有报错信息或截图，请贴在这里（敏感信息请打码）
+      description: 如果有报错信息或截图，请贴在这里
       placeholder: 粘贴报错内容或拖入截图
 
   - type: textarea
