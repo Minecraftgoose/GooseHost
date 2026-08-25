@@ -1,0 +1,42 @@
+name: 功能请求
+description: 给 GooseHost 提一个新功能建议
+title: "[功能请求]: "
+labels: ["enhancement"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 感谢你的建议！
+        好的功能建议能让 GooseHost 变得更好。
+
+  - type: input
+    id: summary
+    attributes:
+      label: 概述
+      description: 概括你想要的功能
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 这个功能解决了什么问题？
+      description: 你现在遇到了什么不方便的地方？这个功能能帮你解决吗？
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 你理想的解决方案
+      description: 你希望这个功能具体怎么运作？
+    validations:
+      required: true
+
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充说明
+      description: 截图、参考链接、或其他你想说的
