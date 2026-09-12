@@ -11,7 +11,7 @@
             return {
                 enabled: !!o.enabled,
                 endpoint: String(o.endpoint || '').trim(),
-                apiKey: String(o.apiKey || '').trim(),
+                apiKey: '',
                 model: String(o.model || '').trim()
             };
         } catch (e) {
@@ -25,7 +25,12 @@
             apiKey: String(cfg.apiKey || '').trim(),
             model: String(cfg.model || '').trim()
         };
-        try { localStorage.setItem(CUSTOM_MODEL_KEY, JSON.stringify(customModel)); } catch (e) { }
+        // 安全：apiKey 属于敏感凭据，不写入 localStorage（避免 clear-text storage / XSS 窃取）。
+        // 仅持久化非敏感配置；apiKey 只保留在内存中，刷新后需重新填写。
+        try {
+            var persisted = { enabled: customModel.enabled, endpoint: customModel.endpoint, model: customModel.model };
+            localStorage.setItem(CUSTOM_MODEL_KEY, JSON.stringify(persisted));
+        } catch (e) { }
         return customModel;
     }
     function normalizeEndpoint(v) {
@@ -1482,7 +1487,11 @@
     function endStreamMsg(el, text) {
         if (!el) return;
         el.classList.remove('cop-streaming');
-        el.innerHTML = renderMarkdown(text || '');
+        try {
+            el.innerHTML = sanitizeHtml(renderMarkdown(text || ''));
+        } catch (e) {
+            el.textContent = text || '';
+        }
         var turn = el.parentNode && el.parentNode.parentNode;
         if (turn && turn.classList) turn.classList.remove('cop-streaming');
         scrollMsgsToEnd();
@@ -2155,7 +2164,12 @@
         if (!body) return null;
         var el = document.createElement('div');
         el.className = 'cop-ai-content';
-        el.innerHTML = renderMarkdown(text);
+        try {
+            el.innerHTML = sanitizeHtml(renderMarkdown(text));
+        } catch (e) {
+            // 解析/渲染异常时退化为纯文本，绝不把异常文本当作 HTML 写入（CWE-79）。
+            el.textContent = text || '';
+        }
         body.appendChild(el);
         syncWelcome();
         scrollMsgsToEnd();
@@ -2261,6 +2275,69 @@
         if (pre) { pre.textContent = out; pre.style.display = 'block'; }
         scrollMsgsToEnd();
     }
+    function sanitizeHtml(inputHtml) {
+        if (!inputHtml) return '';
+        var ALLOWED = {'A':['href','title','target','rel'],'IMG':['src','alt','title','loading'],'VIDEO':['src','controls'],'STRONG':[],'EM':[],'CODE':[],'PRE':[],'P':[],'BR':[],'UL':[],'OL':[],'LI':[],'BLOCKQUOTE':[],'H1':[],'H2':[],'H3':[],'H4':[],'H5':[],'H6':[],'DIV':[],'SPAN':[],'B':[],'I':[],'U':[],'S':[],'HR':[],'TABLE':[],'THEAD':[],'TBODY':[],'TR':[],'TH':[],'TD':[]};
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = String(inputHtml);
+        function safeUrl(u) {
+            var raw = String(u == null ? '' : u).trim();
+            if (!raw) return '';
+            var s = raw.toLowerCase();
+            // 拒绝一切脚本类 / 数据类协议（含大小写变体）。
+            if (/^(javascript|vbscript|data:|file:|about:|blob:)/i.test(s)) return '';
+            // 仅放行绝对 http(s) URL；相对路径（/、./、../ 开头）同样放行。
+            if (/^https?:\/\//i.test(s)) return raw;
+            if (/^\//.test(raw) || /^\.{1,2}\//.test(raw)) return raw;
+            return '';
+        }
+        // 对节点做「序列化 → 重新解析」式重建：先转成消毒后的 HTML 字符串，
+        // 再用一个新的临时容器解析，从而彻底规避部分 DOM 实现（linkedom 等）
+        // NamedNodeMap 实时变化 / tagName 大小写带来的属性处理差异。
+        // 采用「黑名单优先」策略：<script>/<style>/<iframe>/<object>/<embed>/<link>/<meta>
+        // 等高危标签整体丢弃（含其子节点文本），其余按白名单校验属性。
+        var STRIP_TAGS = {'SCRIPT':1,'STYLE':1,'IFRAME':1,'OBJECT':1,'EMBED':1,'LINK':1,'META':1,'BASE':1,'FORM':1};
+        function serializeNode(node, buf) {
+            if (node.nodeType === 3) { buf.push(escapeHtml(node.textContent)); return; }
+            if (node.nodeType !== 1) return;
+            var tag = node.tagName;
+            if (STRIP_TAGS.hasOwnProperty(tag)) return; // 高危标签整棵丢弃
+            if (!ALLOWED.hasOwnProperty(tag)) { serializeChildren(node, buf); return; }
+            var keep = ALLOWED[tag].slice();
+            if (keep.indexOf('title') === -1) keep.push('title');
+            // 收集经白名单过滤后的属性（unsafe 的 src/href 直接丢弃）
+            var renderedAttrs = [];
+            for (var i = 0; i < node.attributes.length; i++) {
+                var attr = node.attributes[i];
+                var name = attr.name.toLowerCase();
+                var value = attr.value;
+                if (name === 'style') continue;
+                if (/^on|^formaction|^(srcdoc|manifest)$/i.test(name)) continue;
+                if (keep.indexOf(name) === -1) continue;
+                if ((name === 'href' || name === 'src') && !safeUrl(value)) continue;
+                if (name === 'href' || name === 'src') value = safeUrl(value);
+                renderedAttrs.push(' ' + name + '="' + escapeAttr(value) + '"');
+            }
+            // 无合法属性的 void 元素（如 <img>、<br>）不再产生无意义空标签
+            if (VOID_TAGS.indexOf(tag) !== -1 && renderedAttrs.length === 0) return;
+            buf.push('<' + tag.toLowerCase() + renderedAttrs.join(''));
+            if (tag === 'A') { buf.push(' rel="noopener noreferrer" target="_blank"'); }
+            buf.push('>');
+            serializeChildren(node, buf);
+            // 自闭合标签列表外（如 img、br）均补闭合标签
+            if (VOID_TAGS.indexOf(tag) === -1) buf.push('</' + tag.toLowerCase() + '>');
+        }
+        function serializeChildren(node, buf) {
+            for (var i = 0; i < node.childNodes.length; i++) serializeNode(node.childNodes[i], buf);
+        }
+        function escapeAttr(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        }
+        var VOID_TAGS = ['IMG','VIDEO','BR','INPUT','LINK','META'];
+        var buf = [];
+        serializeChildren(wrapper, buf);
+        return buf.join('').replace(/<img /gi, '<img ');
+    }
     function escapeHtml(s) {
         return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
@@ -2289,16 +2366,18 @@
             return NUL + 'B' + i + NUL;
         });
         function inline(s) {
+            // 先对整段文本做 HTML 转义（防 XSS），再在受信任的标记片段上还原标签，
+            // 最后由 sanitizeHtml() 对属性/协议做白名单校验 —— 形成「转义 + 消毒」双保险。
             s = escapeHtml(s);
             s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, function (m, alt, url) {
                 if (/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url)) {
-                    return '<video src="' + url + '" controls style="max-width:100%;max-height:420px;border-radius:var(--radius);box-shadow:0 4px 24px rgba(0,0,0,0.15);margin:8px 0"></video>';
+                    return '<video src="' + url + '" controls></video>';
                 }
-                return '<img src="' + url + '" alt="' + alt + '" loading="lazy" style="max-width:100%;max-height:400px;width:auto;height:auto;border-radius:var(--radius);margin:8px 0;object-fit:contain">';
+                return '<img src="' + url + '" alt="' + alt + '" loading="lazy">';
             });
             s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
             s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
-            s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+            s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>');
             return s;
         }
         const placeholder = new RegExp('^' + NUL + 'B\\d+' + NUL + '$');
@@ -2342,7 +2421,13 @@
         if (!t) return;
         var line = document.createElement('div');
         line.className = 'cop-term-row';
-        if (raw) line.innerHTML = text; else line.textContent = text;
+        if (raw) {
+            // raw 文本可能含来自异常/外部输入的控制字符序列，按纯文本写入后再追加，
+            // 避免把可控文本当作 HTML 解析（CWE-79）。
+            line.textContent = text;
+        } else {
+            line.textContent = text;
+        }
         t.appendChild(line);
         t.scrollTop = t.scrollHeight;
     }

@@ -166,8 +166,10 @@
         $('#pfAvatar').addEventListener('input', (e) => {
             const v = e.target.value.trim();
             const img = $('#pfAvatarPreview');
-            if (v) { img.src = v; img.style.display = 'inline-block'; $('#pfAvatarFallback').style.display = 'none'; }
-            else { img.style.display = 'none'; $('#pfAvatarFallback').style.display = 'inline-flex'; }
+            // 仅允许 http(s) 与同源相对路径；拒绝 javascript:/data:/blob: 等危险协议（CWE-79）。
+            const safe = /^https?:\/\//i.test(v) || (/^[^:]+\/[^\/]/i.test(v) && !/^[a-z]+:/i.test(v));
+            if (safe) { img.src = v; img.style.display = 'inline-block'; $('#pfAvatarFallback').style.display = 'none'; }
+            else { img.removeAttribute('src'); img.style.display = 'none'; $('#pfAvatarFallback').style.display = 'inline-flex'; }
         });
         // 弹窗点遮罩关闭
         document.querySelectorAll('.pg-modal').forEach(m => {
