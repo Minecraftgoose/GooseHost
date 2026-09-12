@@ -1479,7 +1479,7 @@
     }
     function safeRender(el, html) {
         try {
-            el.innerHTML = sanitizeHtml(html);
+            safeSetHtml(el, html);
         } catch (e) {
             el.textContent = '';
         }
@@ -2168,7 +2168,7 @@
         var el = document.createElement('div');
         el.className = 'cop-ai-content';
         try {
-            el.innerHTML = sanitizeHtml(renderMarkdown(text));
+            safeSetHtml(el, renderMarkdown(text));
         } catch (e) {
             el.textContent = '';
         }
@@ -2280,8 +2280,15 @@
     function sanitizeHtml(inputHtml) {
         if (!inputHtml) return '';
         var ALLOWED = {'A':['href','title','target','rel'],'IMG':['src','alt','title','loading'],'VIDEO':['src','controls'],'STRONG':[],'EM':[],'CODE':[],'PRE':[],'P':[],'BR':[],'UL':[],'OL':[],'LI':[],'BLOCKQUOTE':[],'H1':[],'H2':[],'H3':[],'H4':[],'H5':[],'H6':[],'DIV':[],'SPAN':[],'B':[],'I':[],'U':[],'S':[],'HR':[],'TABLE':[],'THEAD':[],'TBODY':[],'TR':[],'TH':[],'TD':[]};
-        var wrapper = document.createElement('div');
-        wrapper.innerHTML = String(inputHtml);
+        // 用 DOMParser 解析：文档是 inert 的，不会执行脚本 / 触发 onerror / 加载外部资源
+        var wrapper = null;
+        if (typeof DOMParser !== 'undefined') {
+            wrapper = new DOMParser().parseFromString(String(inputHtml), 'text/html').body;
+        }
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.textContent = String(inputHtml);
+        }
         function safeUrl(u) {
             var raw = String(u == null ? '' : u).trim();
             if (!raw) return '';
@@ -2332,6 +2339,22 @@
     }
     function escapeHtml(s) {
         return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    // 把（已净化的）HTML 字符串写入元素：解析成 inert 文档后逐个节点移入，
+    // 全程不触碰 innerHTML / insertAdjacentHTML，任何残留脚本都不会被执行
+    function safeSetHtml(el, html) {
+        if (!el) return;
+        var safe = sanitizeHtml(html);
+        el.textContent = '';
+        if (!safe) return;
+        if (typeof DOMParser !== 'undefined') {
+            var doc = new DOMParser().parseFromString(safe, 'text/html');
+            var frag = document.createDocumentFragment();
+            while (doc.body.firstChild) frag.appendChild(doc.body.firstChild);
+            el.appendChild(frag);
+            return;
+        }
+        el.textContent = safe;
     }
     function renderMarkdown(text) {
         if (!text) return '';
