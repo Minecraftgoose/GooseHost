@@ -2337,12 +2337,46 @@
         });
         return html;
     }
+    function sanitizeTermHtml(html) {
+        var input = String(html == null ? '' : html);
+        var parser = new DOMParser();
+        var doc = parser.parseFromString('<div>' + input + '</div>', 'text/html');
+        var root = doc.body.firstElementChild;
+
+        var allowedTags = { SPAN: true, B: true, I: true, EM: true, STRONG: true, BR: true, CODE: true };
+        var allowedAttrs = { 'class': true };
+
+        (function walk(node) {
+            var children = Array.prototype.slice.call(node.children || []);
+            for (var i = 0; i < children.length; i++) {
+                var el = children[i];
+                if (!allowedTags[el.tagName]) {
+                    var textNode = doc.createTextNode(el.textContent || '');
+                    el.parentNode.replaceChild(textNode, el);
+                    continue;
+                }
+                var attrs = Array.prototype.slice.call(el.attributes || []);
+                for (var j = 0; j < attrs.length; j++) {
+                    var name = attrs[j].name;
+                    var value = attrs[j].value || '';
+                    var lower = name.toLowerCase();
+                    if (!allowedAttrs[lower] || lower.indexOf('on') === 0 || /javascript:/i.test(value)) {
+                        el.removeAttribute(name);
+                    }
+                }
+                walk(el);
+            }
+        })(root);
+
+        return root.innerHTML;
+    }
+
     function termPrint(text, raw) {
         var t = document.getElementById('copTerm');
         if (!t) return;
         var line = document.createElement('div');
         line.className = 'cop-term-row';
-        if (raw) line.innerHTML = text; else line.textContent = text;
+        if (raw) line.innerHTML = sanitizeTermHtml(text); else line.textContent = text;
         t.appendChild(line);
         t.scrollTop = t.scrollHeight;
     }
