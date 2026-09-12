@@ -80,7 +80,7 @@
 
 ## 用户协议与隐私政策
 
-**请参阅**: https://host.goose.gs.cn/docs/?doc=terms
+**请参阅**: https://host.goose.cc.cd/docs/?doc=terms
 
 ## 来源
 
