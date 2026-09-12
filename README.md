@@ -190,7 +190,7 @@ GooseHost
 - [更新日志](https://host.goose.cc.cd/changelog/)
 - [用户协议](https://host.goose.cc.cd/docs/?doc=terms)
   > 是的有用户协议
-- [CLI文档](https://page.goose.gs.cn/md/cli/)
+- [CLI文档](https://page.goose.cc.cd/md/cli/)
 
 ### 许可
 
