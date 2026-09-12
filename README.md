@@ -64,7 +64,6 @@ GooseHost
 │  ├─ index.html
 │  ├─ logo.svg
 │  ├─ manifest.json
-│  ├─ moved-banner.js
 │  ├─ robots.txt
 │  ├─ sitemap.xml
 │  ├─ style.css
@@ -80,6 +79,10 @@ GooseHost
 │  │  ├─ index.html
 │  │  └─ style.css
 │  ├─ register
+│  │  ├─ app.js
+│  │  ├─ index.html
+│  │  └─ style.css
+│  ├─ playground
 │  │  ├─ app.js
 │  │  ├─ index.html
 │  │  └─ style.css
@@ -108,6 +111,8 @@ GooseHost
 │  │  └─ terms.md
 │  ├─ dashboard
 │  │  ├─ app.js
+│  │  ├─ copilot.css
+│  │  ├─ copilot.js
 │  │  ├─ index.html
 │  │  └─ style.css
 │  ├─ changelog
@@ -121,11 +126,9 @@ GooseHost
 │     ├─ index.html
 │     └─ style.css
 └─ api
-   ├─ .gitignore
    ├─ debug.js
    ├─ index.js
    ├─ macos.js
-   ├─ moved-worker.js
    ├─ package-lock.json
    ├─ package.json
    ├─ wrangler.toml
@@ -149,6 +152,14 @@ GooseHost
    │  ├─ project.js
    │  ├─ serve.js
    │  └─ update.js
+   ├─ play
+   │  ├─ ai.js
+   │  ├─ comments.js
+   │  ├─ feed.js
+   │  ├─ index.js
+   │  ├─ posts.js
+   │  ├─ profile.js
+   │  └─ util.js
    ├─ jobs
    │  ├─ cleanup.js
    │  └─ index.js
@@ -163,17 +174,20 @@ GooseHost
    │  ├─ register.js
    │  ├─ reset-password.js
    │  └─ signup.js
+   ├─ ai
+   │  └─ chat.js
    └─ admin
       ├─ announcement.js
       ├─ delete-user.js
       ├─ index.js
+      ├─ play.js
       ├─ public-stats.js
       ├─ site-detail.js
       ├─ sites.js
       ├─ stats.js
       ├─ sync-emails.js
       ├─ system-status.js
-      └─ users.js                 
+      └─ users.js
 ```
 
 ### 快速开始
