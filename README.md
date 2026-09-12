@@ -178,7 +178,7 @@ GooseHost
 
 ### 快速开始
 
-请阅读[使用手册](https://host.goose.gs.cn/docs/)
+请阅读[使用手册](https://host.goose.cc.cd/docs/)
 > 不是这玩意啥子都会吧
 
 ### 自托管GooseHost
@@ -186,9 +186,9 @@ GooseHost
 请阅读[维基文档](https://github.com/Minecraftgoose/GooseHost/wiki/GooseHost-%E8%87%AA%E6%89%98%E7%AE%A1%E6%96%87%E6%A1%A3)
 
 ### 文档页
-- [API文档](https://host.goose.gs.cn/api-docs/)
-- [更新日志](https://host.goose.gs.cn/changelog/)
-- [用户协议](https://host.goose.gs.cn/docs/?doc=terms)
+- [API文档](https://host.goose.cc.cd/api-docs/)
+- [更新日志](https://host.goose.cc.cd/changelog/)
+- [用户协议](https://host.goose.cc.cd/docs/?doc=terms)
   > 是的有用户协议
 - [CLI文档](https://page.goose.gs.cn/md/cli/)
 
