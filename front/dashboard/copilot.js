@@ -11,7 +11,7 @@
             return {
                 enabled: !!o.enabled,
                 endpoint: String(o.endpoint || '').trim(),
-                apiKey: '',
+                apiKey: String(o.apiKey || '').trim(),
                 model: String(o.model || '').trim()
             };
         } catch (e) {
@@ -25,10 +25,13 @@
             apiKey: String(cfg.apiKey || '').trim(),
             model: String(cfg.model || '').trim()
         };
-        // 安全：apiKey 属于敏感凭据，不写入 localStorage（避免 clear-text storage / XSS 窃取）。
-        // 仅持久化非敏感配置；apiKey 只保留在内存中，刷新后需重新填写。
         try {
-            var persisted = { enabled: customModel.enabled, endpoint: customModel.endpoint, model: customModel.model };
+            var persisted = {
+                enabled: customModel.enabled,
+                endpoint: customModel.endpoint,
+                apiKey: customModel.apiKey,
+                model: customModel.model
+            };
             localStorage.setItem(CUSTOM_MODEL_KEY, JSON.stringify(persisted));
         } catch (e) { }
         return customModel;
@@ -812,8 +815,7 @@
         '- 删除类工具如果用户点了「取消」，如实告诉用户已取消，不要重试或换路径偷偷删除。',
 		'【关于GooseHost】',
 		'- GooseHost由Minecraft_goose开发',
-		'- GooseHost最大的赞助商是猫羽雫',
-		'GooseHost 是一个由 Minecraft_goose 开发、GooseCode® 旗下的开源免费静态网站托管平台。项目于 2026 年 6 月 23 日首发，7 月 22 日开源至 GitHub，采用 MIT 许可证。',
+		'GooseHost 是一个由 Minecraft_goose 开发、GooseCode旗下的开源免费静态网站托管平台。项目于 2026 年 6 月 23 日首发，7 月 22 日开源至 GitHub，采用 MIT 许可证。',
 		'| 项目        | 数据                                                                      |',
 		'| --------- | ----------------------------------------------------------------------- |',
 		'| GitHub 仓库 | [Minecraftgoose/GooseHost](https://github.com/Minecraftgoose/GooseHost) |',
@@ -1394,8 +1396,6 @@
         if (box && box.clientHeight) box.scrollTop = box.scrollHeight;
     }
 
-    /* 切走页面时 .page 变 display:none，#copMsgs 的 scrollTop 会被浏览器清零，
-       切回来就跳到顶部。这里实时记录滚动位置，页面重新可见时还原。 */
     var msgScroll = { top: 0, atBottom: true };
     function resetMsgScroll() { msgScroll.top = 0; msgScroll.atBottom = true; }
     function trackMsgScroll() {
@@ -1477,21 +1477,24 @@
         scrollMsgsToEnd();
         return el;
     }
+    function safeRender(el, html) {
+        try {
+            el.innerHTML = sanitizeHtml(html);
+        } catch (e) {
+            el.textContent = '';
+        }
+    }
     function updateStreamMsg(el, text) {
         if (!el) return;
         var ph = el.querySelector('[data-thinking]');
         if (ph) ph.remove();
-        el.innerHTML = renderPartial(text);
+        safeRender(el, renderMarkdown(text || ''));
         scrollMsgsToEnd();
     }
     function endStreamMsg(el, text) {
         if (!el) return;
         el.classList.remove('cop-streaming');
-        try {
-            el.innerHTML = sanitizeHtml(renderMarkdown(text || ''));
-        } catch (e) {
-            el.textContent = text || '';
-        }
+        safeRender(el, renderMarkdown(text || ''));
         var turn = el.parentNode && el.parentNode.parentNode;
         if (turn && turn.classList) turn.classList.remove('cop-streaming');
         scrollMsgsToEnd();
@@ -1950,7 +1953,7 @@
             '      </div>',
             '      <div class="cop-pane" data-pane="model">',
             '        <div class="cop-model-form">',
-            '          <div class="cop-model-tip">启用后，Copilot 将直接请求你填写的 OpenAI 兼容接口，不再使用 GooseHost 默认模型。配置仅保存在本机浏览器。</div>',
+            '          <div class="cop-model-tip">启用后，Copilot 将直接请求你填写的 OpenAI 兼容接口，不再使用 GooseHost 默认模型。配置（含 API Key）保存在本机浏览器 localStorage，下次打开自动填入；清理浏览器数据或换设备需重新填写。</div>',
             '          <label class="cop-field">',
             '            <span class="cop-field-label">接入地址 Endpoint</span>',
             '            <input class="cop-input" id="copModelEndpoint" type="text" placeholder="https://api.openai.com/v1" autocomplete="off" spellcheck="false">',
@@ -2167,8 +2170,7 @@
         try {
             el.innerHTML = sanitizeHtml(renderMarkdown(text));
         } catch (e) {
-            // 解析/渲染异常时退化为纯文本，绝不把异常文本当作 HTML 写入（CWE-79）。
-            el.textContent = text || '';
+            el.textContent = '';
         }
         body.appendChild(el);
         syncWelcome();
@@ -2284,28 +2286,20 @@
             var raw = String(u == null ? '' : u).trim();
             if (!raw) return '';
             var s = raw.toLowerCase();
-            // 拒绝一切脚本类 / 数据类协议（含大小写变体）。
             if (/^(javascript|vbscript|data:|file:|about:|blob:)/i.test(s)) return '';
-            // 仅放行绝对 http(s) URL；相对路径（/、./、../ 开头）同样放行。
             if (/^https?:\/\//i.test(s)) return raw;
             if (/^\//.test(raw) || /^\.{1,2}\//.test(raw)) return raw;
             return '';
         }
-        // 对节点做「序列化 → 重新解析」式重建：先转成消毒后的 HTML 字符串，
-        // 再用一个新的临时容器解析，从而彻底规避部分 DOM 实现（linkedom 等）
-        // NamedNodeMap 实时变化 / tagName 大小写带来的属性处理差异。
-        // 采用「黑名单优先」策略：<script>/<style>/<iframe>/<object>/<embed>/<link>/<meta>
-        // 等高危标签整体丢弃（含其子节点文本），其余按白名单校验属性。
         var STRIP_TAGS = {'SCRIPT':1,'STYLE':1,'IFRAME':1,'OBJECT':1,'EMBED':1,'LINK':1,'META':1,'BASE':1,'FORM':1};
         function serializeNode(node, buf) {
             if (node.nodeType === 3) { buf.push(escapeHtml(node.textContent)); return; }
             if (node.nodeType !== 1) return;
             var tag = node.tagName;
-            if (STRIP_TAGS.hasOwnProperty(tag)) return; // 高危标签整棵丢弃
+            if (STRIP_TAGS.hasOwnProperty(tag)) return; 
             if (!ALLOWED.hasOwnProperty(tag)) { serializeChildren(node, buf); return; }
             var keep = ALLOWED[tag].slice();
             if (keep.indexOf('title') === -1) keep.push('title');
-            // 收集经白名单过滤后的属性（unsafe 的 src/href 直接丢弃）
             var renderedAttrs = [];
             for (var i = 0; i < node.attributes.length; i++) {
                 var attr = node.attributes[i];
@@ -2318,13 +2312,11 @@
                 if (name === 'href' || name === 'src') value = safeUrl(value);
                 renderedAttrs.push(' ' + name + '="' + escapeAttr(value) + '"');
             }
-            // 无合法属性的 void 元素（如 <img>、<br>）不再产生无意义空标签
             if (VOID_TAGS.indexOf(tag) !== -1 && renderedAttrs.length === 0) return;
             buf.push('<' + tag.toLowerCase() + renderedAttrs.join(''));
             if (tag === 'A') { buf.push(' rel="noopener noreferrer" target="_blank"'); }
             buf.push('>');
             serializeChildren(node, buf);
-            // 自闭合标签列表外（如 img、br）均补闭合标签
             if (VOID_TAGS.indexOf(tag) === -1) buf.push('</' + tag.toLowerCase() + '>');
         }
         function serializeChildren(node, buf) {
@@ -2366,8 +2358,6 @@
             return NUL + 'B' + i + NUL;
         });
         function inline(s) {
-            // 先对整段文本做 HTML 转义（防 XSS），再在受信任的标记片段上还原标签，
-            // 最后由 sanitizeHtml() 对属性/协议做白名单校验 —— 形成「转义 + 消毒」双保险。
             s = escapeHtml(s);
             s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, function (m, alt, url) {
                 if (/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url)) {
@@ -2422,8 +2412,6 @@
         var line = document.createElement('div');
         line.className = 'cop-term-row';
         if (raw) {
-            // raw 文本可能含来自异常/外部输入的控制字符序列，按纯文本写入后再追加，
-            // 避免把可控文本当作 HTML 解析（CWE-79）。
             line.textContent = text;
         } else {
             line.textContent = text;

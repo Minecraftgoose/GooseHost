@@ -367,61 +367,34 @@
             background: #000;
         }
 
-        /* ===== 赞助商区===== */
-        .sponsor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-        .sponsor-slot {
-            min-height: 120px;
-            border: 1px dashed rgba(2, 255, 142, 0.25);
-            border-radius: 10px;
+        /* ===== 鸣谢区 ===== */
+        .thanks-list {
             display: flex;
-            align-items: center;
+            flex-wrap: wrap;
             justify-content: center;
-            background: rgba(0, 20, 10, 0.35);
-            transition: border-color 0.25s, background 0.25s;
-            overflow: hidden;
+            gap: 0.8rem;
+            padding: 1.4rem 1.2rem;
         }
-        .sponsor-slot.sponsor-filled {
-            border-style: solid;
-            border-color: rgba(2, 255, 142, 0.2);
-            padding: 0;
-            background: rgba(0, 20, 10, 0.5);
-        }
-        .sponsor-slot.sponsor-filled img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-        .sponsor-slot:hover {
-            border-color: rgba(2, 255, 142, 0.45);
-            background: rgba(2, 255, 142, 0.05);
-        }
-        .sponsor-empty {
-            text-align: center;
-            color: rgba(255, 255, 255, 0.3);
-            font-size: 0.85rem;
-            display: flex;
-            flex-direction: column;
+        .thanks-item {
+            display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.5rem;
+            padding: 0.55rem 1.1rem;
+            border: 1px solid rgba(2, 255, 142, 0.25);
+            border-radius: 999px;
+            background: rgba(0, 20, 10, 0.35);
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.92rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: border-color 0.25s, background 0.25s, color 0.25s, transform 0.25s;
         }
-        .sponsor-empty i { font-size: 1.3rem; color: rgba(2, 255, 142, 0.35); }
-        .sponsor-thanks {
-            margin-top: 1.2rem;
-            text-align: center;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 0.9rem;
-        }
-        .sponsor-thanks a { color: #02ff8e; text-decoration: none; font-weight: 600; }
-        .sponsor-thanks a:hover { text-decoration: underline; }
-        .sponsor-video {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            border-radius: 10px;
-            border: none;
-            display: block;
-            margin-top: 1.2rem;
-            background: #000;
+        .thanks-item i { color: #02ff8e; font-size: 0.9rem; }
+        .thanks-item:hover {
+            border-color: rgba(2, 255, 142, 0.5);
+            background: rgba(2, 255, 142, 0.08);
+            color: #fff;
+            transform: translateY(-2px);
         }
         .faq-video {
             width: 100%;
@@ -512,7 +485,7 @@
             .compare-vs { padding: 0.9rem 0; }
             .cmp-arrow-h { display: none; }
             .cmp-arrow-v { display: inline; }
-            .sponsor-grid { grid-template-columns: 1fr; }
+            .thanks-list { gap: 0.6rem; }
             .container { padding: 1.5rem 1rem 1rem; }
             .hero { padding-top: 1rem; }
         }
