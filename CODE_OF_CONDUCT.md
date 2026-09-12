@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://host.goose.gs.cn"><img src="front/logo.svg" alt="GooseHost Logo" width="auto"></a>
+  <a href="https://host.goose.cc.cd"><img src="front/logo.svg" alt="GooseHost Logo" width="auto"></a>
 </p>
 
 # `GooseHost` 贡献者公约行为准则
@@ -44,7 +44,7 @@
 
 如遇到辱骂、骚扰或其他不可接受的行为，可通过以下方式向负责执行的项目维护者举报：
 
-**举报邮箱：support@mail.goose.gs.cn**
+**举报邮箱：support@mail.goose.cc.cd**
 
 所有投诉都将得到及时、公正的审查与调查。
 
