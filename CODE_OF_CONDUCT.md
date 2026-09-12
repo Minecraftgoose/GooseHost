@@ -82,6 +82,10 @@
 
 **请参阅**: https://host.goose.cc.cd/docs/?doc=terms
 
+## 贡献指南
+
+我们欢迎任何形式的PR，包括但不限于vibecoding、Agent产物
+
 ## 来源
 
 本行为准则改编自 [Contributor Covenant][homepage] 2.0 版，可在 https://www.contributor-covenant.org/version/2/0/code_of_conduct.html 查看。
