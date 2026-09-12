@@ -1,4 +1,4 @@
-        const API_URL = 'https://page.goose.gs.cn';
+        const API_URL = 'https://page.goose.cc.cd';
 
         async function checkStatus() {
             const loadingBox = document.getElementById('loadingBox');

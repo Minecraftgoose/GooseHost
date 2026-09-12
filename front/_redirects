@@ -4,6 +4,8 @@
 /dashboard/mysite/* /dashboard/ 200
 /dashboard/settings /dashboard/ 200
 /dashboard/account /dashboard/ 200
+/dashboard/copilot /dashboard/ 200
+/dashboard/preferences /dashboard/ 200
 /dashboard.html /dashboard 301
 /status /status/ 200
 /status.html /status 301
@@ -11,3 +13,4 @@
 /register.html /register 301
 /admin.html /admin 301
 /reset-password.html /reset-password 301
+/playground /playground/ 200

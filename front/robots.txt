@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow:
 
-Sitemap: https://host.goose.gs.cn/sitemap.xml
+Sitemap: https://host.goose.cc.cd/sitemap.xml
