@@ -1,10 +1,32 @@
-<p style="text-align: center;"><img src="https://host.goose.gs.cn/logo.svg" alt="GooseHost Logo" style="height:auto; width:auto;"></p>
+<p style="text-align: center;"><img src="https://host.goose.cc.cd/logo.svg" alt="GooseHost Logo" style="height:auto; width:auto;"></p>
 
 <h1 style="text-align: center;">更新日志</h1>
 
 > 记录 GooseHost 的每一次更新。
 
 ---
+
+## 🚀 v1.2.2 - 2026年8月31日
+
+### 新增：GooseHost Copilot
+
+在 Dashboard 侧边栏新增 **AI Copilot** 页面，用户可通过自然语言与 AI 对话，让 AI 协助完成文件编辑、站点部署与管理等操作，大幅提升建站效率。
+
+#### AI能力
+
+- **智能沙箱操作**：内置类 Unix 虚拟文件系统，AI 可执行文件的读写、目录创建、移动复制、内容搜索等操作，所有改动实时同步至沙箱。
+- **一键部署上线**：AI 可将沙箱中的单文件或多文件站点自动打包并部署至 GooseHost，部署成功后自动返回访问链接。
+- **账号站点管理**：AI 可查询账号下的全部站点列表、读取/更新线上内容，删除站点等危险操作会触发用户二次确认弹窗，确保安全可控。
+- **多文件站点文件级编辑**：支持 AI 直接读取、更新、删除已发布的多文件站点中的单个文件，无需重新打包整个站点。
+
+#### 界面
+
+- **对话式编程**：在聊天框中描述需求（如“帮我写一个带 CSS 的登录页面并部署”），AI 自动生成文件并逐步执行。
+- **内置终端**：右侧面板提供命令行终端，支持 `ls`、`cd`、`cat`、`grep`、`deploy`、`zip`、`download` 等常用命令，并支持 `|` 管道与 `>` 重定向，满足高级用户习惯。
+- **文件树可视化**：右侧文件栏以树形结构展示沙箱全部文件，支持点击文件快速查看内容，目录可展开/折叠。
+- **沉浸式全屏布局**：进入 Copilot 页面自动全屏展开，最大化工作区域。
+- **移动端适配**：右侧面板在手机端以抽屉形式弹出，文件树与终端触手可及。
+- **响应式输入框**：输入框随内容自动增高，并内置快捷指令按钮，降低使用门槛。
 
 ## 🚀 v1.2.1 - 2026年8月20日
 
@@ -16,7 +38,7 @@
 - 修复注册显示注册失败问题
 ### 关于GooseHostCLI
 - GooseHostCLI恢复维护
-> 当前版本1.0.31,[CLI文档](https://page.goose.gs.cn/md/cli)
+> 当前版本1.0.31,[CLI文档](https://page.goose.cc.cd/md/cli)
 - GooseHostdesktop暂时没有维护计划
 
 ---
@@ -107,7 +129,7 @@
 - **水印**：页面底部加入浅灰色 `GooseHost` 链接，hover 变绿，可点击跳转首页
 
 #### 🔧 后端修复
-- **URL 修复**： URL 返回错误域名 `goose.gs.cn/s/xxx` 已修复，改为正确的 `https://page.goose.gs.cn/s/xxx`。
+- **URL 修复**： URL 返回错误域名 `goose.cc.cd/s/xxx` 已修复，改为正确的 `https://page.goose.cc.cd/s/xxx`。
 
 ---
 
@@ -151,7 +173,7 @@
 
 ### 新发布
 - **GooseHost 的 OpenClaw 适配版** —— [已发布至 SkillHub](https://skillhub.cn/skills/goosehost)，支持 `/` 命令（e.g. `/goosehost --help`）
-- **GooseHost CLI 命令行版本 v0.1.4** 发布 —— [点击查看详细内容](https://page.goose.gs.cn/md/cli)
+- **GooseHost CLI 命令行版本 v0.1.4** 发布 —— [点击查看详细内容](https://page.goose.cc.cd/md/cli)
 
 ---
 
@@ -214,8 +236,8 @@
 ## 🚀 v1.0.8 - 2026年6月30日
 
 ### 新增
-- 📚 API文档开放：[这里](https://host.goose.gs.cn/api-docs)
-- 📄 用户协议与隐私政策开放：[这里](https://host.goose.gs.cn/docs)
+- 📚 API文档开放：[这里](https://host.goose.cc.cd/api-docs)
+- 📄 用户协议与隐私政策开放：[这里](https://host.goose.cc.cd/docs)
 
 ---
 
@@ -231,7 +253,7 @@
 ### 新增
 - 添加了全套网站图标
 
-![1](https://host.goose.gs.cn/icons/icon-180x180.png)
+![1](https://host.goose.cc.cd/icons/icon-180x180.png)
 
 ---
 
@@ -287,7 +309,7 @@
 <footer style="text-align: center; color: #888; font-size: 14px; padding: 20px 0; border-top: 1px solid #ddd;">
   <p>© 2026 GooseHost. </p>
   <p>
-    <a href="https://host.goose.gs.cn/" style="color: #02ff8e; text-decoration: none;">官网</a> &nbsp;|&nbsp;
-    <a href="mailto:support@mail.goose.gs.cn" style="color: #02ff8e; text-decoration: none;">联系我们</a>
+    <a href="https://host.goose.cc.cd/" style="color: #02ff8e; text-decoration: none;">官网</a> &nbsp;|&nbsp;
+    <a href="mailto:support@mail.goose.cc.cd" style="color: #02ff8e; text-decoration: none;">联系我们</a>
   </p>
 </footer>

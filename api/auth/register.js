@@ -60,7 +60,7 @@ export async function handleRegister(request, env, corsHeaders) {
       'Content-Type': 'application/json',
       apikey: env.SUPABASE_ANON_KEY,
     },
-    body: JSON.stringify({ email, password, data: { nickname }, redirect_to: 'https://host.goose.gs.cn/login.html' }),
+    body: JSON.stringify({ email, password, data: { nickname }, redirect_to: 'https://host.goose.cc.cd/login.html' }),
   });
   const authData = await authRes.json();
 

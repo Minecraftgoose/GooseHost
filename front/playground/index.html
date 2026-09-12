@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="GooseHost 广场 —— 把你的站点发布到广场，和大家一起发帖、点赞、唠嗑。">
+    <title>广场 - GooseHost</title>
+    <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png">
+    <link rel="apple-touch-icon" href="/icons/icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
+    <meta property="og:title" content="GooseHost 广场">
+    <meta property="og:description" content="发布站点、发帖唠嗑、关注同好。">
+    <meta name="theme-color" content="#0a0a0a">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/playground/style.css">
+</head>
+<body>
+    <div id="bgLayer" class="bg-layer"></div>
+
+    <!-- ===== 顶部导航 ===== -->
+    <nav class="pg-navbar">
+        <div class="pg-nav-inner">
+            <a href="/" class="pg-brand">
+                <img src="/logo.svg" alt="GooseHost" height="30">
+                <span>广场</span>
+            </a>
+            <div class="pg-search">
+                <i class="fas fa-magnifying-glass"></i>
+                <input id="searchInput" type="text" placeholder="搜标题、正文…" autocomplete="off">
+            </div>
+            <div class="pg-nav-right" id="navRight">
+                <!-- JS 填充：登录态 -->
+            </div>
+        </div>
+    </nav>
+
+    <main class="pg-layout">
+        <!-- ===== 左：主内容 ===== -->
+        <section class="pg-main">
+            <!-- 视图：广场 / 关注流 -->
+            <div id="viewList" class="pg-view">
+                <div class="pg-toolbar">
+                    <div class="pg-tabs" id="feedTabs">
+                        <button class="pg-tab active" data-tab="all"><i class="fas fa-globe"></i> 广场</button>
+                        <button class="pg-tab" data-tab="site"><i class="fas fa-rocket"></i> 网站</button>
+                        <button class="pg-tab" data-tab="text"><i class="fas fa-pen"></i> 帖子</button>
+                        <button class="pg-tab" data-tab="feed"><i class="fas fa-user-group"></i> 关注</button>
+                    </div>
+                    <div class="pg-sort">
+                        <button class="pg-sort-btn active" data-sort="new">最新</button>
+                        <button class="pg-sort-btn" data-sort="hot">最热</button>
+                    </div>
+                </div>
+
+                <div id="postList" class="pg-post-list">
+                    <div class="pg-skeleton"></div>
+                    <div class="pg-skeleton"></div>
+                    <div class="pg-skeleton"></div>
+                </div>
+
+                <div class="pg-load-more">
+                    <button id="loadMoreBtn" class="pg-btn ghost" style="display:none;">加载更多</button>
+                    <div id="listEnd" class="pg-end" style="display:none;">—— 到底啦 ——</div>
+                </div>
+            </div>
+
+            <!-- 视图：帖子详情 -->
+            <div id="viewPost" class="pg-view" style="display:none;"></div>
+
+            <!-- 视图：用户主页 -->
+            <div id="viewUser" class="pg-view" style="display:none;"></div>
+        </section>
+
+        <!-- ===== 右：侧边 ===== -->
+        <aside class="pg-side">
+            <div class="pg-card pg-me" id="meCard"></div>
+
+            <div class="pg-card pg-actions" id="actionCard" style="display:none;">
+                <button class="pg-btn primary block" id="btnPublishSite"><i class="fas fa-rocket"></i> 发布站点到广场</button>
+                <button class="pg-btn outline block" id="btnNewPost"><i class="fas fa-pen-to-square"></i> 发个帖子</button>
+            </div>
+
+            <div class="pg-card">
+                <div class="pg-card-title"><i class="fas fa-lightbulb"></i> 广场小贴士</div>
+                <ul class="pg-tips">
+                    <li>把已部署的站点一键发布，让更多人看到</li>
+                    <li>看到喜欢的鹅，点个关注，动态会出现在「关注」里</li>
+                    <li>评论框里输入 <code>@小鹅C</code>，召唤吉祥物陪你唠嗑</li>
+                </ul>
+            </div>
+
+        </aside>
+    </main>
+
+    <!-- ===== 发帖弹窗 ===== -->
+    <div class="pg-modal" id="postModal">
+        <div class="pg-modal-box">
+            <div class="pg-modal-head">
+                <span id="postModalTitle">发个帖子</span>
+                <button class="pg-icon-btn" onclick="closeModal('postModal')"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="pg-modal-body">
+                <label class="pg-label">标题</label>
+                <input id="postTitle" class="pg-input" maxlength="120" placeholder="一句话说清是什么">
+
+                <label class="pg-label" id="contentLabel">正文</label>
+                <textarea id="postContent" class="pg-input pg-textarea" maxlength="20000" placeholder="随便写点什么…"></textarea>
+
+                <div id="sitePicker" style="display:none;">
+                    <label class="pg-label">选择要发布的站点</label>
+                    <div id="siteOptions" class="pg-site-options"><div class="pg-muted small">加载中…</div></div>
+                    <div class="pg-muted small" style="margin-top:8px;">站点只能发布一次，发布后广场会留一张预览图位。</div>
+                </div>
+            </div>
+            <div class="pg-modal-foot">
+                <button class="pg-btn ghost" onclick="closeModal('postModal')">取消</button>
+                <button class="pg-btn primary" id="postSubmitBtn">发布</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 编辑资料弹窗 ===== -->
+    <div class="pg-modal" id="profileModal">
+        <div class="pg-modal-box">
+            <div class="pg-modal-head">
+                <span>编辑我的资料</span>
+                <button class="pg-icon-btn" onclick="closeModal('profileModal')"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="pg-modal-body">
+                <label class="pg-label">昵称</label>
+                <input id="pfNickname" class="pg-input" maxlength="20" placeholder="2-20 个字符">
+
+                <label class="pg-label">头像 URL</label>
+                <input id="pfAvatar" class="pg-input" placeholder="https://… 图片直链">
+                <div class="pg-avatar-preview">
+                    <span class="pg-muted small">预览：</span>
+                    <img id="pfAvatarPreview" alt="" style="display:none;">
+                    <span id="pfAvatarFallback" class="pg-avatar sm">?</span>
+                </div>
+
+                <label class="pg-label">简介</label>
+                <textarea id="pfBio" class="pg-input pg-textarea" maxlength="200" placeholder="一句话介绍自己（可留空）"></textarea>
+            </div>
+            <div class="pg-modal-foot">
+                <button class="pg-btn ghost" onclick="closeModal('profileModal')">取消</button>
+                <button class="pg-btn primary" id="profileSubmitBtn">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 关注/粉丝列表弹窗 ===== -->
+    <div class="pg-modal" id="listModal">
+        <div class="pg-modal-box">
+            <div class="pg-modal-head">
+                <span id="listModalTitle">关注</span>
+                <button class="pg-icon-btn" onclick="closeModal('listModal')"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="pg-modal-body" id="listModalBody"><div class="pg-muted small">加载中…</div></div>
+        </div>
+    </div>
+
+    <div id="toast" class="pg-toast"></div>
+
+    <script src="/playground/app.js"></script>
+</body>
+</html>

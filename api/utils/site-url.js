@@ -5,5 +5,5 @@ export function getPublicBaseUrl(env) {
     while (base.endsWith('/')) base = base.slice(0, -1);
     return base;
   }
-  return 'https://page.goose.gs.cn';
+  return 'https://page.goose.cc.cd';
 }

@@ -148,7 +148,7 @@ export async function handleSignup(request, env, corsHeaders) {
         'apikey': env.SUPABASE_ANON_KEY,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ email, password, redirect_to: 'https://host.goose.gs.cn/login.html' })
+      body: JSON.stringify({ email, password, redirect_to: 'https://host.goose.cc.cd/login.html' })
     });
     const supabaseData = await supabaseRes.json();
 

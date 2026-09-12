@@ -4,12 +4,12 @@ import { checkRateLimit } from '../utils/rate-limit.js';
 import { jsonResp } from '../utils/response.js';
 import { fetchEmailMap } from '../utils/email-map.js';
 
-const RESET_PAGE = 'https://host.goose.gs.cn/reset-password.html';
+const RESET_PAGE = 'https://host.goose.cc.cd/reset-password.html';
 
 export async function handleForgotPassword(request, env, corsHeaders) {
   const rl_ip = await checkRateLimit(request, env, 'forgot_ip');
   if (!rl_ip.allowed) {
-    return jsonResp({ error: `请求过于频繁，请在 ${Math.ceil(rl_ip.resetIn / 60)} 分钟后重试，有问题请联系support@mail.goose.gs.cn` }, 429, corsHeaders);
+    return jsonResp({ error: `请求过于频繁，请在 ${Math.ceil(rl_ip.resetIn / 60)} 分钟后重试，有问题请联系support@mail.goose.cc.cd` }, 429, corsHeaders);
   }
 
   let body;

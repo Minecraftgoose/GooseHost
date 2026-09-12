@@ -1,4 +1,4 @@
-        const API_URL = 'https://page.goose.gs.cn';
+        const API_URL = 'https://page.goose.cc.cd';
         let pendingDeleteSite = null;
         let pendingDeleteUser = null;
         let allData = { sites: [], users: [] };
@@ -109,13 +109,19 @@
         function switchTab(tab) {
             document.getElementById('tab-sites').style.display = tab === 'sites' ? 'block' : 'none';
             document.getElementById('tab-users').style.display = tab === 'users' ? 'block' : 'none';
+            document.getElementById('tab-play').style.display = tab === 'play' ? 'block' : 'none';
             document.getElementById('tabBtnSites').classList.toggle('active', tab === 'sites');
             document.getElementById('tabBtnUsers').classList.toggle('active', tab === 'users');
-            document.getElementById('tabLabel').textContent = tab === 'sites' ? '全部数据' : '用户列表';
+            document.getElementById('tabBtnPlay').classList.toggle('active', tab === 'play');
+            document.getElementById('tabLabel').textContent =
+                tab === 'sites' ? '全部数据' : (tab === 'users' ? '用户列表' : '广场内容');
             document.getElementById('searchWrap').style.display = tab === 'sites' ? 'flex' : 'none';
+            document.getElementById('playSearchWrap').style.display = tab === 'play' ? 'flex' : 'none';
             if (tab === 'users') {
                 if (!allData.users.length) loadUsers();
                 else renderUsers();
+            } else if (tab === 'play') {
+                loadPlay();
             }
         }
 
@@ -147,8 +153,14 @@
 
         var paginationState = {
             sites: { page: 1, total: 0, loading: false },
-            users: { page: 1, total: 0, loading: false }
+            users: { page: 1, total: 0, loading: false },
+            playPosts: { page: 1, total: 0, loading: false },
+            playComments: { page: 1, total: 0, loading: false }
         };
+
+        // 广场子标签：posts | comments
+        let playSubTab = 'posts';
+        let playData = { stats: null, posts: [], comments: [] };
 
         const PAGE_SIZE = 50;
 
@@ -825,6 +837,318 @@
             const d = document.createElement('div');
             d.textContent = str;
             return d.innerHTML;
+        }
+
+        // ==================== 广场管理 ====================
+
+        function switchPlaySubTab(sub) {
+            playSubTab = sub;
+            paginationState.playPosts.page = 1;
+            paginationState.playComments.page = 1;
+            loadPlay();
+        }
+
+        async function loadPlay() {
+            const token = checkAuth();
+            if (!token) return;
+            if (paginationState.playPosts.loading || paginationState.playComments.loading) return;
+
+            const box = document.getElementById('tab-play');
+            box.innerHTML = '<div class="loading-state"><i class="fas fa-circle-notch"></i></div>';
+
+            try {
+                // 统计卡 + 当前子标签的数据
+                const requests = [
+                    apiFetch(`${API_URL}/api/admin/play/stats`)
+                ];
+                if (playSubTab === 'posts') {
+                    paginationState.playPosts.loading = true;
+                    const q = document.getElementById('playSearchInput')?.value || '';
+                    const params = new URLSearchParams({ page: paginationState.playPosts.page });
+                    if (q.trim()) params.set('q', q.trim());
+                    requests.push(apiFetch(`${API_URL}/api/admin/play/posts?${params}`));
+                } else {
+                    paginationState.playComments.loading = true;
+                    const q = document.getElementById('playSearchInput')?.value || '';
+                    const params = new URLSearchParams({ page: paginationState.playComments.page });
+                    if (q.trim()) params.set('q', q.trim());
+                    requests.push(apiFetch(`${API_URL}/api/admin/play/comments?${params}`));
+                }
+
+                const [statsRes, dataRes] = await Promise.all(requests);
+
+                if (statsRes.ok) {
+                    playData.stats = await statsRes.json();
+                }
+                const data = await dataRes.json();
+                if (!dataRes.ok) throw new Error(data.error || '加载失败');
+
+                if (playSubTab === 'posts') {
+                    playData.posts = data.posts || [];
+                    paginationState.playPosts.total = data.pagination?.total || 0;
+                } else {
+                    playData.comments = data.comments || [];
+                    paginationState.playComments.total = data.pagination?.total || 0;
+                }
+                renderPlay();
+            } catch (err) {
+                if (err.message === 'ADMIN_403') {
+                    box.innerHTML = '<div class="empty-state"><i class="fas fa-shield-halved"></i><p>您没有管理员权限</p></div>';
+                } else {
+                    box.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${esc(err.message)}</p></div>`;
+                }
+            } finally {
+                paginationState.playPosts.loading = false;
+                paginationState.playComments.loading = false;
+            }
+        }
+
+        function renderPlay() {
+            const box = document.getElementById('tab-play');
+            const st = playData.stats;
+
+            const statsHtml = st ? `
+                <div class="stats-grid" style="margin-bottom: 1rem;">
+                    <div class="stat-card"><div class="stat-number">${st.posts ?? 0}</div><div class="stat-label">帖子总数</div></div>
+                    <div class="stat-card"><div class="stat-number">${st.comments ?? 0}</div><div class="stat-label">评论总数</div></div>
+                    <div class="stat-card"><div class="stat-number">${st.posts_today ?? 0}</div><div class="stat-label">今日发帖</div></div>
+                    <div class="stat-card"><div class="stat-number">${st.ai_comments ?? 0}</div><div class="stat-label">小鹅C 回复</div></div>
+                    <div class="stat-card"><div class="stat-number">${st.likes ?? 0}</div><div class="stat-label">点赞数</div></div>
+                    <div class="stat-card"><div class="stat-number">${st.follows ?? 0}</div><div class="stat-label">关注关系</div></div>
+                </div>` : '';
+
+            const subTabHtml = `
+                <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+                    <button class="btn ${playSubTab === 'posts' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPlaySubTab('posts')">
+                        <i class="fas fa-file-lines"></i> 帖子
+                    </button>
+                    <button class="btn ${playSubTab === 'comments' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPlaySubTab('comments')">
+                        <i class="fas fa-comments"></i> 评论
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadPlay()" style="margin-left:auto;">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>`;
+
+            const body = playSubTab === 'posts' ? renderPlayPosts() : renderPlayComments();
+
+            box.innerHTML = statsHtml + subTabHtml + body;
+        }
+
+        function renderPlayPosts() {
+            const posts = playData.posts;
+            if (!posts.length) {
+                return '<div class="empty-state"><i class="fas fa-comments"></i><p>暂无帖子</p></div>';
+            }
+            const page = paginationState.playPosts.page;
+            const rows = posts.map(p => {
+                const kindBadge = p.kind === 'site'
+                    ? '<span style="padding:1px 7px;border-radius:999px;font-size:10px;color:#03dac6;border:1px solid rgba(3,218,198,.4);margin-left:6px;">站点</span>'
+                    : '<span style="padding:1px 7px;border-radius:999px;font-size:10px;color:#bb86fc;border:1px solid rgba(187,134,252,.4);margin-left:6px;">帖子</span>';
+                const time = new Date(p.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const who = p.author?.nickname || p.author?.email || p.author_id || '—';
+                return `<tr>
+                    <td>
+                        <a href="javascript:void(0)" onclick="showPlayPost('${esc(p.id)}')" class="site-name">${esc(p.title)}</a>${kindBadge}
+                        <div style="font-size:11px;color:var(--color-fg-subtle);margin-top:2px;">${esc(who)} · ${time}</div>
+                    </td>
+                    <td style="font-size:12px;color:var(--color-fg-muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(p.content || '')}">${esc((p.content || '').slice(0, 60)) || '—'}</td>
+                    <td style="font-size:12px;white-space:nowrap;">
+                        <span title="点赞"><i class="fas fa-heart" style="color:#ff6b6b;"></i> ${p.like_count || 0}</span>
+                        <span style="margin-left:8px;" title="评论"><i class="fas fa-comment"></i> ${p.comment_count || 0}</span>
+                        <span style="margin-left:8px;" title="浏览"><i class="fas fa-eye"></i> ${p.view_count || 0}</span>
+                    </td>
+                    <td>
+                        <a href="/playground/#/post/${esc(p.id)}" target="_blank" class="btn btn-secondary" title="查看"><i class="fas fa-external-link-alt"></i></a>
+                        <button class="btn btn-danger" onclick="showDeletePlayPost('${esc(p.id)}', '${esc(p.title)}', ${p.comment_count || 0})" title="删除"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+            return `
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>标题</th><th>正文摘要</th><th>互动</th><th style="width:110px;">操作</th></tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+                ${renderPageBar(paginationState.playPosts.total, page, 'gotoPlayPostsPage')}`;
+        }
+
+        function renderPlayComments() {
+            const comments = playData.comments;
+            if (!comments.length) {
+                return '<div class="empty-state"><i class="fas fa-comments"></i><p>暂无评论</p></div>';
+            }
+            const page = paginationState.playComments.page;
+            const rows = comments.map(c => {
+                const time = new Date(c.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const who = c.is_ai
+                    ? '<span style="color:#6fd3ff;"><i class="fas fa-robot"></i> 小鹅C</span>'
+                    : esc(c.author?.nickname || c.author?.email || c.author_id || '—');
+                const inPost = c.post_title
+                    ? `<a href="/playground/#/post/${esc(c.post_id)}" target="_blank" style="color:var(--color-fg-muted);font-size:12px;" title="跳转到帖子">${esc(c.post_title.slice(0, 24))}${c.post_title.length > 24 ? '…' : ''}</a>`
+                    : '<span style="color:var(--color-fg-subtle);">—</span>';
+                return `<tr>
+                    <td style="max-width:340px;">
+                        <div style="font-size:13px;word-break:break-word;">${esc(c.content.slice(0, 120))}${c.content.length > 120 ? '…' : ''}</div>
+                        <div style="font-size:11px;color:var(--color-fg-subtle);margin-top:2px;">${who} · ${time}${c.mention_ai ? ' · <span style="color:#6fd3ff;">@了小鹅C</span>' : ''}</div>
+                    </td>
+                    <td style="font-size:12px;">${inPost}</td>
+                    <td><button class="btn btn-danger" onclick="showDeletePlayComment('${esc(c.id)}', ${JSON.stringify(esc(c.content.slice(0, 200)))})" title="删除"><i class="fas fa-trash"></i></button></td>
+                </tr>`;
+            }).join('');
+            return `
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>评论内容</th><th>所属帖子</th><th style="width:70px;">操作</th></tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+                ${renderPageBar(paginationState.playComments.total, page, 'gotoPlayCommentsPage')}`;
+        }
+
+        function gotoPlayPostsPage(p) {
+            p = Math.max(1, p | 0);
+            paginationState.playPosts.page = p;
+            loadPlay();
+        }
+
+        function gotoPlayCommentsPage(p) {
+            p = Math.max(1, p | 0);
+            paginationState.playComments.page = p;
+            loadPlay();
+        }
+
+        function filterPlay() {
+            paginationState.playPosts.page = 1;
+            paginationState.playComments.page = 1;
+            loadPlay();
+        }
+
+        // ---- 帖子详情 ----
+        async function showPlayPost(postId) {
+            const token = checkAuth();
+            if (!token) return;
+            const body = document.getElementById('playPostBody');
+            body.innerHTML = '<div class="loading-state"><i class="fas fa-circle-notch"></i></div>';
+            document.getElementById('playPostModal').classList.add('active');
+
+            try {
+                // 帖子基础信息列表里已经有了，只单独拉评论
+                const post = (playData.posts || []).find(x => x.id === postId);
+                if (!post) throw new Error('帖子数据已过期，请刷新后重试');
+
+                const cmtRes = await apiFetch(`${API_URL}/api/admin/play/comments?post_id=${encodeURIComponent(postId)}`);
+                const cmtData = await cmtRes.json();
+                if (!cmtRes.ok) throw new Error(cmtData.error || '加载评论失败');
+                const comments = cmtData.comments || [];
+
+                const meta = [
+                    ['作者', post.author?.nickname || post.author?.email || post.author_id],
+                    ['类型', post.kind === 'site' ? '站点发布' : '纯帖子'],
+                    ['发布时间', new Date(post.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })],
+                    ['点赞 / 评论 / 浏览', `${post.like_count || 0} / ${post.comment_count || 0} / ${post.view_count || 0}`],
+                    ['预览图状态', post.preview_status || 'none']
+                ];
+                if (post.site_url) meta.push(['站点地址', post.site_url]);
+
+                const commentsHtml = comments.length
+                    ? comments.slice(0, 30).map(c => `
+                        <div style="padding:8px 10px;margin-bottom:6px;background:rgba(0,0,0,0.3);border-radius:6px;font-size:12px;">
+                            <div style="color:var(--color-fg-subtle);margin-bottom:3px;">
+                                ${c.is_ai ? '<span style="color:#6fd3ff;"><i class="fas fa-robot"></i> 小鹅C</span>' : esc(c.author?.nickname || c.author?.email || '匿名')}
+                                · ${new Date(c.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                · 层级 ${c.depth || 0}
+                            </div>
+                            <div style="word-break:break-word;">${esc(c.content)}</div>
+                        </div>`).join('')
+                    : '<div style="color:var(--color-fg-subtle);font-size:12px;">暂无评论</div>';
+
+                body.innerHTML = `
+                    <h3 style="margin-bottom:10px;word-break:break-word;">${esc(post.title)}</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:14px;">
+                        ${meta.map(([k, v]) => `
+                            <div style="padding:8px 10px;background:rgba(0,0,0,0.3);border-radius:6px;font-size:12px;">
+                                <div style="color:var(--color-fg-subtle);">${esc(k)}</div>
+                                <div style="word-break:break-all;">${esc(String(v))}</div>
+                            </div>`).join('')}
+                    </div>
+                    ${post.content ? `<div style="padding:10px;background:rgba(0,0,0,0.3);border-radius:6px;font-size:13px;white-space:pre-wrap;word-break:break-word;margin-bottom:14px;">${esc(post.content)}</div>` : ''}
+                    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">评论（${comments.length}）</div>
+                    ${commentsHtml}`;
+            } catch (err) {
+                body.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${esc(err.message)}</p></div>`;
+            }
+        }
+
+        function closePlayPostModal() {
+            document.getElementById('playPostModal').classList.remove('active');
+        }
+
+        // ---- 删除帖子 ----
+        let pendingPlayPostId = null;
+
+        function showDeletePlayPost(postId, title, commentCount) {
+            pendingPlayPostId = postId;
+            document.getElementById('deletePlayPostTitle').textContent = title;
+            document.getElementById('deletePlayPostMeta').textContent =
+                commentCount ? `将同时删除 ${commentCount} 条评论` : '该帖暂无评论';
+            document.getElementById('deletePlayPostModal').classList.add('active');
+        }
+
+        function closeDeletePlayPostModal() {
+            pendingPlayPostId = null;
+            document.getElementById('deletePlayPostModal').classList.remove('active');
+        }
+
+        async function confirmDeletePlayPost() {
+            if (!pendingPlayPostId) return;
+            const token = checkAuth();
+            if (!token) return;
+            try {
+                const res = await apiFetch(`${API_URL}/api/admin/play/post/${pendingPlayPostId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || '删除失败');
+                showToast(`已删除「${data.deleted?.title || ''}」及其 ${data.deleted?.comments || 0} 条评论`, 'success');
+                closeDeletePlayPostModal();
+                closePlayPostModal();
+                loadPlay();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        // ---- 删除评论 ----
+        let pendingPlayCommentId = null;
+
+        function showDeletePlayComment(commentId, content) {
+            pendingPlayCommentId = commentId;
+            document.getElementById('deletePlayCommentContent').textContent = content;
+            document.getElementById('deletePlayCommentMeta').textContent = '子回复会一起删除';
+            document.getElementById('deletePlayCommentModal').classList.add('active');
+        }
+
+        function closeDeletePlayCommentModal() {
+            pendingPlayCommentId = null;
+            document.getElementById('deletePlayCommentModal').classList.remove('active');
+        }
+
+        async function confirmDeletePlayComment() {
+            if (!pendingPlayCommentId) return;
+            const token = checkAuth();
+            if (!token) return;
+            try {
+                const res = await apiFetch(`${API_URL}/api/admin/play/comment/${pendingPlayCommentId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || '删除失败');
+                const extra = data.deleted?.children ? `及 ${data.deleted.children} 条子回复` : '';
+                showToast(`已删除该评论${extra}`, 'success');
+                closeDeletePlayCommentModal();
+                closePlayPostModal();
+                loadPlay();
+            } catch (err) { showToast(err.message, 'error'); }
         }
 
         // System Status 

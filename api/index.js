@@ -33,12 +33,42 @@ import { handleAdminSyncEmails } from './admin/sync-emails.js';
 import { handleGetSystemStatus, handleSetSystemStatus } from './admin/system-status.js';
 import { handleGetAnnouncement, handleAdminAnnouncement } from './admin/announcement.js';
 import { handlePublicStats } from './admin/public-stats.js';
+import {
+  handleAdminPlayPosts,
+  handleAdminPlayComments,
+  handleAdminDeletePlayPost,
+  handleAdminDeletePlayComment,
+  handleAdminPlayStats
+} from './admin/play.js';
 
 import {
   handleDebugSyncEmails,
   handleDebugTestAuth,
   handleDebugCleanup
 } from './debug.js';
+
+import { handleAiChat } from './ai/chat.js';
+
+import {
+  handlePlayListPosts,
+  handlePlayPostDetail,
+  handlePlayCreatePost,
+  handlePlayDeletePost,
+  handlePlayMySites,
+  handlePlayListComments,
+  handlePlayCreateComment,
+  handlePlayDeleteComment,
+  handlePlayGetMe,
+  handlePlayUpdateMe,
+  handlePlayGetProfile,
+  handlePlayProfilePosts,
+  handlePlayFollowList,
+  handlePlayFollow,
+  handlePlayUnfollow,
+  handlePlayLike,
+  handlePlayUnlike,
+  handlePlayFeed
+} from './play/index.js';
 
 // ===== Workers Entry =====
 export default {
@@ -124,6 +154,11 @@ export default {
     // POST /api/delete-account - 销号
     if (url.pathname === '/api/delete-account' && method === 'POST') {
       return await handleDeleteAccount(request, env, corsHeaders);
+    }
+
+    // POST /api/ai/chat - AI Copilot 转发（认证与限流在 handler 内）
+    if (url.pathname === '/api/ai/chat' && method === 'POST') {
+      return await handleAiChat(request, env, corsHeaders);
     }
 
     // POST /api/create - 创建站点
@@ -229,6 +264,35 @@ export default {
       return await handleAdminAnnouncement(request, env, corsHeaders);
     }
 
+    // === 管理员 - 广场管理 ===
+
+    // GET /api/admin/play/stats - 广场统计
+    if (url.pathname === '/api/admin/play/stats' && method === 'GET') {
+      return await handleAdminPlayStats(request, env, corsHeaders);
+    }
+
+    // GET /api/admin/play/posts - 广场帖子列表
+    if (url.pathname === '/api/admin/play/posts' && method === 'GET') {
+      return await handleAdminPlayPosts(request, env, corsHeaders);
+    }
+
+    // GET /api/admin/play/comments - 广场评论列表
+    if (url.pathname === '/api/admin/play/comments' && method === 'GET') {
+      return await handleAdminPlayComments(request, env, corsHeaders);
+    }
+
+    // DELETE /api/admin/play/post/:id - 删除帖子
+    if (pathParts[0] === 'api' && pathParts[1] === 'admin' && pathParts[2] === 'play'
+        && pathParts[3] === 'post' && pathParts[4] && !pathParts[5] && method === 'DELETE') {
+      return await handleAdminDeletePlayPost(request, env, corsHeaders, pathParts[4]);
+    }
+
+    // DELETE /api/admin/play/comment/:id - 删除评论
+    if (pathParts[0] === 'api' && pathParts[1] === 'admin' && pathParts[2] === 'play'
+        && pathParts[3] === 'comment' && pathParts[4] && !pathParts[5] && method === 'DELETE') {
+      return await handleAdminDeletePlayComment(request, env, corsHeaders, pathParts[4]);
+    }
+
     // === Debug 路由 ===
 
     // POST /_debug/sync-emails - Service Role 同步邮箱
@@ -258,6 +322,91 @@ export default {
       } catch (err) {
         return jsonResp({ error: err.message }, 500, corsHeaders);
       }
+    }
+
+    // === 广场（Playground）===
+
+    // GET /api/play/posts - 广场帖子列表（公开）
+    if (url.pathname === '/api/play/posts' && method === 'GET') {
+      return await handlePlayListPosts(request, env, corsHeaders);
+    }
+
+    // POST /api/play/posts - 发帖（登录）
+    if (url.pathname === '/api/play/posts' && method === 'POST') {
+      return await handlePlayCreatePost(request, env, corsHeaders);
+    }
+
+    // GET /api/play/my-sites - 我可发布的站点（登录）
+    if (url.pathname === '/api/play/my-sites' && method === 'GET') {
+      return await handlePlayMySites(request, env, corsHeaders);
+    }
+
+    // GET /api/play/feed - 关注的人的动态（登录）
+    if (url.pathname === '/api/play/feed' && method === 'GET') {
+      return await handlePlayFeed(request, env, corsHeaders);
+    }
+
+    // GET /api/play/me - 我的广场资料（登录）
+    if (url.pathname === '/api/play/me' && method === 'GET') {
+      return await handlePlayGetMe(request, env, corsHeaders);
+    }
+
+    // PUT /api/play/me - 设置昵称/头像/简介（登录）
+    if (url.pathname === '/api/play/me' && method === 'PUT') {
+      return await handlePlayUpdateMe(request, env, corsHeaders);
+    }
+
+    // POST /api/play/follow - 关注（登录）
+    if (url.pathname === '/api/play/follow' && method === 'POST') {
+      return await handlePlayFollow(request, env, corsHeaders);
+    }
+
+    // DELETE /api/play/follow/:userId - 取关（登录）
+    if (pathParts[0] === 'api' && pathParts[1] === 'play' && pathParts[2] === 'follow' && pathParts[3] && !pathParts[4] && method === 'DELETE') {
+      return await handlePlayUnfollow(request, env, corsHeaders, pathParts[3]);
+    }
+
+    // DELETE /api/play/comments/:id - 删评论（登录）
+    if (pathParts[0] === 'api' && pathParts[1] === 'play' && pathParts[2] === 'comments' && pathParts[3] && !pathParts[4] && method === 'DELETE') {
+      return await handlePlayDeleteComment(request, env, corsHeaders, pathParts[3]);
+    }
+
+    // GET/POST /api/play/posts/:id/comments - 评论树 / 发评论
+    if (pathParts[0] === 'api' && pathParts[1] === 'play' && pathParts[2] === 'posts' && pathParts[3] && pathParts[4] === 'comments' && !pathParts[5]) {
+      const postId = pathParts[3];
+      if (method === 'GET') return await handlePlayListComments(request, env, corsHeaders, postId);
+      if (method === 'POST') return await handlePlayCreateComment(request, env, corsHeaders, postId);
+    }
+
+    // POST/DELETE /api/play/posts/:id/like - 点赞 / 取消点赞（登录）
+    if (pathParts[0] === 'api' && pathParts[1] === 'play' && pathParts[2] === 'posts' && pathParts[3] && pathParts[4] === 'like' && !pathParts[5]) {
+      if (method === 'POST') return await handlePlayLike(request, env, corsHeaders, pathParts[3]);
+      if (method === 'DELETE') return await handlePlayUnlike(request, env, corsHeaders, pathParts[3]);
+    }
+
+    // GET /api/play/posts/:id - 帖子详情（公开）
+    if (pathParts[0] === 'api' && pathParts[1] === 'play' && pathParts[2] === 'posts' && pathParts[3] && !pathParts[4] && method === 'GET') {
+      return await handlePlayPostDetail(request, env, corsHeaders, pathParts[3]);
+    }
+
+    // DELETE /api/play/posts/:id - 删帖（登录）
+    if (pathParts[0] === 'api' && pathParts[1] === 'play' && pathParts[2] === 'posts' && pathParts[3] && !pathParts[4] && method === 'DELETE') {
+      return await handlePlayDeletePost(request, env, corsHeaders, pathParts[3]);
+    }
+
+    // GET /api/play/profile/:id - 用户主页（公开）
+    if (pathParts[0] === 'api' && pathParts[1] === 'play' && pathParts[2] === 'profile' && pathParts[3] && !pathParts[4] && method === 'GET') {
+      return await handlePlayGetProfile(request, env, corsHeaders, pathParts[3]);
+    }
+
+    // GET /api/play/profile/:id/posts - TA 的帖子（公开）
+    if (pathParts[0] === 'api' && pathParts[1] === 'play' && pathParts[2] === 'profile' && pathParts[3] && pathParts[4] === 'posts' && !pathParts[5] && method === 'GET') {
+      return await handlePlayProfilePosts(request, env, corsHeaders, pathParts[3]);
+    }
+
+    // GET /api/play/profile/:id/following | /followers - 关注/粉丝列表（公开）
+    if (pathParts[0] === 'api' && pathParts[1] === 'play' && pathParts[2] === 'profile' && pathParts[3] && (pathParts[4] === 'following' || pathParts[4] === 'followers') && !pathParts[5] && method === 'GET') {
+      return await handlePlayFollowList(request, env, corsHeaders, pathParts[3], pathParts[4]);
     }
 
     // === 公共站点访问 ===

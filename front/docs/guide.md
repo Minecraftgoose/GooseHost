@@ -1,4 +1,4 @@
-<p style="text-align: center;"><img src="https://host.goose.gs.cn/logo.svg" alt="GooseHost Logo" style="height:auto; width:auto;"></p>
+<p style="text-align: center;"><img src="https://host.goose.cc.cd/logo.svg" alt="GooseHost Logo" style="height:auto; width:auto;"></p>
 
 <h1 style="text-align: center;">使用手册</h1>
 
@@ -10,10 +10,10 @@
 
 ## 一、快速上手
 
-1. **注册账号**：打开 [host.goose.gs.cn](https://host.goose.gs.cn) 点「开始探索」，或直接访问 `/register`。填写邮箱、密码、昵称后提交，到邮箱点击验证链接完成注册。
+1. **注册账号**：打开 [host.goose.cc.cd](https://host.goose.cc.cd) 点「开始探索」，或直接访问 `/register`。填写邮箱、密码、昵称后提交，到邮箱点击验证链接完成注册。
 2. **登录**：访问 `/login`，输入邮箱密码。登录状态会自动保持（登录一次，长期有效，无需反复登录）。
 3. **创建网站**：登录后进入 Dashboard，左侧「部署」→ 填网站名称 → 选类型 → 粘贴代码或上传文件 → 部署。
-4. **访问网站**：部署完成后会得到形如 `page.goose.gs.cn/s/你的网站名` 的访问地址，发给任何人都能打开。
+4. **访问网站**：部署完成后会得到形如 `page.goose.cc.cd/s/你的网站名` 的访问地址，发给任何人都能打开。
 
 ---
 
@@ -94,7 +94,7 @@ Dashboard → 账户设置 → 注销账号。确认后**永久删除账号及�
 多文件网站白名单只接受代码/文本文件，图片等二进制资源会被拦截。请把图片传到外部图床，在 HTML 里用完整 URL 引用。
 
 **Q：网站能绑定自己的域名吗？**
-目前不支持自定义域名，使用平台分配的 `page.goose.gs.cn/...` 地址。
+目前不支持自定义域名，使用平台分配的 `page.goose.cc.cd/...` 地址。
 
 **Q：网站被删了能恢复吗？**
 不能。删除操作不可逆，请提前备份源码。
@@ -123,7 +123,7 @@ Dashboard → 账户设置 → 注销账号。确认后**永久删除账号及�
 <footer style="text-align: center; color: #888; font-size: 14px; padding: 20px 0; border-top: 1px solid #ddd;">
   <p>© 2026 GooseHost. </p>
   <p>
-    <a href="https://host.goose.gs.cn/" style="color: #02ff8e; text-decoration: none;">官网</a> &nbsp;|&nbsp;
-    <a href="mailto:support@mail.goose.gs.cn" style="color: #02ff8e; text-decoration: none;">联系我们</a>
+    <a href="https://host.goose.cc.cd/" style="color: #02ff8e; text-decoration: none;">官网</a> &nbsp;|&nbsp;
+    <a href="mailto:support@mail.goose.cc.cd" style="color: #02ff8e; text-decoration: none;">联系我们</a>
   </p>
 </footer>

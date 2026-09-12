@@ -173,6 +173,9 @@
                 <button class="tab-btn" id="tabBtnUsers" onclick="switchTab('users')">
                     <i class="fas fa-users"></i> 用户列表
                 </button>
+                <button class="tab-btn" id="tabBtnPlay" onclick="switchTab('play')">
+                    <i class="fas fa-comments"></i> 广场
+                </button>
             </div>
 
             <!-- Tab Header -->
@@ -186,6 +189,10 @@
                         <i class="fas fa-search"></i>
                         <input type="text" id="siteSearchInput" placeholder="搜索名称/邮箱/IP..." oninput="filterSites()">
                     </div>
+                    <div class="search-wrap" id="playSearchWrap" style="display:none;">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="playSearchInput" placeholder="搜索帖子/评论内容、作者..." oninput="filterPlay()">
+                    </div>
                     <button class="btn btn-secondary" onclick="loadData()">
                         <i class="fas fa-sync-alt"></i> 刷新
                     </button>
@@ -198,6 +205,7 @@
             <!-- Tab Content -->
             <div id="tab-sites"></div>
             <div id="tab-users" style="display:none;"></div>
+            <div id="tab-play" style="display:none;"></div>
         </div>
     </main>
 
@@ -328,6 +336,78 @@
                 <button class="btn btn-danger" onclick="confirmDeleteUser()">
                     <i class="fas fa-trash"></i> 删除用户
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Play Post Modal -->
+    <div class="modal-overlay" id="deletePlayPostModal">
+        <div class="modal" style="max-width: 460px;">
+            <div class="modal-header">
+                <div class="modal-title" style="color: var(--color-danger-fg);">
+                    <i class="fas fa-trash"></i> 删除广场帖子
+                </div>
+                <button class="modal-close" onclick="closeDeletePlayPostModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <p style="margin-bottom: 8px;">确定删除这条帖子？</p>
+                <p id="deletePlayPostTitle" style="font-weight: 600; font-size: 16px; margin-bottom: 8px; word-break: break-all;"></p>
+                <p id="deletePlayPostMeta" style="color: var(--color-fg-muted); font-size: 13px; margin-bottom: 8px;"></p>
+                <p style="color: var(--color-danger-fg); font-size: 13px;">评论和点赞会一并删除，不可恢复</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeletePlayPostModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmDeletePlayPost()">
+                    <i class="fas fa-trash"></i> 删除
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Play Comment Modal -->
+    <div class="modal-overlay" id="deletePlayCommentModal">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <div class="modal-title" style="color: var(--color-danger-fg);">
+                    <i class="fas fa-comment-slash"></i> 删除广场评论
+                </div>
+                <button class="modal-close" onclick="closeDeletePlayCommentModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <p style="margin-bottom: 8px;">确定删除这条评论？</p>
+                <p id="deletePlayCommentContent" style="font-weight: 600; font-size: 14px; margin-bottom: 8px; max-height: 100px; overflow-y: auto; word-break: break-word; text-align:left; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px;"></p>
+                <p id="deletePlayCommentMeta" style="color: var(--color-fg-muted); font-size: 13px; margin-bottom: 8px;"></p>
+                <p style="color: var(--color-danger-fg); font-size: 13px;">子回复会一并删除，不可恢复</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeletePlayCommentModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmDeletePlayComment()">
+                    <i class="fas fa-trash"></i> 删除
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Play Post Detail Modal -->
+    <div class="modal-overlay" id="playPostModal">
+        <div class="modal" style="max-width: 640px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-file-lines"></i> 帖子详情
+                </div>
+                <button class="modal-close" onclick="closePlayPostModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="playPostBody" style="max-height: 460px; overflow-y: auto;">
+                加载中...
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closePlayPostModal()">关闭</button>
             </div>
         </div>
     </div>

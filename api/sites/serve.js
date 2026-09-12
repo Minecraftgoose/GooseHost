@@ -36,11 +36,11 @@ function render404Page(msg) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - GooseHost</title>
-    <link rel="icon" type="image/x-icon" href="https://host.goose.gs.cn/icons/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="https://host.goose.cc.cd/icons/favicon.ico">
     <style>
         @font-face {
             font-family: 'DingTalk JinBuTi';
-            src: url('https://host.goose.gs.cn/fonts/DingTalk%20JinBuTi.ttf') format('truetype');
+            src: url('https://host.goose.cc.cd/fonts/DingTalk%20JinBuTi.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
             font-display: swap;
@@ -107,17 +107,17 @@ function render404Page(msg) {
 <body>
     <div class="bg-layer"></div>
     <nav class="navbar">
-        <a href="https://host.goose.gs.cn/" style="color:#02ff8e;font-weight:600;font-size:16px;">GooseHost</a>
-        <a href="https://host.goose.gs.cn/">返回首页</a>
+        <a href="https://host.goose.cc.cd/" style="color:#02ff8e;font-weight:600;font-size:16px;">GooseHost</a>
+        <a href="https://host.goose.cc.cd/">返回首页</a>
     </nav>
     <main class="container">
         <div class="code">404</div>
         <div class="msg">${escapeHtml(msg)}</div>
-        <a href="https://host.goose.gs.cn/" class="back-link">
+        <a href="https://host.goose.cc.cd/" class="back-link">
             <i class="fas fa-arrow-left"></i> 返回首页
         </a>
     </main>
-    <footer class="footer"><a href="https://host.goose.gs.cn/" target="_blank">GooseHost</a></footer>
+    <footer class="footer"><a href="https://host.goose.cc.cd/" target="_blank">GooseHost</a></footer>
 </body>
 </html>`;
 }
@@ -183,7 +183,7 @@ export async function handleServeSite(request, env, slug) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
-    <link rel="icon" type="image/x-icon" href="https://host.goose.gs.cn/icons/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="https://host.goose.cc.cd/icons/favicon.ico">
     <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
@@ -399,21 +399,21 @@ export async function handleServeSite(request, env, slug) {
 </head>
 <body>
     <header class="header">
-        <a href="https://host.goose.gs.cn/" class="header-brand">
-            <img src="https://host.goose.gs.cn/logo.svg" alt="GooseHost" onerror="this.style.display='none'">
+        <a href="https://host.goose.cc.cd/" class="header-brand">
+            <img src="https://host.goose.cc.cd/logo.svg" alt="GooseHost" onerror="this.style.display='none'">
         </a>
         <nav class="header-nav">
-            <a href="https://host.goose.gs.cn/docs/" class="header-link">使用手册</a>
-            <a href="https://host.goose.gs.cn/docs/?doc=terms" class="header-link">用户协议</a>
-            <a href="https://host.goose.gs.cn/changelog/" class="header-link">更新日志</a>
-            <a href="https://host.goose.gs.cn/api-docs/" class="header-link">API 文档</a>
-            <a href="https://host.goose.gs.cn/" class="header-link">返回首页</a>
+            <a href="https://host.goose.cc.cd/docs/" class="header-link">使用手册</a>
+            <a href="https://host.goose.cc.cd/docs/?doc=terms" class="header-link">用户协议</a>
+            <a href="https://host.goose.cc.cd/changelog/" class="header-link">更新日志</a>
+            <a href="https://host.goose.cc.cd/api-docs/" class="header-link">API 文档</a>
+            <a href="https://host.goose.cc.cd/" class="header-link">返回首页</a>
         </nav>
     </header>
     <main class="container">
         <div id="md-content">${body}</div>
     </main>
-    <footer class="md-footer"><a href="https://host.goose.gs.cn/" target="_blank">GooseHost</a></footer>
+    <footer class="md-footer"><a href="https://host.goose.cc.cd/" target="_blank">GooseHost</a></footer>
     <script>
     document.querySelectorAll('a[href^="#-"]').forEach(a => a.href = a.href.replace('#-', '#'));
     if (location.hash.startsWith('#-')) location.hash = location.hash.slice(1);

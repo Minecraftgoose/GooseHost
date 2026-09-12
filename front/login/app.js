@@ -1,4 +1,4 @@
-        const API_URL_FALLBACK = 'https://page.goose.gs.cn';
+        const API_URL_FALLBACK = 'https://page.goose.cc.cd';
         let API_URL = API_URL_FALLBACK;
 
         fetch(API_URL_FALLBACK + '/api/config')

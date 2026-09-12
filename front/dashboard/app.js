@@ -1,4 +1,4 @@
-        const API_URL_FALLBACK = 'https://page.goose.gs.cn';
+        const API_URL_FALLBACK = 'https://page.goose.cc.cd';
         let API_URL = API_URL_FALLBACK;
         fetch(API_URL_FALLBACK + '/api/config').then(r => r.json()).then(d => {
             if (d && d.apiUrl) { window.API_URL = d.apiUrl; API_URL = d.apiUrl; }
@@ -67,7 +67,8 @@
             deploy: '/dashboard/deploy',
             sites: '/dashboard/mysite',
             preferences: '/dashboard/settings',
-            account: '/dashboard/account'
+            account: '/dashboard/account',
+            copilot: '/dashboard/copilot'
         };
 
         function navigateTo(page) {
@@ -105,7 +106,7 @@
         function parseRoute() {
             const raw = location.pathname.replace(/\/+$/, '');
             if (raw === '/dashboard' || raw.endsWith('/dashboard.html')) return navigateTo('overview');
-            const m = raw.match(/^\/dashboard\/(deploy|mysite|settings|account|preferences|overview)(?:\/(.+))?$/);
+            const m = raw.match(/^\/dashboard\/(deploy|mysite|settings|account|preferences|overview|copilot)(?:\/(.+))?$/);
             if (m) {
                 const seg = m[1];
                 const slug = m[2] ? decodeURIComponent(m[2]) : null;
@@ -113,7 +114,7 @@
                     showSiteDetail(slug);
                     return;
                 }
-                const map = { deploy: 'deploy', mysite: 'sites', settings: 'preferences', preferences: 'preferences', account: 'account', overview: 'overview' };
+                const map = { deploy: 'deploy', mysite: 'sites', settings: 'preferences', preferences: 'preferences', account: 'account', overview: 'overview', copilot: 'copilot' };
                 return navigateTo(map[seg]);
             }
             return navigateTo('overview');
@@ -1227,6 +1228,7 @@
                             document.getElementById('stat-latest').textContent = '-';
                         }
                     }
+                    setTimeout(() => navigateTo('sites'), 320);
                 } else {
                     showToast(data.error || '删除失败', 'error');
                     if (item) {

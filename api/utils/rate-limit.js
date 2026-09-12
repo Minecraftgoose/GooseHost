@@ -12,6 +12,11 @@ const RATE_LIMIT = {
   reset:        { limit: 10, windowSec: 3600 },          // 每 IP 每小时最多 10 次重置密码
   me_update:    { limit: 20, windowSec: 60 },            // 昵称修改：每 IP 每分钟最多 20 次
   delete_acct:  { limit: 3,  windowSec: 3600 },          // 注销账号：每 IP 每小时最多 3 次
+  ai_chat:      { limit: 30,  windowSec: 60 },           // AI Copilot：每 IP 每分钟最多 30 次
+  play_write:   { limit: 40,  windowSec: 60 },           // 广场写操作：发帖/点赞/关注/改资料
+  play_comment: { limit: 20,  windowSec: 60 },           // 广场评论：每 IP 每分钟最多 20 条
+                                                         // （一轮建站对话内部最多 12 轮请求，
+                                                         //   30 次留给正常交互，同时挡住脚本刷 key）
 };
 
 function getClientIP(request) {

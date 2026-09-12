@@ -1,8 +1,8 @@
-<p style="text-align: center;"><img src="https://host.goose.gs.cn/logo.svg" alt="GooseHost Logo" style="height:auto; width:auto;"></p>
+<p style="text-align: center;"><img src="https://host.goose.cc.cd/logo.svg" alt="GooseHost Logo" style="height:auto; width:auto;"></p>
 
 <h1 style="text-align: center;">API文档</h1>
 
-> **基础 URL**：`https://page.goose.gs.cn`
+> **基础 URL**：`https://page.goose.cc.cd`
 > **响应格式**：JSON（UTF-8）
 > **认证方式**：Bearer Token
 > **最后更新** : 2026/8/20
@@ -245,7 +245,7 @@
   "success": true,
   "name": "my-blog",
   "type": "html",      // 或 "md" / "project"
-  "url": "https://page.goose.gs.cn/s/my-blog"
+  "url": "https://page.goose.cc.cd/s/my-blog"
 }
 ```
 
@@ -433,7 +433,7 @@
 
 **端点**：`GET /api/config`
 
-**响应（200）**：`{ "apiUrl": "https://page.goose.gs.cn" }`
+**响应（200）**：`{ "apiUrl": "https://page.goose.cc.cd" }`
 
 ---
 
@@ -491,7 +491,7 @@
 <footer style="text-align: center; color: #888; font-size: 14px; padding: 20px 0; border-top: 1px solid #ddd;">
   <p>© 2026 GooseHost. </p>
   <p>
-    <a href="https://host.goose.gs.cn/" style="color: #02ff8e; text-decoration: none;">官网</a> &nbsp;|&nbsp;
-    <a href="mailto:support@mail.goose.gs.cn" style="color: #02ff8e; text-decoration: none;">联系我们</a>
+    <a href="https://host.goose.cc.cd/" style="color: #02ff8e; text-decoration: none;">官网</a> &nbsp;|&nbsp;
+    <a href="mailto:support@mail.goose.cc.cd" style="color: #02ff8e; text-decoration: none;">联系我们</a>
   </p>
 </footer>

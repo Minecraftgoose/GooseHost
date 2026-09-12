@@ -5,11 +5,11 @@ import { jsonResp } from './utils/response.js';
 import { makeSupabase } from './utils/supabase.js';
 import { checkRateLimit } from './utils/rate-limit.js';
 
-const MACOS_API = 'https://dev.macos.goose.gs.cn';
+const MACOS_API = 'https://dev.macos.goose.cc.cd';
 
 function siteUrl(site) {
   const prefix = site.type === 'md' ? '/md/' : (site.type === 'project' ? '/p/' : '/s/');
-  return 'https://page.goose.gs.cn' + prefix + encodeURIComponent(site.name);
+  return 'https://page.goose.cc.cd' + prefix + encodeURIComponent(site.name);
 }
 
 // POST /api/macos/submit - 提交站点到 macOS 开发者计划

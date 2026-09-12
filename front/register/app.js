@@ -1,4 +1,4 @@
-        const API_URL = 'https://page.goose.gs.cn';
+        const API_URL = 'https://page.goose.cc.cd';
 
         function setBingWallpaper() {
             const bgLayer = document.getElementById('bgLayer');

@@ -136,7 +136,7 @@
             visits: document.getElementById('statVisits')
         };
         if (!els.sites || !els.visits) return;
-        fetch('https://page.goose.gs.cn/api/stats', { mode: 'cors' })
+        fetch('https://page.goose.cc.cd/api/stats', { mode: 'cors' })
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 var num = function(n) {

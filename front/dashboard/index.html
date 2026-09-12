@@ -30,6 +30,7 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/dashboard/style.css">
+    <link rel="stylesheet" href="/dashboard/copilot.css">
 </head>
 <body class="splash-active">
     <div class="splash-screen" id="splashScreen">
@@ -73,9 +74,31 @@
                     <i class="fas fa-rocket"></i>
                     <span>部署</span>
                 </div>
+                <div class="nav-item" data-page="copilot" onclick="navigateTo('copilot')" role="button" tabindex="0">
+                    <!--
+                      Bot 图标：与 copilot.js 的 botIcon() **图形完全一致**，
+                      只是尺寸不同（这里 18px 匹配 nav-item 的 1rem 图标槽位）。
+                      必须内联而非 JS 注入 —— 侧边栏首屏就要渲染，
+                      靠 JS 替换会先闪一下旧图标。
+                      图形一致性由 tests/test-bot-icon.mjs 守着。
+                    -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="18" height="18" fill="none">
+                        <!-- 上回环断线 -->
+                        <path d="M 50 10 H 20 C 20 10 10 10 10 50" stroke="currentColor" stroke-width="10" stroke-linecap="square" />
+                        <!-- 下回环断线 -->
+                        <path d="M 50 90 H 80 C 80 90 90 90 90 50" stroke="currentColor" stroke-width="10" stroke-linecap="square" />
+                        <!-- 中心汇聚点 -->
+                        <circle cx="50" cy="50" r="5" fill="currentColor" />
+                    </svg>
+                    <span>AI Copilot</span>
+                </div>
                 <div class="nav-item" data-page="sites" onclick="navigateTo('sites')" role="button" tabindex="0">
                     <i class="fas fa-globe"></i>
                     <span>我的网站</span>
+                </div>
+                <div class="nav-item" onclick="location.href='/playground/'" role="button" tabindex="0">
+                    <i class="fas fa-comments"></i>
+                    <span>广场</span>
                 </div>
             </div>
 
@@ -164,19 +187,19 @@
                         <div class="card-title"><i class="fas fa-book"></i> 帮助文档</div>
                     </div>
                     <div class="quick-actions">
-                        <a href="https://host.goose.gs.cn/changelog/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.6s" target="_blank">
+                        <a href="https://host.goose.cc.cd/changelog/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.6s" target="_blank">
                             <i class="fas fa-clipboard-list"></i>
                             <span>更新日志</span>
                         </a>
-                        <a href="https://host.goose.gs.cn/api-docs/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.7s" target="_blank">
+                        <a href="https://host.goose.cc.cd/api-docs/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.7s" target="_blank">
                             <i class="fas fa-code"></i>
                             <span>API 文档</span>
                         </a>
-                        <a href="https://host.goose.gs.cn/docs/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.8s" target="_blank">
+                        <a href="https://host.goose.cc.cd/docs/?doc=terms" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.8s" target="_blank">
                             <i class="fas fa-file-contract"></i>
                             <span>用户协议</span>
                         </a>
-						<a href="https://page.goose.gs.cn/md/cli/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.9s" target="_blank">
+						<a href="https://page.goose.cc.cd/md/cli/" class="quick-action splash-action" style="animation:fadeInUp 0.4s ease forwards;opacity:0;animation-delay:0.9s" target="_blank">
                             <i class="fas fa-code"></i>
                             <span>CLI 文档</span>
                         </a>
@@ -457,6 +480,8 @@
                 </div>
                 <div id="pageDetailBody"></div>
             </div>
+            <!-- AI Copilot 页（内容由 copilot.js 填充；容器必须预置，见 copilot.js buildPage 注释） -->
+            <div class="page" id="page-copilot"></div>
         </main>
     </div>
 
@@ -545,6 +570,11 @@
     <div id="toast" class="toast"></div>
 
     <script src="/dashboard/app.js"></script>
+    <!-- 注意：不要在这里引 JSZip。它是同步 script，国内访问 jsdelivr 很慢，
+         会阻塞整个面板渲染（连没改过的页面也一起遭殃）。
+         copilot.js 会在真正需要打包 zip 时才动态加载，并自动回退国内 CDN。 -->
+    <script src="/dashboard/copilot.js"></script>
+	<script type="text/javascript" src="https://www.wjx.cn/js/ap.js?activity=hGAu84c" id="wjxFloatBtnJsCode"></script>
 
     <div id="deleteAccountDialog" class="custom-dialog">
         <div class="dialog-card">
