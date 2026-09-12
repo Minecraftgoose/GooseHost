@@ -177,7 +177,7 @@
                 if (err.message === 'ADMIN_403') {
                     document.getElementById('tab-sites').innerHTML = '<div class="empty-state"><i class="fas fa-shield-halved"></i><p>您没有管理员权限</p></div>';
                 } else {
-                    document.getElementById('tab-sites').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${err.message}</p></div>`;
+                    document.getElementById('tab-sites').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${esc(err.message)}</p></div>`;
                 }
             }
         }
@@ -266,7 +266,7 @@
                 await loadUsersFull();
                 renderUsers();
             } catch (err) {
-                document.getElementById('tab-users').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${err.message}</p></div>`;
+                document.getElementById('tab-users').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${esc(err.message)}</p></div>`;
             }
         }
 
@@ -354,8 +354,8 @@
                     : site.type === 'project'
                     ? '<span style="padding:1px 7px;border-radius:999px;font-size:10px;color:#bb86fc;border:1px solid rgba(187,134,252,.4);margin-left:6px;vertical-align:1px;">PROJECT</span>'
                     : '<span style="padding:1px 7px;border-radius:999px;font-size:10px;color:#03dac6;border:1px solid rgba(3,218,198,.4);margin-left:6px;vertical-align:1px;">HTML</span>';
-                return `<tr onclick="openSiteDetailPage('${esc(site.name)}')" style="cursor:pointer;">
-                    <td><a href="javascript:void(0)" onclick="event.stopPropagation();openSiteDetailPage('${esc(site.name)}')" class="site-name">${esc(site.name)}</a>${typeBadge}</td>
+                return `<tr onclick="openSiteDetailPage('${escJsAttr(site.name)}')" style="cursor:pointer;">
+                    <td><a href="javascript:void(0)" onclick="event.stopPropagation();openSiteDetailPage('${escJsAttr(site.name)}')" class="site-name">${esc(site.name)}</a>${typeBadge}</td>
                     <td style="color:var(--color-fg-default);font-size:13px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(site.ownerEmail || site.owner_id || '—')}">${esc(site.ownerEmail || site.owner_id || '—')}</td>
                     <td style="font-family:monospace;font-size:12px;color:var(--color-fg-default);white-space:nowrap;">${esc(site.ip_address || '—')}</td>
                 </tr>`;
@@ -405,7 +405,7 @@
                     <td><strong>${esc(u.email)}</strong></td>
                     <td class="site-time">${createdAt}</td>
                     <td>${sitesHtml}</td>
-                    <td><button class="btn btn-danger" onclick="showDeleteUser('${esc(u.id)}', '${esc(u.email)}', ${u.siteCount || 0})"><i class="fas fa-user-times"></i></button></td>
+                    <td><button class="btn btn-danger" onclick="showDeleteUser('${escJsAttr(u.id)}', '${escJsAttr(u.email)}', ${u.siteCount || 0})"><i class="fas fa-user-times"></i></button></td>
                 </tr>`;
             }).join('');
             document.getElementById('tab-users').innerHTML = `
@@ -839,6 +839,23 @@
             return d.innerHTML;
         }
 
+        // JS 字符串转义（供 onclick="fn('...')" 内联参数使用）
+        function jsStr(str) {
+            return String(str == null ? '' : str)
+                .replace(/\\/g, '\\\\')
+                .replace(/\r/g, '')
+                .replace(/\n/g, '\\n')
+                .replace(/'/g, "\\'");
+        }
+        // HTML 属性上下文转义（esc 不处理引号，此处补齐）
+        function escAttr(str) {
+            return esc(String(str == null ? '' : str)).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+        }
+        // 内联事件里的 JS 字符串字面量：先 JS 转义再属性转义
+        function escJsAttr(str) {
+            return escAttr(String(str == null ? '' : str).replace(/\\/g, '\\\\').replace(/\r/g, '').replace(/\n/g, '\\n').replace(/'/g, "\\'"));
+        }
+
         // ==================== 广场管理 ====================
 
         function switchPlaySubTab(sub) {
@@ -949,7 +966,7 @@
                 const who = p.author?.nickname || p.author?.email || p.author_id || '—';
                 return `<tr>
                     <td>
-                        <a href="javascript:void(0)" onclick="showPlayPost('${esc(p.id)}')" class="site-name">${esc(p.title)}</a>${kindBadge}
+                        <a href="javascript:void(0)" onclick="showPlayPost('${escJsAttr(p.id)}')" class="site-name">${esc(p.title)}</a>${kindBadge}
                         <div style="font-size:11px;color:var(--color-fg-subtle);margin-top:2px;">${esc(who)} · ${time}</div>
                     </td>
                     <td style="font-size:12px;color:var(--color-fg-muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(p.content || '')}">${esc((p.content || '').slice(0, 60)) || '—'}</td>
@@ -960,7 +977,7 @@
                     </td>
                     <td>
                         <a href="/playground/#/post/${esc(p.id)}" target="_blank" class="btn btn-secondary" title="查看"><i class="fas fa-external-link-alt"></i></a>
-                        <button class="btn btn-danger" onclick="showDeletePlayPost('${esc(p.id)}', '${esc(p.title)}', ${p.comment_count || 0})" title="删除"><i class="fas fa-trash"></i></button>
+                        <button class="btn btn-danger" onclick="showDeletePlayPost('${escJsAttr(p.id)}', '${escJsAttr(p.title)}', ${p.comment_count || 0})" title="删除"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>`;
             }).join('');
@@ -996,7 +1013,7 @@
                         <div style="font-size:11px;color:var(--color-fg-subtle);margin-top:2px;">${who} · ${time}${c.mention_ai ? ' · <span style="color:#6fd3ff;">@了小鹅C</span>' : ''}</div>
                     </td>
                     <td style="font-size:12px;">${inPost}</td>
-                    <td><button class="btn btn-danger" onclick="showDeletePlayComment('${esc(c.id)}', ${JSON.stringify(esc(c.content.slice(0, 200)))})" title="删除"><i class="fas fa-trash"></i></button></td>
+                    <td><button class="btn btn-danger" onclick="showDeletePlayComment('${escJsAttr(c.id)}', ${escAttr(JSON.stringify(String(c.content || '').slice(0, 200)))})" title="删除"><i class="fas fa-trash"></i></button></td>
                 </tr>`;
             }).join('');
             return `

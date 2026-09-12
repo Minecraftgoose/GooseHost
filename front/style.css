@@ -368,34 +368,39 @@
         }
 
         /* ===== 鸣谢区 ===== */
-        .thanks-list {
+        .thanks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 0.9rem;
+        }
+        .thanks-logo {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 0.8rem;
-            padding: 1.4rem 1.2rem;
-        }
-        .thanks-item {
-            display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.55rem 1.1rem;
-            border: 1px solid rgba(2, 255, 142, 0.25);
-            border-radius: 999px;
-            background: rgba(0, 20, 10, 0.35);
-            color: rgba(255, 255, 255, 0.75);
-            font-size: 0.92rem;
-            font-weight: 600;
-            text-decoration: none;
-            transition: border-color 0.25s, background 0.25s, color 0.25s, transform 0.25s;
+            justify-content: center;
+            min-height: 88px;
+            padding: 0.9rem 1.1rem;
+            border: 1px solid rgba(2, 255, 142, 0.18);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.96);
+            transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
         }
-        .thanks-item i { color: #02ff8e; font-size: 0.9rem; }
-        .thanks-item:hover {
+        .thanks-logo img {
+            max-width: 100%;
+            max-height: 46px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            filter: grayscale(1);
+            opacity: 0.85;
+            transition: filter 0.25s, opacity 0.25s;
+        }
+        .thanks-logo:hover {
+            transform: translateY(-3px);
             border-color: rgba(2, 255, 142, 0.5);
-            background: rgba(2, 255, 142, 0.08);
-            color: #fff;
-            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(2, 255, 142, 0.14);
         }
+        .thanks-logo:hover img { filter: grayscale(0); opacity: 1; }
         .faq-video {
             width: 100%;
             height: 260px;
@@ -485,7 +490,7 @@
             .compare-vs { padding: 0.9rem 0; }
             .cmp-arrow-h { display: none; }
             .cmp-arrow-v { display: inline; }
-            .thanks-list { gap: 0.6rem; }
+            .thanks-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.7rem; }
             .container { padding: 1.5rem 1rem 1rem; }
             .hero { padding-top: 1rem; }
         }

@@ -80,15 +80,39 @@
         return false;
     }
 
+    // 头像/图片地址白名单：只允许 http(s)。
+    // 绝对地址直接校验协议，相对地址按当前页面解析后再校验；
+    // javascript:/vbscript:/data:/blob:/file: 等危险协议一律返回空串（CWE-79）。
+    function safeImgUrl(v) {
+        const s = String(v == null ? '' : v).trim();
+        if (!s) return '';
+        if (/^[a-z][a-z0-9+.\-]*:/i.test(s) && !/^https?:/i.test(s)) return '';
+        let u;
+        try { u = new URL(s, location.href); } catch (e) { return ''; }
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+        return /^https?:\/\/[^\s<>"']+$/i.test(u.href) ? u.href : '';
+    }
+
+    // 链接地址白名单：与 safeImgUrl 同策略，非法协议时退回安全占位，
+    // 避免 <a href="javascript:..."> 被点击执行（CWE-79）
+    function safeLinkUrl(v) {
+        return safeImgUrl(v) || '#';
+    }
+
+    // 首字母兜底文案存在 data-fb 上，加载失败时由委托 handler 用 textContent 替换，
+    // 不再走 innerHTML / 内联 onerror 拼接 HTML
     function avatarHtml(author, cls) {
         cls = cls || '';
         const nick = (author && author.nickname) || '鹅';
+        const initial = esc(nick.slice(0, 1));
         if (author && author.avatar_url) {
-            return `<img class="pg-avatar ${cls}" src="${esc(author.avatar_url)}" alt="${esc(nick)}"
-                        onerror="this.outerHTML='<span class=&quot;pg-avatar ${cls}&quot;>${esc(nick.slice(0, 1))}</span>'">`;
+            const src = safeImgUrl(author.avatar_url);
+            if (src) {
+                return `<img class="pg-avatar ${cls}" src="${esc(src)}" alt="${esc(nick)}" data-fb="${initial}">`;
+            }
         }
         const extra = (author && author.is_ai) ? ' ai' : '';
-        return `<span class="pg-avatar ${cls}${extra}">${esc(nick.slice(0, 1))}</span>`;
+        return `<span class="pg-avatar ${cls}${extra}">${initial}</span>`;
     }
 
     // ------------------------------------------------------------------ 启动
@@ -108,6 +132,19 @@
             .catch(() => {});
 
         bindGlobal();
+
+        // 头像加载失败（404 / 防盗链）→ 退回首字母。
+        // error 事件不冒泡，用捕获阶段监听；全程 DOM API + textContent，不拼接 HTML
+        document.addEventListener('error', (e) => {
+            const el = e.target;
+            if (!el || el.tagName !== 'IMG' || !el.classList.contains('pg-avatar')) return;
+            const fb = el.getAttribute('data-fb');
+            if (fb == null) return;
+            const span = document.createElement('span');
+            span.className = el.className;
+            span.textContent = fb;
+            if (el.parentNode) el.parentNode.replaceChild(span, el);
+        }, true);
 
         (async () => {
             if (token) {
@@ -164,11 +201,10 @@
         $('#postSubmitBtn').addEventListener('click', submitPost);
         $('#profileSubmitBtn').addEventListener('click', submitProfile);
         $('#pfAvatar').addEventListener('input', (e) => {
-            const v = e.target.value.trim();
             const img = $('#pfAvatarPreview');
-            // 仅允许 http(s) 与同源相对路径；拒绝 javascript:/data:/blob: 等危险协议（CWE-79）。
-            const safe = /^https?:\/\//i.test(v) || (/^[^:]+\/[^\/]/i.test(v) && !/^[a-z]+:/i.test(v));
-            if (safe) { img.src = v; img.style.display = 'inline-block'; $('#pfAvatarFallback').style.display = 'none'; }
+            // 统一走 safeImgUrl：非 http(s) 一律拒绝，赋给 src 的永远是归一化后的绝对地址
+            const src = safeImgUrl(e.target.value);
+            if (src) { img.src = src; img.style.display = 'inline-block'; $('#pfAvatarFallback').style.display = 'none'; }
             else { img.removeAttribute('src'); img.style.display = 'none'; $('#pfAvatarFallback').style.display = 'inline-flex'; }
         });
         // 弹窗点遮罩关闭
@@ -354,15 +390,16 @@
 
         let siteBox = '';
         if (isSite) {
+            const previewSrc = safeImgUrl(p.preview_url);
             const preview = p.preview_url
-                ? `<img src="${esc(p.preview_url)}" alt="站点预览" loading="lazy">`
+                ? `<img src="${esc(previewSrc)}" alt="站点预览" loading="lazy">`
                 : '<span><i class="fas fa-image"></i><br>预览图位<br>（待接入）</span>';
             siteBox = `
                 <div class="pg-site-box">
                     <div class="pg-site-preview">${preview}</div>
                     <div class="pg-site-meta">
                         <div class="pg-site-url"><i class="fas fa-link"></i> ${esc(p.site_url || ('/s/' + (p.site_slug || '')))}</div>
-                        <a class="pg-site-visit" href="${esc(p.site_url || ('/s/' + (p.site_slug || '')))}" target="_blank" rel="noopener noreferrer">
+                        <a class="pg-site-visit" href="${esc(safeLinkUrl(p.site_url || ('/s/' + (p.site_slug || ''))))}" target="_blank" rel="noopener noreferrer">
                             <i class="fas fa-arrow-up-right-from-square"></i> 访问站点
                         </a>
                     </div>
@@ -468,8 +505,9 @@
         }
         const p = r.data.post;
         const isSite = p.kind === 'site';
+        const previewSrc = safeImgUrl(p.preview_url);
         const preview = p.preview_url
-            ? `<img src="${esc(p.preview_url)}" alt="站点预览">`
+            ? `<img src="${esc(previewSrc)}" alt="站点预览">`
             : '<span><i class="fas fa-image"></i><br>预览图位<br>（等首屏抓取服务接入）</span>';
 
         box.innerHTML = `
@@ -495,7 +533,7 @@
                     <div class="pg-site-preview">${preview}</div>
                     <div class="pg-site-meta">
                         <div class="pg-site-url"><i class="fas fa-link"></i> ${esc(p.site_url || '')}</div>
-                        <a class="pg-site-visit" href="${esc(p.site_url || '')}" target="_blank" rel="noopener noreferrer">
+                        <a class="pg-site-visit" href="${esc(safeLinkUrl(p.site_url || ''))}" target="_blank" rel="noopener noreferrer">
                             <i class="fas fa-arrow-up-right-from-square"></i> 访问站点
                         </a>
                     </div>
@@ -858,7 +896,8 @@
         $('#pfAvatar').value = me.avatar_url || '';
         $('#pfBio').value = me.bio || '';
         const img = $('#pfAvatarPreview');
-        if (me.avatar_url) { img.src = me.avatar_url; img.style.display = 'inline-block'; $('#pfAvatarFallback').style.display = 'none'; }
+        const avatarSrc = safeImgUrl(me.avatar_url);
+        if (avatarSrc) { img.src = avatarSrc; img.style.display = 'inline-block'; $('#pfAvatarFallback').style.display = 'none'; }
         else { img.style.display = 'none'; $('#pfAvatarFallback').style.display = 'inline-flex'; }
         $('#profileModal').classList.add('open');
     }
