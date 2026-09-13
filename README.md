@@ -54,6 +54,10 @@ cloudflare负责前端和worker调用
 SUPABASE负责用户认证和储存（有1GB空间）（其实cloudflareR2更好）
 
 
+### 联系
+
+点击链接加入群聊【GooseHost】：https://qm.qq.com/q/PBzrpi8Zyi
+
 ### 项目结构
 
 ```
