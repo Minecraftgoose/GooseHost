@@ -47,6 +47,11 @@
                     <i class="fas fa-sign-in-alt"></i> 登录
                 </button>
 
+                <div id="loginHint" class="login-hint">
+                    密码登不上？可能是本次故障导致旧密码失效，
+                    <a href="#" onclick="event.preventDefault();showForgot()">点这里重置密码</a>
+                </div>
+
                 <div class="link-row">
                     没有账户？<a href="../register/">立即注册</a>
                     · <a href="#" onclick="event.preventDefault();showForgot()">忘记密码？</a>
@@ -61,6 +66,41 @@
         </div>
     </div>
 
+
+    <!-- 开屏公告：故障导致密码失效，需要重置 -->
+    <div id="noticeModal" class="notice-overlay" role="dialog" aria-modal="true" aria-labelledby="noticeTitle">
+        <div class="card notice-card">
+            <div class="notice-head">
+                <span class="notice-badge"><i class="fas fa-triangle-exclamation"></i> 服务公告</span>
+                <button class="notice-close" type="button" onclick="dismissNotice(true)" aria-label="关闭公告">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+
+            <h3 id="noticeTitle">密码凭据丢失，请重置密码</h3>
+
+            <p class="tip">
+                GooseHost 发生了一次系统故障 —— 说人话：某段祖传代码突然犯病，把用户凭据表扇了一巴掌。
+            </p>
+
+            <ul class="notice-list">
+                <li><i class="fas fa-key"></i> 故障前注册的账号，旧密码已全部失效，直接登录会失败。</li>
+                <li><i class="fas fa-envelope"></i> 点击「立即重置密码」，用注册邮箱收一封重置邮件，设置新密码后即可正常登录。</li>
+                <li><i class="fas fa-server"></i> 站点数据不受影响 —— 只有密码坏了。</li>
+            </ul>
+
+            <p class="tip small">
+                其实不只是密码没了，只不过Minecraft_goose全救回来了，只有密码救不回来
+            </p>
+
+            <button id="noticeResetBtn" class="btn btn-primary" type="button" onclick="goResetFromNotice()">
+                <i class="fas fa-key"></i> 立即重置密码
+            </button>
+            <button class="btn-ghost" type="button" onclick="dismissNotice(true)">我已有新密码，直接登录</button>
+
+            <p class="notice-date" id="noticeDate"></p>
+        </div>
+    </div>
 
     <!-- 找回密码弹窗 -->
     <div id="forgotModal" class="modal-overlay">

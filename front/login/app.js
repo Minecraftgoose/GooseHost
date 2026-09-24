@@ -11,21 +11,62 @@
             })
             .catch(() => {});
 
-        function setBingWallpaper() {
+        function activateDotBg() {
             const bgLayer = document.getElementById('bgLayer');
-            const wallpaperUrl = `https://api.fuchenboke.cn/api/fengjing.php?t=${Date.now()}`;
-            const img = new Image();
-            img.onload = () => {
-                bgLayer.style.backgroundImage = `url('${wallpaperUrl}')`;
-                bgLayer.classList.add('loaded');
-            };
-            img.onerror = () => bgLayer.classList.add('loaded');
-            img.src = wallpaperUrl;
+            if (bgLayer) bgLayer.classList.add('loaded');
         }
-        setBingWallpaper();
+        activateDotBg();
+
+        /* ===== 开屏公告：故障导致密码失效 ===== */
+        const NOTICE_KEY = 'gh_pwd_reset_notice_v1';
+        let noticeDone = false;
+        let pendingDashboard = false;
+
+        function noticeSeen() {
+            try { return localStorage.getItem(NOTICE_KEY) === '1'; } catch (e) { return false; }
+        }
+        function markNoticeSeen() {
+            try { localStorage.setItem(NOTICE_KEY, '1'); } catch (e) {}
+        }
+        function openNotice() {
+            document.getElementById('noticeModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+            try { document.getElementById('noticeResetBtn').focus(); } catch (e) {}
+        }
+        function closeNotice() {
+            const el = document.getElementById('noticeModal');
+            if (el) el.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        function dismissNotice(remember) {
+            closeNotice();
+            if (remember !== false) markNoticeSeen();
+            afterNotice();
+        }
+        function goResetFromNotice() {
+            pendingDashboard = false; // 要留在本页重置密码，先不跳控制台
+            closeNotice();
+            markNoticeSeen();
+            showForgot();
+        }
+        function afterNotice() {
+            if (noticeDone) return;
+            noticeDone = true;
+            if (pendingDashboard) location.href = '/dashboard';
+        }
+
+        // 进入登录页先看公告；已读过的用户不再打扰，直接走原流程
+        setTimeout(function () {
+            if (noticeSeen()) { afterNotice(); return; }
+            try {
+                document.getElementById('noticeDate').textContent =
+                    '公告发布于 ' + new Date().toLocaleDateString('zh-CN');
+            } catch (e) {}
+            openNotice();
+        }, 350);
 
         if (localStorage.getItem('sb_token')) {
-            location.href = '/dashboard';
+            pendingDashboard = true;
         }
 
         (function() {
@@ -37,6 +78,8 @@
                 var type = params.get('type');
                 if (token && type === 'signup') {
                     history.replaceState(null, '', window.location.pathname);
+                    markNoticeSeen();
+                    noticeDone = true;
                     showMsg('邮箱已验证成功！', 'success');
                     localStorage.setItem('sb_token', token);
                     if (refresh) localStorage.setItem('sb_refresh_token', refresh);
@@ -70,6 +113,8 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const btn = document.getElementById('loginBtn');
+            const hint = document.getElementById('loginHint');
+            if (hint) hint.classList.remove('show');
 
             if (!email || !password) {
                 showMsg('请填写邮箱和密码', 'error');
@@ -89,6 +134,8 @@
                 const data = await res.json();
 
                 if (!res.ok) {
+                    const hint = document.getElementById('loginHint');
+                    if (hint && (res.status === 400 || res.status === 401)) hint.classList.add('show');
                     throw new Error(data.error_description || data.msg || '登录失败');
                 }
 
@@ -107,6 +154,12 @@
 
         document.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') login();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('noticeModal').classList.contains('open')) {
+                dismissNotice(true);
+            }
         });
         function showForgot() {
             document.getElementById('forgotModal').style.display = 'flex';

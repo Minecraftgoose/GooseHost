@@ -1,13 +1,113 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/*.js
+  Content-Type: text/javascript; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/*.css
+  Content-Type: text/css; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/*.json
+  Content-Type: application/json; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/*.xml
+  Content-Type: application/xml; charset=utf-8
+
+/*.txt
+  Content-Type: text/plain; charset=utf-8
+
+/*.html
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/dashboard
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/dashboard/
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/dashboard/deploy
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/dashboard/mysite
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/dashboard/mysite/
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/dashboard/mysite/*
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/dashboard/settings
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/dashboard/account
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/dashboard/copilot
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/dashboard/preferences
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/login
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/login/
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/playground
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/playground/
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/status
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/status/
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/
+  Content-Type: text/html; charset=utf-8
+  X-Content-Type-Options: nosniff
+
 /fonts/*
   Cache-Control: public, max-age=31536000, immutable
   X-Content-Type-Options: nosniff
 
 /icons/*
   Cache-Control: public, max-age=604800
+  X-Content-Type-Options: nosniff
 
 /logo.svg
   Cache-Control: public, max-age=604800
+  X-Content-Type-Options: nosniff
+
 /manifest.json
   Cache-Control: public, max-age=604800
+
 /thanks/*
   Cache-Control: public, max-age=604800

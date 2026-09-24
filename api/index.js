@@ -1,8 +1,7 @@
-﻿// ===== GooseHost API 主入口 =====
+// ===== GooseHost API 主入口 =====
 
 import { getCorsHeaders } from './utils/cors.js';
 import { jsonResp } from './utils/response.js';
-import { cleanupOrphanUsers } from './jobs/cleanup.js';
 
 import { handleRegister } from './auth/register.js';
 import { handleLogin } from './auth/login.js';
@@ -41,11 +40,7 @@ import {
   handleAdminPlayStats
 } from './admin/play.js';
 
-import {
-  handleDebugSyncEmails,
-  handleDebugTestAuth,
-  handleDebugCleanup
-} from './debug.js';
+import { handleDebugSyncEmails, handleDebugTestAuth } from './debug.js';
 
 import { handleAiChat } from './ai/chat.js';
 
@@ -71,8 +66,28 @@ import {
 } from './play/index.js';
 
 // ===== Workers Entry =====
+function makeHandler(inner) {
+  return async (request, env) => {
+    try {
+      return await inner(request, env);
+    } catch (e) {
+      const url = (() => { try { return new URL(request.url); } catch { return null; } })();
+      const pathname = url ? url.pathname : '?';
+      console.error('[api] unhandled exception', {
+        path: pathname,
+        message: e && e.message,
+        stack: e && e.stack
+      });
+      // 兜底：必须带上 CORS 头，否则浏览器只会看到
+      // "CORS 头缺少 Access-Control-Allow-Origin"，把真实错误掩盖掉。
+      // 生产响应体只返回 requestId，堆栈走日志查。
+      const reqId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'n/a';
+      return jsonResp({ error: '服务端内部错误', requestId: reqId }, 500, getCorsHeaders(request));
+    }
+  };
+}
 export default {
-  async fetch(request, env) {
+  fetch: makeHandler(async (request, env) => {
     const url = new URL(request.url);
     const method = request.method;
     const pathParts = url.pathname.split('/').filter(Boolean);
@@ -305,25 +320,6 @@ export default {
       return await handleDebugTestAuth(request, env, corsHeaders);
     }
 
-    // GET /_debug/cleanup - 手动触发清理
-    if (url.pathname === '/_debug/cleanup' && method === 'GET') {
-      return await handleDebugCleanup(request, env, corsHeaders);
-    }
-
-    // POST /_cron/cleanup-orphans - Cron 触发清理
-    if (url.pathname === '/_cron/cleanup-orphans' && method === 'POST') {
-      const secret = request.headers.get('X-Cron-Secret') || '';
-      if (secret !== env.CRON_SECRET) {
-        return jsonResp({ error: 'Unauthorized' }, 401, corsHeaders);
-      }
-      try {
-        const result = await cleanupOrphanUsers(env);
-        return jsonResp(result, 200, corsHeaders);
-      } catch (err) {
-        return jsonResp({ error: err.message }, 500, corsHeaders);
-      }
-    }
-
     // === 广场（Playground）===
 
     // GET /api/play/posts - 广场帖子列表（公开）
@@ -432,17 +428,5 @@ export default {
       status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
     });
-  },
-
-  async scheduled(controller, env, ctx) {
-    if (controller.cron) {
-      console.log('Cron trigger: starting orphan cleanup at', new Date().toISOString());
-      try {
-        const result = await cleanupOrphanUsers(env);
-        console.log('Cron cleanup result:', JSON.stringify(result));
-      } catch (err) {
-        console.error('Cron cleanup error:', err.message);
-      }
-    }
-  },
+  })
 };

@@ -8,20 +8,10 @@
             }
         }
     })();
-    // ----- 壁纸 -----
-    (function setBingWallpaper() {
+    // ----- 点阵背景（纯 CSS，无需网络请求）-----
+    (function activateDotBg() {
         const bgLayer = document.getElementById('bgLayer');
-        const timestamp = new Date().getTime();
-        const wallpaperUrl = 'https://api.fuchenboke.cn/api/fengjing.php?t=' + timestamp;
-        const img = new Image();
-        img.onload = function() {
-            bgLayer.style.backgroundImage = 'url(\'' + wallpaperUrl + '\')';
-            bgLayer.classList.add('loaded');
-        };
-        img.onerror = function() {
-            bgLayer.classList.add('loaded');
-        };
-        img.src = wallpaperUrl;
+        if (bgLayer) bgLayer.classList.add('loaded');
     })();
 
     // ----- FAQ 折叠展开 -----

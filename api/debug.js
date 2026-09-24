@@ -3,7 +3,6 @@
 import { makeSupabase } from './utils/supabase.js';
 import { syncEmailMap } from './utils/email-map.js';
 import { jsonResp } from './utils/response.js';
-import { cleanupOrphanUsers } from './jobs/cleanup.js';
 
 // Service Role Key 验证的同步邮箱
 export async function handleDebugSyncEmails(request, env, corsHeaders) {
@@ -34,19 +33,5 @@ export async function handleDebugTestAuth(request, env, corsHeaders) {
     }, 200, corsHeaders);
   } catch (e) {
     return jsonResp({ threw: e.message, userId: testId }, 500, corsHeaders);
-  }
-}
-
-export async function handleDebugCleanup(request, env, corsHeaders) {
-  const secret = request.headers.get('X-Cron-Secret') || '';
-  if (secret !== env.CRON_SECRET) {
-    return jsonResp({ error: 'Unauthorized' }, 401, corsHeaders);
-  }
-
-  try {
-    const result = await cleanupOrphanUsers(env);
-    return jsonResp(result, 200, corsHeaders);
-  } catch (err) {
-    return jsonResp({ error: err.message }, 500, corsHeaders);
   }
 }

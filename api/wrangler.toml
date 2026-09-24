@@ -13,6 +13,3 @@ AI_MAX_TOKENS = "4096"
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
 id = "89552af87a1248bb81cc77419aeeae07"
-
-[triggers]
-crons = ["*/30 * * * *"]

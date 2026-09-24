@@ -44,17 +44,32 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: rgba(2, 255, 142, 0.5); }
 * { scrollbar-width: thin; scrollbar-color: rgba(2, 255, 142, 0.25) rgba(255, 255, 255, 0.03); }
 
-/* ===== 背景壁纸 ===== */
+/* ===== 点阵背景 ===== */
 .bg-layer {
     position: fixed; inset: 0; z-index: 0;
-    background: #0a0f0d center/cover;
     opacity: 0; transition: opacity .5s ease;
+    background-color: #0a0f0d;
+    /* 白点层（后方点阵） */
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.22) 1px, transparent 2px);
+    background-size: 16px 16px;
+    background-position: 0 0;
+}
+.bg-layer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(2, 255, 142, 0.28) 1px, transparent 2px);
+    background-size: 16px 16px;
+    background-position: 0 0;
+    opacity: 0;
+    animation: dotBreath 3.6s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes dotBreath {
+    0%, 100% { opacity: 0; }
+    50%      { opacity: 1; }
 }
 .bg-layer.loaded { opacity: 1; }
-.bg-layer::before {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(10, 20, 15, 0.88) 0%, rgba(26, 37, 32, 0.78) 100%);
-}
 
 /* ===== 顶部导航 ===== */
 .pg-navbar {

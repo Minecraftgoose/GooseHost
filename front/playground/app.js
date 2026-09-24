@@ -117,13 +117,9 @@
 
     // ------------------------------------------------------------------ 启动
     (function boot() {
-        // 壁纸
+        // 点阵背景（纯 CSS，无需网络请求）
         const bg = $('#bgLayer');
-        const url = `https://api.fuchenboke.cn/api/fengjing.php?t=${Date.now()}`;
-        const img = new Image();
-        img.onload = () => { bg.style.backgroundImage = `url('${url}')`; bg.classList.add('loaded'); };
-        img.onerror = () => bg.classList.add('loaded');
-        img.src = url;
+        if (bg) bg.classList.add('loaded');
 
         // API 地址
         fetch(API_URL_FALLBACK + '/api/config')

@@ -75,19 +75,9 @@
             }
         }
 
-        (function setBingWallpaper() {
+        (function activateDotBg() {
             const bgLayer = document.getElementById('bgLayer');
-            const timestamp = new Date().getTime();
-            const wallpaperUrl = 'https://api.fuchenboke.cn/api/fengjing.php?t=' + timestamp;
-            const img = new Image();
-            img.onload = function() {
-                bgLayer.style.backgroundImage = 'url(\'' + wallpaperUrl + '\')';
-                bgLayer.classList.add('loaded');
-            };
-            img.onerror = function() {
-                bgLayer.classList.add('loaded');
-            };
-            img.src = wallpaperUrl;
+            if (bgLayer) bgLayer.classList.add('loaded');
         })();
 
         checkStatus();

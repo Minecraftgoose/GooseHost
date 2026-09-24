@@ -1,17 +1,10 @@
         const API_URL = 'https://page.goose.cc.cd';
 
-        function setBingWallpaper() {
+        function activateDotBg() {
             const bgLayer = document.getElementById('bgLayer');
-            const wallpaperUrl = `https://api.fuchenboke.cn/api/fengjing.php?t=${Date.now()}`;
-            const img = new Image();
-            img.onload = () => {
-                bgLayer.style.backgroundImage = `url('${wallpaperUrl}')`;
-                bgLayer.classList.add('loaded');
-            };
-            img.onerror = () => bgLayer.classList.add('loaded');
-            img.src = wallpaperUrl;
+            if (bgLayer) bgLayer.classList.add('loaded');
         }
-        setBingWallpaper();
+        activateDotBg();
 
         function showMsg(msg, type = 'error') {
             const el = document.getElementById('msg');
