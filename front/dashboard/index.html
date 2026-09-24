@@ -480,8 +480,90 @@
                 </div>
                 <div id="pageDetailBody"></div>
             </div>
-            <!-- AI Copilot 页（内容由 copilot.js 填充；容器必须预置，见 copilot.js buildPage 注释） -->
+            <!-- AI Copilot 页（整体结构由 copilot.js buildPage() 生成）。
+                 「自定义模型」面板：DOM 直接写在 HTML 里（不通过 JS 拼接、也不用 <template> 克隆），
+                 符合「DOM 不用 JS 加载」的要求。设计稿：模型提供商 / 选择模型 / 填写 key + 测试·启用·默认。
+
+                 位置约定：面板必须与 #page-copilot 平级（同属 .content），不能嵌套在 #page-copilot 内部。
+                 buildPage() 会对 #page-copilot 执行 innerHTML 重建聊天区骨架，若面板是其子节点会被一并清掉。
+                 copilot.js 的 mountStaticModelPane() 负责在初始化时把本面板 append 进右侧栏 .cop-right-panel-body。 -->
             <div class="page" id="page-copilot"></div>
+
+            <div class="cop-pane" id="copModelPaneInline" data-pane="model">
+    <div class="cop-model-form">
+
+        <!-- ===== 说明条 ===== -->
+        <div class="cop-model-tip">
+            启用后，Copilot 通过 GooseHost 后端代理转发到你填写的 OpenAI 兼容接口
+            （DeepSeek / OpenAI 官方 API 均不开放浏览器 CORS，前端直连会被拦截，故必须经代理）。
+            配置（含 API Key）保存在本机浏览器 localStorage，仅在你发起对话时经本站后端转发，
+            不会公开暴露；清理浏览器数据或换设备需重新填写。
+        </div>
+
+        <!-- ===== 1. 模型提供商（原生 select，含 自定义服务）=====
+             设计原则：一个服务商 = 一个端点。
+             DeepSeek 只有一个端点，模型差异（Flash / Pro）放在下方「选择模型」区，
+             不在这里拆成两个 provider（避免出现 "DeepSeek Pro" 这种伪提供商）。
+             切到 OpenCode / 自定义服务 时，下方的 datalist 提示会随之切换。 -->
+        <label class="cop-field">
+            <span class="cop-field-label">模型提供商</span>
+            <div class="cop-select-wrap">
+                <select class="cop-input cop-select" id="copModelProvider">
+                    <option value="deepseek">DeepSeek</option>
+                    <option value="opencode-zen">OpenCode 免费端点</option>
+                    <option value="custom">自定义服务</option>
+                </select>
+                <span class="cop-select-arrow" aria-hidden="true">▾</span>
+            </div>
+            <span class="cop-field-hint" id="copProviderHint">选择服务商后将自动填入 Endpoint，只需再选模型、粘贴 API Key 即可。</span>
+        </label>
+
+        <!-- ===== 2. 选择模型（原生 select，按当前 provider 动态切换可选模型）=====
+             为什么不用 datalist：模型清单取决于所选 provider，原生 select 可直接由 JS 重写
+             options，且能明确区分「预置可选」与「自由输入」（accept 任意 OpenAI 兼容模型 ID）。
+             默认选中项由 PROVIDER_PRESETS[provider].model 决定。 -->
+        <label class="cop-field">
+            <span class="cop-field-label">选择模型</span>
+            <div class="cop-select-wrap">
+                <select class="cop-input cop-select" id="copModelId"></select>
+                <span class="cop-select-arrow" aria-hidden="true">▾</span>
+            </div>
+            <span class="cop-field-hint" id="copModelHint">也可直接输入任意 OpenAI 兼容的模型 ID。</span>
+        </label>
+
+        <!-- ===== 3. 填写 key ===== -->
+        <label class="cop-field">
+            <span class="cop-field-label">填写 key</span>
+            <input class="cop-input" id="copModelKey" type="password" placeholder="sk-..." autocomplete="new-password" spellcheck="false">
+            <span class="cop-field-hint">API Key 仅存于本机 localStorage，仅在你发送消息时经本站后端转发。</span>
+        </label>
+
+        <!-- ===== 4. 高级：自定义服务（仅 provider = custom 时显示）===== -->
+        <div class="cop-field cop-advanced" id="copAdvanced">
+            <span class="cop-field-label">高级：手动填写 Endpoint</span>
+            <input class="cop-input" id="copModelEndpoint" type="text" placeholder="https://api.openai.com/v1/chat/completions" autocomplete="off" spellcheck="false">
+            <span class="cop-field-hint">填完整请求地址（须含 /chat/completions）；可改为任意 OpenAI 兼容端点。</span>
+        </div>
+
+        <!-- ===== 5. 启用开关 ===== -->
+        <label class="cop-switch">
+            <input type="checkbox" id="copModelEnable">
+            <span>启用自定义模型（替代默认 GooseHost 模型）</span>
+        </label>
+
+        <!-- ===== 6. 状态行 ===== -->
+        <div class="cop-model-status" id="copModelStatus"></div>
+
+    </div>
+
+    <!-- ===== 底部操作栏：测试 · 启用 · 默认 ===== -->
+    <div class="cop-pane-foot">
+        <button class="cop-mini-btn" id="copModelTest" title="用一条最短消息验证连通性"><i class="fas fa-plug"></i> 测试</button>
+        <button class="cop-mini-btn cop-primary" id="copModelSave" title="保存并启用"><i class="fas fa-check"></i> 启用</button>
+        <button class="cop-mini-btn danger" id="copModelReset" title="恢复为默认模型"><i class="fas fa-rotate-left"></i> 默认</button>
+    </div>
+</div>
+            </div>
         </main>
     </div>
 
@@ -590,9 +672,10 @@
                 <button id="deleteConfirmBtn" class="btn btn-danger ripple-btn" style="width:100%;justify-content:center;" onclick="deleteAccount()">
                     <i class="fas fa-user-slash"></i> 我确定，注销
                 </button>
-                <button onclick="closeDeleteModal()" style="margin-top:0.5rem;width:100%;height:var(--input-height);border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text-secondary);cursor:pointer;font-size:1rem;">取消</button>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+                <button onclick="closeDeleteModal()" style="margin-top:0.5rem;w">
+                <input type="hidden" id="editType">
+
+                <!-- HTML ç¼è¾é¢æ¿ -->
+                <div id="html-editor-panel">
+                    <div class="form-group drop-target">
+                        <label class="form

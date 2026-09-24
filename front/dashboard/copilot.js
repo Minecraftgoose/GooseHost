@@ -36,24 +36,39 @@
         } catch (e) { }
         return customModel;
     }
+    // ⚠️ 已移除「自动补全 /chat/completions」（2026-09）。
+    // 原因：一键接入 / 自定义模型一律走后端代理转发，URL 由【用户填写的完整地址】
+    // 决定，后端不再做任何路径假设。前端只负责：去空格、去尾斜杠、原样透传。
+    // 这样用户填第三方网关（/api/v1/chat、/completions、带子路径代理）都能正常工作，
+    // 不会被强制改成 .../chat/completions 而报错。
     function normalizeEndpoint(v) {
-        var base = String(v || '').trim().replace(/\/+$/, '');
-        if (!base) return '';
-        if (/\/chat\/completions$/i.test(base)) return base;
-        return base + '/chat/completions';
+        return String(v || '').trim().replace(/\/+$/, '');
     }
     function customModelReady() {
         return !!(customModel.enabled && customModel.endpoint && customModel.apiKey);
     }
     function chatEndpoint() {
-        if (customModelReady()) return normalizeEndpoint(customModel.endpoint);
+        // 自定义模型一律走后端代理 /api/ai/chat：DeepSeek / OpenAI 官方 API 不开放
+        // 浏览器 CORS（预检 OPTIONS 返回 403，无 Access-Control-Allow-Origin），
+        // 前端直连会被浏览器拦截，故由后端透传 endpoint / apiKey。
+        if (customModelReady()) {
+            if (window.COPILOT_CHAT_URL) return window.COPILOT_CHAT_URL;
+            var base = (window.API_URL || API_FALLBACK).replace(/\/$/, '');
+            return base + '/api/ai/chat';
+        }
         if (window.COPILOT_CHAT_URL) return window.COPILOT_CHAT_URL;
-        var base = (window.API_URL || API_FALLBACK).replace(/\/$/, '');
-        return base + '/api/ai/chat';
+        var base2 = (window.API_URL || API_FALLBACK).replace(/\/$/, '');
+        return base2 + '/api/ai/chat';
     }
     function buildChatBody(messages, stream) {
         var body = { messages: messages, tools: TOOLS, temperature: 0.3 };
-        if (customModelReady() && customModel.model) body.model = customModel.model;
+        if (customModelReady()) {
+            // 一键接入：把用户的 endpoint / apiKey 随请求体带给后端代理转发。
+            // endpoint 原样透传（已移除自动补全），后端按「完整地址优先」处理。
+            if (customModel.endpoint) body.endpoint = customModel.endpoint.trim().replace(/\/+$/, '');
+            if (customModel.apiKey) body.apiKey = customModel.apiKey;
+            if (customModel.model) body.model = customModel.model;
+        }
         if (stream) body.stream = true;
         return JSON.stringify(body);
     }
@@ -1337,10 +1352,14 @@
         var doFetch = function () {
             var hdr = new Headers((options && options.headers) || {});
             if (custom) {
-                if (custom.apiKey) hdr.set('Authorization', 'Bearer ' + custom.apiKey);
-            } else {
+                // 走后端代理（/api/ai/chat）时：Authorization 必须是用户 JWT 用于身份鉴权，
+                // 自定义模型的 apiKey 已在请求体 endpoint/apiKey 字段中透传，不能再塞进 Authorization，
+                // 否则后端 getUserId 会把它当 token 解析而鉴权失败。
                 var t = localStorage.getItem('sb_token');
                 if (t) hdr.set('Authorization', 'Bearer ' + t);
+            } else {
+                var t2 = localStorage.getItem('sb_token');
+                if (t2) hdr.set('Authorization', 'Bearer ' + t2);
             }
             return fetch(url, Object.assign({}, options, { headers: hdr }));
         };
@@ -1838,42 +1857,58 @@
             if (!cfg.endpoint) { setStatus('请先填写接入地址', 'err'); return; }
             if (!/^https?:\/\//i.test(cfg.endpoint)) { setStatus('接入地址需以 http:// 或 https:// 开头', 'err'); return; }
             if (!cfg.apiKey) { setStatus('请先填写 API Key', 'err'); return; }
-            var ep = normalizeEndpoint(cfg.endpoint);
+            // 经后端代理转发测试（浏览器直连会因 CORS 被服务商网关拦截）。
+            // endpoint 原样透传给后端，由后端决定如何请求（完整地址优先）。
+            var proxyBase = (window.API_URL || API_FALLBACK).replace(/\/$/, '');
+            var testBody = {
+                endpoint: cfg.endpoint.replace(/\/+$/, ''),
+                apiKey: cfg.apiKey,
+                model: cfg.model || (function () {
+                    // OpenCode Zen 一键接入：未填模型时默认用 big-pickle（免费模型）
+                    var ep = (cfg.endpoint || '').replace(/\/+$/, '').toLowerCase();
+                    if (ep.indexOf('opencode.ai/zen') !== -1) return 'big-pickle';
+                    // DeepSeek 官方在售名为 deepseek-flash（deepseek-v4-flash 是已退役模型的旧别名）
+                    return 'deepseek-flash';
+                })(),
+                messages: [{ role: 'user', content: 'hi' }],
+                max_tokens: 1,
+                stream: false
+            };
             var oldHtml = elTest.innerHTML;
             elTest.disabled = true;
             elTest.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 测试中';
-            setStatus('正在连接 ' + ep + ' …', '');
+            setStatus('正在通过代理连接 ' + cfg.endpoint + ' …', '');
             try {
-                var res = await copFetch(ep, {
+                var res = await copFetch(proxyBase + '/api/ai/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: cfg.model || 'gpt-4o-mini',
-                        messages: [{ role: 'user', content: 'hi' }],
-                        max_tokens: 1,
-                        stream: false
-                    })
-                }, 30000, { apiKey: cfg.apiKey });
+                    body: JSON.stringify(testBody)
+                }, 30000, true);
                 var data = null;
                 try { data = await res.json(); } catch (e) { }
                 if (res.ok) {
                     var used = (data && data.model) || cfg.model || '';
                     setStatus('● 连接成功' + (used ? '，模型可用：' + used : ''), 'ok');
-                    termPrint('自定义模型连接成功：' + ep + (used ? '（' + used + '）' : ''));
+                    termPrint('自定义模型连接成功：' + cfg.endpoint + (used ? '（' + used + '）' : ''));
                 } else {
                     var err = data && data.error;
                     var detail = (err && (err.message || err.code || err)) || ('HTTP ' + res.status);
                     setStatus('连接失败：' + detail, 'err');
                 }
             } catch (e) {
-                setStatus('连接失败：' + (e && e.message ? e.message : e) + '（部分服务商有 CORS 限制，需在其后台放行当前域名）', 'err');
+                setStatus('连接失败：' + (e && e.message ? e.message : e), 'err');
             } finally {
                 elTest.disabled = false;
                 elTest.innerHTML = oldHtml;
             }
         };
         fillForm();
+        bindQuickConnect();
     }
+    // ===== 一键接入逻辑已迁移到 bindProviderSelect()（原生 select 联动）=====
+    // 原「按钮组 cop-provider-grid」UI 已废弃（DOM 中不再存在），
+    // 服务商选择改由 <select id="copModelProvider"> 驱动，预设数据见 PROVIDER_PRESETS。
+    function bindQuickConnect() { /* deprecated, no-op */ }
     function esc(s) {
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1890,6 +1925,8 @@
             content.appendChild(page);
         }
         pageRoot = page;
+
+        // 1) 生成聊天区 + 右侧栏骨架（含 #copRightPanel .cop-right-panel-body）
         page.innerHTML = [
             '<div class="cop-root">',
             '  <main class="cop-main">',
@@ -1951,44 +1988,197 @@
             '          <button class="cop-mini-btn" id="copClearTerm" title="清屏"><i class="fas fa-broom"></i> 清屏</button>',
             '        </div>',
             '      </div>',
-            '      <div class="cop-pane" data-pane="model">',
-            '        <div class="cop-model-form">',
-            '          <div class="cop-model-tip">启用后，Copilot 将直接请求你填写的 OpenAI 兼容接口，不再使用 GooseHost 默认模型。配置（含 API Key）保存在本机浏览器 localStorage，下次打开自动填入；清理浏览器数据或换设备需重新填写。</div>',
-            '          <label class="cop-field">',
-            '            <span class="cop-field-label">接入地址 Endpoint</span>',
-            '            <input class="cop-input" id="copModelEndpoint" type="text" placeholder="https://api.openai.com/v1" autocomplete="off" spellcheck="false">',
-            '            <span class="cop-field-hint">会自动补全 /chat/completions，填完整地址也可</span>',
-            '          </label>',
-            '          <label class="cop-field">',
-            '            <span class="cop-field-label">API Key</span>',
-            '            <input class="cop-input" id="copModelKey" type="password" placeholder="sk-..." autocomplete="new-password" spellcheck="false">',
-            '          </label>',
-            '          <label class="cop-field">',
-            '            <span class="cop-field-label">模型名称</span>',
-            '            <input class="cop-input" id="copModelId" type="text" placeholder="gpt-4o-mini" autocomplete="off" spellcheck="false">',
-            '          </label>',
-            '          <label class="cop-switch">',
-            '            <input type="checkbox" id="copModelEnable">',
-            '            <span>启用自定义模型（替代默认 GooseHost 模型）</span>',
-            '          </label>',
-            '          <div class="cop-model-status" id="copModelStatus"></div>',
-            '        </div>',
-            '        <div class="cop-pane-foot">',
-            '          <button class="cop-mini-btn" id="copModelTest" title="用一条最短消息验证连通性"><i class="fas fa-plug"></i> 测试连接</button>',
-            '          <button class="cop-mini-btn" id="copModelSave" title="保存配置"><i class="fas fa-check"></i> 保存</button>',
-            '          <button class="cop-mini-btn danger" id="copModelReset" title="清空配置并恢复默认模型"><i class="fas fa-rotate-left"></i> 恢复默认</button>',
-            '        </div>',
-            '      </div>',
             '    </div>',
             '  </aside>',
             '</div>'
         ].join('');
+
+        // 挂载静态「自定义模型」面板（HTML 直接写在 index.html，不通过 JS 拼接）
+        // 必须在骨架 page.innerHTML 赋值之后调用 —— 此时 #copRightPanel .cop-right-panel-body 才存在。
+        mountStaticModelPane(page);
+
         bindUI(page);
         mounted = true;
         trackMsgScroll();
         watchPageVisibility();
         refreshTree();
         termPrint('GooseHost Copilot 沙箱已就绪，输入 help 查看命令。');
+    }
+
+    /**
+     * 把 index.html 中预置的静态「自定义模型」面板（data-pane="model"）注入到
+     * 右侧栏 #copRightPanel .cop-right-panel-body 末尾。
+     *
+     * 设计稿：模型提供商 / 选择模型 / 填写 key + 测试 · 启用 · 默认
+     *
+     * 关键点：
+     * · 静态 HTML 中的元素 id 与 bindCustomModelForm() 中的 getElementById 完全一致，
+     *   JS 逻辑（保存 / 测试 / localStorage 回填 / 状态行）无需任何改动；
+     * · 这里只额外处理「模型提供商」切换 → 自动填入 Endpoint + 模型 + 显隐高级区，
+     *   等价于原一键接入（cop-provider-grid 点击），只是触发源从按钮组换成原生 select；
+     * · 使用 appendChild(cloneNode) 而非 innerHTML，遵守本文件「不用 innerHTML 注入
+     *   含表单的片段」的安全原则（参见 safeSetHtml / sanitizeHtml）。
+     */
+    // 挂载「自定义模型」面板到右侧栏。
+    // 面板 DOM 直接写在 index.html（与 #page-copilot 平级，id="copModelPaneInline"），
+    // 不走 <template> 克隆 —— 满足「DOM 不用 JS 加载」的要求。
+    // 此处只负责：① 首次初始化时把它 append 进右侧栏 .cop-right-panel-body；② 绑定 select 联动。
+    // 幂等：重复调用不会重复挂载（靠 #copRightPanel 内的 data-pane="model" 判断）。
+    function mountStaticModelPane(page) {
+        var pane = document.getElementById('copModelPaneInline');
+        var body = page && page.querySelector('#copRightPanel .cop-right-panel-body');
+        if (!body) {
+            console.warn('[copilot] 右侧栏 .cop-right-panel-body 尚未生成，无法挂载 model 面板');
+            return;
+        }
+        // 骨架中预置了 files / term 两个占位 pane；model 面板是「自定义模型」tab 的内容，
+        // 需在骨架生成后（innerHTML 已写入）才 append，故此处追加到末尾。
+        if (!body.querySelector('.cop-pane[data-pane="model"]')) {
+            if (pane) {
+                body.appendChild(pane);   // 从 .content 平级移动到右侧栏（同一节点，不丢失状态）
+            } else {
+                console.warn('[copilot] #copModelPaneInline 未找到');
+            }
+        }
+        bindProviderSelect();
+    }
+
+    // 「模型提供商」select 切换 → 自动填入 Endpoint + 刷新「选择模型」的可选列表
+    //
+    // 设计原则：一个 provider = 一个 endpoint。模型差异不在这里拆 provider，
+    // 而是放在 PROVIDER_PRESETS[provider].models 里（如 DeepSeek 的 Flash / Pro）。
+    // provider 值：deepseek / opencode-zen / custom
+    var PROVIDER_PRESETS = {
+        'deepseek': {
+            endpoint: 'https://api.deepseek.com/chat/completions',
+            // DeepSeek 官方（OpenAI 格式）base_url = https://api.deepseek.com，只有两个在售模型：
+            // deepseek-flash（DeepSeek-V4.1-Flash）、deepseek-v4-pro（DeepSeek-V4-Pro-0813）。
+            // ⚠️ 不要再用 deepseek-v4-flash：官方文档说明该名称是【已退役模型的旧别名】，
+            // 虽仍被接受，但请求由 DeepSeek-V4.1-Flash 承接并按 Flash 计价。
+            models: [
+                { value: 'deepseek-flash', label: 'deepseek-flash（通用 / 快速）' },
+                { value: 'deepseek-v4-pro', label: 'deepseek-v4-pro（强推理）' }
+            ],
+            model: 'deepseek-v4-pro',   // 默认档位：DeepSeek 默认走 Pro（强推理）
+            label: 'DeepSeek'
+        },
+        'opencode-zen': {
+            endpoint: 'https://opencode.ai/zen/v1/chat/completions',
+            // OpenCode Zen 免费模型（官方定价表标 Free，多为限时提供）。
+            // ⚠️ 只列走 /chat/completions 的模型——Zen 的 endpoint 按模型族区分：
+            //   GPT/Grok/Muse Spark → /responses；Claude/Qwen → /messages；
+            //   Gemini → /models/<id>；Jev → /systemone。
+            // 本代理只发 Chat Completions 请求体，填其它模型族会打错端点。
+            // 已移除文档中不存在的：deepseek-v4-flash-free / qwen3.6-plus-free /
+            // minimax-m3-free / north-mini-code-free（qwen3.6-plus、minimax-m3 是付费模型，
+            // 没有 -free 版本）。参考 https://opencode.ai/docs/zen
+            models: [
+                { value: 'big-pickle', label: 'big-pickle（免费默认）' },
+                { value: 'mimo-v2.6-flash-free', label: 'mimo-v2.6-flash-free（免费）' },
+                { value: 'mimo-v2.5-free', label: 'mimo-v2.5-free（免费）' },
+                { value: 'ling-3.0-flash-fin-free', label: 'ling-3.0-flash-fin-free（免费）' },
+                { value: 'nemotron-3-ultra-free', label: 'nemotron-3-ultra-free（免费）' },
+                { value: 'nemotron-3.5-lightning-free', label: 'nemotron-3.5-lightning-free（免费）' },
+                { value: 'deepseek-v4-flash', label: 'deepseek-v4-flash（按量付费）' },
+                { value: 'deepseek-v4-pro', label: 'deepseek-v4-pro（按量付费）' },
+                { value: 'glm-5.3-flash', label: 'glm-5.3-flash（按量付费）' },
+                { value: 'minimax-m3', label: 'minimax-m3（按量付费）' }
+            ],
+            model: 'big-pickle',
+            label: 'OpenCode 免费端点'
+        }
+    };
+    // 通用 OpenAI 兼容模型的兜底建议（provider=custom 时使用）
+    // 只放 Chat Completions 语义下的示例模型 ID。
+    var GENERIC_MODELS = [
+        { value: 'deepseek-v4-pro', label: 'deepseek-v4-pro' },
+        { value: 'deepseek-flash', label: 'deepseek-flash' },
+        { value: 'glm-5.3-flash', label: 'glm-5.3-flash' },
+        { value: 'kimi-k3', label: 'kimi-k3' }
+    ];
+
+    // 刷新「选择模型」下拉选项
+    // selected：应被选中的模型 ID。优先级明确由调用方决定（见 apply()），
+    // 这里**不用 sel.value** 兜底——新建的 <select> 在部分环境（含 jsdom）下
+    // sel.value 读取为 ""，会导致「默认选中第 0 项」的逻辑失效。
+    function renderModelOptions(sel, list, selected) {
+        if (!sel) return;
+        var prev = selected || '';
+        sel.innerHTML = '';
+        for (var i = 0; i < list.length; i++) {
+            var o = list[i];
+            var opt = document.createElement('option');
+            opt.value = o.value;
+            opt.textContent = o.label;
+            if (o.value === prev) opt.selected = true;
+            sel.appendChild(opt);
+        }
+        // 若 prev 不在列表里（用户自由输入的模型 ID），补一条保持显示且不丢失值
+        if (prev && !list.some(function (m) { return m.value === prev; })) {
+            var custom = document.createElement('option');
+            custom.value = prev;
+            custom.textContent = prev + '（自定义）';
+            custom.selected = true;
+            sel.appendChild(custom);
+        }
+    }
+
+    function bindProviderSelect() {
+        var sel = document.getElementById('copModelProvider');
+        var adv = document.getElementById('copAdvanced');
+        var ep = document.getElementById('copModelEndpoint');
+        var md = document.getElementById('copModelId');       // 现在是 <select>，仍可用 .value
+        var hint = document.getElementById('copProviderHint');
+        var modelHint = document.getElementById('copModelHint');
+        if (!sel) return;
+
+        function apply(provider) {
+            var p = PROVIDER_PRESETS[provider];
+            var isCustom = (provider === 'custom');
+            // 已保存的模型优先于 provider 默认模型：切换服务商时若当前已选模型仍在该列表里，保持不变
+            var savedModel = customModel && customModel.model;
+            if (adv) adv.classList.toggle('is-visible', isCustom);
+
+            if (p) {
+                // 已知服务商：填 Endpoint + 刷新模型下拉
+                // 默认选中优先级：
+                // ① 已保存的模型「属于当前 provider 的模型列表」→ 保留（回显用户上次选择，含 flash/pro 切换）
+                // ② 否则用 provider 声明的默认档位（p.model，即 deepseek-v4-pro）
+                var belongs = savedModel && p.models.some(function (m) { return m.value === savedModel; });
+                var defaultForProvider = belongs ? savedModel : p.model;
+                if (ep) ep.value = p.endpoint;
+                renderModelOptions(md, p.models, defaultForProvider);
+                if (modelHint) modelHint.textContent = '也可直接选择其他 OpenAI 兼容模型。';
+            } else {
+                // 自定义服务：Endpoint 留空由用户填，模型给通用建议
+                if (ep && !ep.value) ep.placeholder = 'https://your-host/v1/chat/completions';
+                renderModelOptions(md, GENERIC_MODELS, savedModel || '');
+                if (modelHint) modelHint.textContent = '请填写 OpenAI 兼容的模型 ID（如 gpt-5.5 / deepseek-v4-pro）。';
+            }
+
+            if (hint) {
+                hint.textContent = p
+                    ? '已选择『' + p.label + '』，Endpoint 已自动填入，选好模型并粘贴 API Key 后保存即可。'
+                    : '自定义服务：请在下方「高级：手动填写 Endpoint」中填写完整请求地址（含 /chat/completions）。';
+            }
+        }
+
+        sel.addEventListener('change', function () { apply(sel.value); });
+
+        // 与已保存配置联动：根据 customModel.endpoint 回显「模型提供商」选中项
+        // 默认策略（首次进入、无任何配置）：DeepSeek + Pro —— 这是产品主推组合，
+        // 不能因为没有 localStorage 就退化为「自定义服务」（空表单，体验差）。
+        var savedEp = (customModel && customModel.endpoint || '').replace(/\/+$/, '');
+        var matched = 'deepseek';
+        if (savedEp) {
+            matched = 'custom';
+            for (var k in PROVIDER_PRESETS) {
+                if (!Object.prototype.hasOwnProperty.call(PROVIDER_PRESETS, k)) continue;
+                if (savedEp === (PROVIDER_PRESETS[k].endpoint || '').replace(/\/+$/, '')) { matched = k; break; }
+            }
+        }
+        sel.value = matched;
+        apply(matched);   // 内部已优先回显 customModel.model，无需再单独处理
     }
     function bindUI(pageEl) {
         var input = document.getElementById('copInput');

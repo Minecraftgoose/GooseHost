@@ -748,3 +748,82 @@
     .cop-right-panel.collapsed .cop-right-panel-count,
     .cop-right-panel.collapsed .cop-right-panel-body { display: revert; }
 }
+
+/* ============================================================================
+   自定义模型面板（静态 HTML 版）补充样式
+   设计规范：毛玻璃深底 + #02ff8e 品牌绿描边，与上方变量保持一致
+   ============================================================================ */
+
+/* —— 下拉框包裹层：原生 <select> 统一风格 —— */
+.cop-select-wrap {
+    position: relative;
+    display: block;
+}
+.cop-select-wrap .cop-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 34px 10px 12px;   /* 右侧留箭头空间 */
+    border-radius: 8px;
+    border: 1px solid var(--gai-border);
+    background: var(--gai-acrylic-bar);
+    color: var(--gai-text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s;
+}
+.cop-select-wrap .cop-select:focus {
+    border-color: var(--gai-brand);
+    box-shadow: 0 0 0 2px rgba(2, 255, 142, 0.15);
+}
+.cop-select-wrap .cop-select option {
+    background: #141a1f;             /* 深色系统下下拉列表的可读性 */
+    color: var(--gai-text);
+}
+.cop-select-arrow {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gai-text-secondary);
+    font-size: 11px;
+    pointer-events: none;
+}
+
+/* —— 高级：手动填写 Endpoint（默认隐藏，provider=custom 时显示）—— */
+.cop-advanced {
+    display: none;
+    animation: copAdvIn .2s ease;
+}
+.cop-advanced.is-visible { display: flex; }
+@keyframes copAdvIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* —— 主操作按钮（启用）—— */
+.cop-mini-btn.cop-primary {
+    background: var(--gai-brand);
+    border-color: var(--gai-brand);
+    color: #04120b;
+    font-weight: 600;
+}
+.cop-mini-btn.cop-primary:hover {
+    background: #2bffa5;
+    border-color: #2bffa5;
+    color: #04120b;
+}
+
+/* —— 底部操作栏：测试 / 启用 / 默认 右对齐、间距均匀 —— */
+.cop-model-form + .cop-pane-foot,
+.cop-pane-foot:has(.cop-primary) {
+    justify-content: flex-end;
+}
+.cop-pane-foot .cop-mini-btn { min-width: 64px; justify-content: center; }
+
+/* —— 状态行位置补偿 —— */
+.cop-model-status { margin-top: auto; padding-top: 8px; }

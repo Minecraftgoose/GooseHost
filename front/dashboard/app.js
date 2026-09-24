@@ -7,19 +7,9 @@
         let token = localStorage.getItem('sb_token');
         let user = JSON.parse(localStorage.getItem('sb_user') || 'null');
 
-        (function preloadWallpaper() {
+        (function activateDotBg() {
             const bgLayer = document.getElementById('bgLayer');
-            const timestamp = new Date().getTime();
-            const wallpaperUrl = `https://api.fuchenboke.cn/api/fengjing.php?t=${timestamp}`;
-            const img = new Image();
-            img.onload = function() {
-                bgLayer.style.backgroundImage = `url('${wallpaperUrl}')`;
-                bgLayer.classList.add('loaded');
-            };
-            img.onerror = function() {
-                bgLayer.classList.add('loaded');
-            };
-            img.src = wallpaperUrl;
+            if (bgLayer) bgLayer.classList.add('loaded');
         })();
 
         if (!token || !user) {
