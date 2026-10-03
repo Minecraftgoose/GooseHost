@@ -12,4 +12,4 @@ AI_MAX_TOKENS = "4096"
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
-id = "89552af87a1248bb81cc77419aeeae07"
+id = "12b92271a0a44fa692fa99e2a639a5f9"
