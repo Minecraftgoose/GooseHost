@@ -18,6 +18,8 @@
 </head>
 <body>
     <div id="bgLayer" class="bg-layer"></div>
+    <!-- ===== 国旗点阵（复用背景点位） ===== -->
+    <canvas id="flagDots" class="flag-dots" aria-hidden="true"></canvas>
 
     <!-- ===== 顶部导航 ===== -->
     <nav class="pg-navbar">
@@ -164,5 +166,6 @@
     <div id="toast" class="pg-toast"></div>
 
     <script src="/playground/app.js"></script>
+    <script src="../flag-dots.js"></script>
 </body>
 </html>

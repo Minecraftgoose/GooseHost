@@ -43,6 +43,8 @@
         <div class="welcome-text" id="welcomeText"></div>
     </div>
     <div id="bgLayer" class="bg-layer"></div>
+    <!-- ===== 国旗点阵（复用背景点位） ===== -->
+    <canvas id="flagDots" class="flag-dots" aria-hidden="true"></canvas>
     <!-- 顶部导航栏 -->
     <nav class="navbar">
         <div class="navbar-left">
@@ -656,6 +658,7 @@
          会阻塞整个面板渲染（连没改过的页面也一起遭殃）。
          copilot.js 会在真正需要打包 zip 时才动态加载，并自动回退国内 CDN。 -->
     <script src="/dashboard/copilot.js"></script>
+    <script src="../flag-dots.js"></script>
 	<script type="text/javascript" src="https://www.wjx.cn/js/ap.js?activity=hGAu84c" id="wjxFloatBtnJsCode"></script>
 
     <div id="deleteAccountDialog" class="custom-dialog">

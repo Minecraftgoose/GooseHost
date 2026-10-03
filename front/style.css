@@ -44,16 +44,16 @@
             transition: opacity 0.6s ease;
             background-color: #0a0f0d;
             /* 白点层（后方点阵） */
-            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.22) 1px, transparent 2px);
-            background-size: 16px 16px;
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.20) 0.8px, transparent 1.4px);
+            background-size: 8px 8px;
             background-position: 0 0;
         }
         .bg-layer::after {
             content: '';
             position: absolute;
             inset: 0;
-            background-image: radial-gradient(circle, rgba(2, 255, 142, 0.28) 1px, transparent 2px);
-            background-size: 16px 16px;
+            background-image: radial-gradient(circle, rgba(2, 255, 142, 0.28) 0.8px, transparent 1.4px);
+            background-size: 8px 8px;
             background-position: 0 0;
             opacity: 0;
             animation: dotBreath 3.6s ease-in-out infinite;
@@ -66,6 +66,17 @@
         .bg-layer.loaded {
             opacity: 1;
         }
+        /* ===== 国旗点阵层（复用背景点位，不新增视觉元素） ===== */
+        .flag-dots {
+            position: fixed;
+            inset: 0;
+            z-index: 0;               /* 与 bg-layer 同级，DOM 靠后故在其上 */
+            display: block;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+        .flag-dots.on { opacity: 1; }
         .glow {
             position: fixed;
             z-index: 0;

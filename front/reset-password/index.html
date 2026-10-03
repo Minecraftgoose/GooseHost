@@ -9,6 +9,10 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- ===== 背景层 + 国旗点阵（复用统一 8px 点位） ===== -->
+    <div id="bgLayer" class="bg-layer"></div>
+    <canvas id="flagDots" class="flag-dots" aria-hidden="true"></canvas>
+
     <div class="page">
         <div class="card">
             <div class="logo">
@@ -55,5 +59,6 @@
     </div>
 
     <script src="app.js"></script>
+    <script src="../flag-dots.js"></script>
 </body>
 </html>

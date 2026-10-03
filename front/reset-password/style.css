@@ -22,6 +22,45 @@
             font-display: swap;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* ===== 背景点阵层（与全站统一 8px 点位） ===== */
+        .bg-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            opacity: 1;
+            background-color: var(--bg-primary);
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.20) 0.8px, transparent 1.4px);
+            background-size: 8px 8px;
+            background-position: 0 0;
+            pointer-events: none;
+        }
+        .bg-layer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(2, 255, 142, 0.28) 0.8px, transparent 1.4px);
+            background-size: 8px 8px;
+            background-position: 0 0;
+            opacity: 0;
+            animation: dotBreath 3.6s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes dotBreath {
+            0%, 100% { opacity: 0; }
+            50%      { opacity: 1; }
+        }
+        /* ===== 国旗点阵层（复用背景点位） ===== */
+        .flag-dots {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            display: block;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+        .flag-dots.on { opacity: 1; }
+
         html, body {
             height: 100%;
             font-family: 'DingTalk JinBuTi', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
