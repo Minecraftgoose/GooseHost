@@ -19,6 +19,7 @@ jobs:
         include:
           - { goos: windows, goarch: amd64, name: goosehost-windows-amd64.exe }
           - { goos: windows, goarch: arm64, name: goosehost-windows-arm64.exe }
+          - { goos: windows, goarch: 386,   name: goosehost-windows-386.exe }
           - { goos: linux,   goarch: amd64, name: goosehost-linux-amd64 }
           - { goos: linux,   goarch: arm64, name: goosehost-linux-arm64 }
           - { goos: darwin,  goarch: amd64, name: goosehost-darwin-amd64 }
@@ -30,7 +31,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.20'
           cache-dependency-path: GooseHost-CLI/go.sum
 
       - name: Determine version
