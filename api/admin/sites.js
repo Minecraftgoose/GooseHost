@@ -1,10 +1,26 @@
-// ===== 管理员 - 站点列表=====
+// ===== 管理员 - 站点列表（服务端分页 + 服务端搜索）=====
 
 import { isAdmin } from '../utils/jwt.js';
 import { checkRateLimit } from '../utils/rate-limit.js';
 import { makeSupabase } from '../utils/supabase.js';
 import { fetchEmailMap } from '../utils/email-map.js';
 import { jsonResp } from '../utils/response.js';
+
+// 排序字段白名单：order/dir 直接来自 URL，禁止原样拼进查询
+const ALLOWED_ORDER = {
+  updated_at: 'updated_at',
+  created_at: 'created_at',
+  name: 'name',
+  visit_count: 'visit_count',
+};
+const ALLOWED_DIR = { asc: 'ASC', desc: 'DESC' };
+
+const SITE_COLS = 'id, name, type, owner_id, ip_address, created_at, updated_at, visit_count';
+
+// 去掉 PostgREST 过滤语法里的特殊字符，避免用户输入被当成语法
+function sanitizeQuery(q) {
+  return String(q || '').replace(/["'(),.*%\\]/g, ' ').trim().slice(0, 64);
+}
 
 export async function handleAdminSites(request, env, corsHeaders) {
   if (!await isAdmin(request, env)) {
@@ -19,13 +35,65 @@ export async function handleAdminSites(request, env, corsHeaders) {
   const offset = offsetParam !== null
     ? Math.max(0, parseInt(offsetParam) || 0)
     : (Math.max(1, parseInt(urlParams.get('page')) || 1) - 1) * limit;
-  const orderBy = urlParams.get('order') || 'updated_at';
-  const orderDir = urlParams.get('dir') || 'DESC';
+  const page = Math.floor(offset / limit) + 1;
+  const orderBy = ALLOWED_ORDER[urlParams.get('order')] || 'updated_at';
+  const orderDir = ALLOWED_DIR[(urlParams.get('dir') || '').toLowerCase()] || 'DESC';
+  const q = sanitizeQuery(urlParams.get('q'));
 
   try {
     const supabase = makeSupabase(env);
-
     const emailMap = await fetchEmailMap(env);
+
+    // 有搜索词时 RPC 不支持过滤条件，走直查 + count('exact')
+    if (q) {
+      const lower = q.toLowerCase();
+      // 邮箱不在站点表里，先用内存映射反查命中的 uid
+      const matchedIds = Object.keys(emailMap)
+        .filter(uid => String(emailMap[uid] || '').toLowerCase().includes(lower))
+        .slice(0, 200);
+
+      const textParts = [`name.ilike."*${q}*"`, `ip_address.ilike."*${q}*"`];
+      const buildOr = withIds => withIds && matchedIds.length
+        ? `(${[...textParts, `owner_id.in.(${matchedIds.map(id => `"${id}"`).join(',')})`].join(',')})`
+        : `(${textParts.join(',')})`;
+
+      let query = supabase
+        .from('gh_site')
+        .select(SITE_COLS, { count: 'exact' })
+        .or(buildOr(true))
+        .order(orderBy, { ascending: orderDir === 'ASC' })
+        .range(offset, offset + limit - 1);
+
+      let { data: rows, error, count } = await query;
+
+      // 兜底：部分 PostgREST 版本解析不了 or 里嵌套的 in.(...)，降级为纯文本匹配
+      if (error) {
+        console.error('sites search with owner_id.in failed, retrying text only:', error.message);
+        ({ data: rows, error, count } = await supabase
+          .from('gh_site')
+          .select(SITE_COLS, { count: 'exact' })
+          .or(buildOr(false))
+          .order(orderBy, { ascending: orderDir === 'ASC' })
+          .range(offset, offset + limit - 1));
+      }
+
+      if (error) throw error;
+
+      const sites = (rows || []).map(s => ({
+        ...s,
+        ownerEmail: emailMap[s.owner_id] || s.owner_id,
+      }));
+
+      return jsonResp({
+        sites,
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          hasMore: offset + sites.length < (count || 0)
+        }
+      }, 200, corsHeaders);
+    }
 
     const { data, error } = await supabase
       .rpc('get_sites_paginated', {
@@ -39,31 +107,26 @@ export async function handleAdminSites(request, env, corsHeaders) {
       console.error('RPC get_sites_paginated failed, falling back:', error.message);
 
       // 回退到原来的方式
-      const { data: sites, error: fetchError } = await supabase
+      const { data: rows, error: fetchError, count } = await supabase
         .from('gh_site')
-        .select('id, name, type, owner_id, ip_address, created_at, updated_at, visit_count')
-        .order('updated_at', { ascending: false })
-        .limit(limit)
+        .select(SITE_COLS, { count: 'exact' })
+        .order(orderBy, { ascending: orderDir === 'ASC' })
         .range(offset, offset + limit - 1);
 
       if (fetchError) throw fetchError;
 
-      const { count } = await supabase
-        .from('gh_site')
-        .select('id', { count: 'exact', head: true });
-
-      const sitesWithEmail = (sites || []).map(s => ({
+      const sites = (rows || []).map(s => ({
         ...s,
         ownerEmail: emailMap[s.owner_id] || s.owner_id,
       }));
 
       return jsonResp({
-        sites: sitesWithEmail,
+        sites,
         pagination: {
-          page: 1,
+          page,
           limit,
           total: count || 0,
-          hasMore: offset + (sites?.length || 0) < (count || 0)
+          hasMore: offset + sites.length < (count || 0)
         }
       }, 200, corsHeaders);
     }
@@ -71,6 +134,7 @@ export async function handleAdminSites(request, env, corsHeaders) {
     const sites = (data || []).map(row => ({
       id: row.id,
       name: row.name,
+      type: row.type,
       owner_id: row.owner_id,
       ip_address: row.ip_address,
       created_at: row.created_at,
@@ -85,7 +149,7 @@ export async function handleAdminSites(request, env, corsHeaders) {
     return jsonResp({
       sites,
       pagination: {
-        page: 1,
+        page,
         limit,
         total: totalCount,
         hasMore: offset + sites.length < totalCount

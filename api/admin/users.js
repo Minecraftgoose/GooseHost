@@ -27,6 +27,7 @@ export async function handleAdminUsers(request, env, corsHeaders) {
   const offset = offsetParam !== null
     ? Math.max(0, parseInt(offsetParam) || 0)
     : (Math.max(1, parseInt(urlParams.get('page')) || 1) - 1) * limit;
+  const page = Math.floor(offset / limit) + 1;
 
   try {
     const supabase = makeSupabase(env);
@@ -71,11 +72,11 @@ export async function handleAdminUsers(request, env, corsHeaders) {
         }
       });
 
-      const users = ownerOrder.map(id => owners[id]);
+      const all = ownerOrder.map(id => owners[id]);
 
       return jsonResp({
-        users,
-        pagination: { page: 1, limit, total: users.length, hasMore: false }
+        users: all.slice(offset, offset + limit),
+        pagination: { page, limit, total: all.length, hasMore: offset + limit < all.length }
       }, 200, corsHeaders);
     }
 
@@ -96,7 +97,7 @@ export async function handleAdminUsers(request, env, corsHeaders) {
     return jsonResp({
       users,
       pagination: {
-        page: 1,
+        page,
         limit,
         total: totalCount,
         hasMore: offset + users.length < totalCount

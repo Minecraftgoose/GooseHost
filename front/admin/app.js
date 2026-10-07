@@ -72,8 +72,7 @@
             document.getElementById('searchWrap').style.display = tab === 'sites' ? 'flex' : 'none';
             document.getElementById('playSearchWrap').style.display = tab === 'play' ? 'flex' : 'none';
             if (tab === 'users') {
-                if (!allData.users.length) loadUsers();
-                else renderUsers();
+                loadUsers();  // 每次切回来刷新当前页（单页请求）
             } else if (tab === 'play') {
                 loadPlay();
             }
@@ -93,7 +92,7 @@
                 const data = await res.json();
                 if (res.ok) {
                     showToast(`同步成功，已记录 ${data.count} 个用户邮箱`, 'success');
-                    loadData();
+                    refreshSites();
                 } else {
                     showToast(data.error || '同步失败', 'error');
                 }
@@ -106,7 +105,7 @@
         }
 
         var paginationState = {
-            sites: { page: 1, total: 0, loading: false },
+            sites: { page: 1, total: 0, loading: false, q: '' },
             users: { page: 1, total: 0, loading: false },
             playPosts: { page: 1, total: 0, loading: false },
             playComments: { page: 1, total: 0, loading: false }
@@ -123,7 +122,7 @@
             if (!token) return;
             document.getElementById('tab-sites').innerHTML = '<div class="loading-state"><i class="fas fa-circle-notch"></i></div>';
             try {
-                await loadSitesFull();
+                await loadSitesPage(paginationState.sites.page || 1);
                 renderStats();
                 renderSites();
                 if (!allData.users.length) loadUsersSilent();
@@ -136,29 +135,31 @@
             }
         }
 
-        async function loadSitesFull() {
+        // 只拉取当前页，搜索交给服务端，前端不再全量缓存
+        async function loadSitesPage(page) {
             const token = checkAuth();
             if (!token) return;
-            let page = 1, collected = [], total = 0;
-            while (true) {
-                const res = await apiFetch(`${API_URL}/api/admin/sites?page=${page}&limit=${PAGE_SIZE}`, {
+            const st = paginationState.sites;
+            if (st.loading) return;
+            st.loading = true;
+            page = Math.max(1, page | 0);
+            const q = (st.q || '').trim();
+            try {
+                const qs = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+                if (q) qs.set('q', q);
+                const res = await apiFetch(`${API_URL}/api/admin/sites?${qs.toString()}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (res.status === 403) throw new Error('ADMIN_403');
-                if (!res.ok) break;
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
                 const arr = Array.isArray(data) ? data : (data.sites || []);
-                collected = collected.concat(arr);
-                if (data.pagination && data.pagination.total) total = data.pagination.total;
-                const hasMore = data.pagination
-                    ? (page * PAGE_SIZE < (data.pagination.total || 0))
-                    : (arr.length === PAGE_SIZE);
-                if (!hasMore) break;
-                if (++page > 1000) break;
+                allData.sites = arr;
+                st.page = page;
+                st.total = (data.pagination && data.pagination.total) || arr.length;
+            } finally {
+                st.loading = false;
             }
-            allData.sites = collected;
-            paginationState.sites.total = total || collected.length;
-            paginationState.sites.page = 1;
         }
 
         function pageNumbers(current, totalPages) {
@@ -192,11 +193,17 @@
             return html;
         }
 
-        function gotoSitesPage(p) {
+        async function gotoSitesPage(p) {
             p = Math.max(1, p | 0);
-            paginationState.sites.page = p;
-            renderSites(document.getElementById('siteSearchInput').value || '');
             const el = document.getElementById('tab-sites');
+            if (el) el.innerHTML = '<div class="loading-state"><i class="fas fa-circle-notch"></i></div>';
+            try {
+                await loadSitesPage(p);
+            } catch (err) {
+                if (el) el.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${esc(err.message)}</p></div>`;
+                return;
+            }
+            renderSites();
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
@@ -204,7 +211,7 @@
             const token = checkAuth();
             if (!token) return;
             try {
-                await loadUsersFull();
+                await loadUsersPage(paginationState.users.page || 1);
                 renderStats();
                 if (document.getElementById('tabBtnUsers').classList.contains('active')) {
                     renderUsers();
@@ -217,43 +224,48 @@
             if (!token) return;
             document.getElementById('tab-users').innerHTML = '<div class="loading-state"><i class="fas fa-circle-notch"></i></div>';
             try {
-                await loadUsersFull();
+                await loadUsersPage(paginationState.users.page || 1);
                 renderUsers();
             } catch (err) {
                 document.getElementById('tab-users').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${esc(err.message)}</p></div>`;
             }
         }
 
-        async function loadUsersFull() {
+        async function loadUsersPage(page) {
             const token = checkAuth();
             if (!token) return;
-            let page = 1, collected = [], total = 0;
-            while (true) {
-                const res = await apiFetch(`${API_URL}/api/admin/users?page=${page}&limit=${PAGE_SIZE}`, {
+            const st = paginationState.users;
+            if (st.loading) return;
+            st.loading = true;
+            page = Math.max(1, page | 0);
+            try {
+                const qs = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+                const res = await apiFetch(`${API_URL}/api/admin/users?${qs.toString()}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (res.status === 403) throw new Error('ADMIN_403');
-                if (!res.ok) break;
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
                 const arr = Array.isArray(data) ? data : (data.users || []);
-                collected = collected.concat(arr);
-                if (data.pagination && data.pagination.total) total = data.pagination.total;
-                const hasMore = data.pagination
-                    ? (page * PAGE_SIZE < (data.pagination.total || 0))
-                    : (arr.length === PAGE_SIZE);
-                if (!hasMore) break;
-                if (++page > 1000) break;
+                allData.users = arr;
+                st.page = page;
+                st.total = (data.pagination && data.pagination.total) || arr.length;
+            } finally {
+                st.loading = false;
             }
-            allData.users = collected;
-            paginationState.users.total = total || collected.length;
-            paginationState.users.page = 1;
         }
 
-        function gotoUsersPage(p) {
+        async function gotoUsersPage(p) {
             p = Math.max(1, p | 0);
-            paginationState.users.page = p;
-            renderUsers();
             const el = document.getElementById('tab-users');
+            if (el) el.innerHTML = '<div class="loading-state"><i class="fas fa-circle-notch"></i></div>';
+            try {
+                await loadUsersPage(p);
+            } catch (err) {
+                if (el) el.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${esc(err.message)}</p></div>`;
+                return;
+            }
+            renderUsers();
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
@@ -273,31 +285,23 @@
             } catch (err) {
                 console.error('renderStats error:', err);
             }
-            document.getElementById('totalSites').textContent = allData.sites.length;
-            const userCount = allData.users.length || new Set(allData.sites.map(s => s.owner_id)).size;
-            document.getElementById('totalUsers').textContent = userCount;
-            const today = new Date().toDateString();
-            document.getElementById('todaySites').textContent = allData.sites.filter(s => new Date(s.created_at).toDateString() === today).length;
+            // 统计接口不可用时用服务端返回的条目总数兜底（前端只持有当前页）
+            document.getElementById('totalSites').textContent = paginationState.sites.total || allData.sites.length;
+            document.getElementById('totalUsers').textContent = paginationState.users.total || allData.users.length;
+            document.getElementById('todaySites').textContent = '—';
         }
 
-        function renderSites(query) {
-            query = (query || '').toLowerCase().trim();
-            var view = query
-                ? allData.sites.filter(s =>
-                    s.name.toLowerCase().includes(query) ||
-                    (s.ownerEmail || '').toLowerCase().includes(query) ||
-                    (s.owner_id || '').toLowerCase().includes(query) ||
-                    (s.ip_address || '').includes(query))
-                : allData.sites;
-            if (!view.length) {
+        function renderSites() {
+            // 过滤已由服务端完成，这里只渲染当前页
+            const query = (paginationState.sites.q || '').trim();
+            const sites = allData.sites;
+            if (!sites.length) {
                 document.getElementById('tab-sites').innerHTML = query
                     ? '<div class="empty-state"><i class="fas fa-search"></i><p>没有找到匹配「' + esc(query) + '」的网站</p></div>'
                     : '<div class="empty-state"><i class="fas fa-globe"></i><p>暂无网站</p></div>';
                 return;
             }
             const page = paginationState.sites.page;
-            const start = (page - 1) * PAGE_SIZE;
-            const sites = view.slice(start, start + PAGE_SIZE);
             const rows = sites.map(site => {
                 const siteType = site.type === 'md' ? 'md' : (site.type === 'project' ? 'project' : 'html');
                 const urlPrefix = siteType === 'md' ? '/md/' : (siteType === 'project' ? '/p/' : '/s/');
@@ -327,23 +331,42 @@
                         <tbody>${rows}</tbody>
                     </table>
                 </div>
-                ${renderPageBar(view.length, page, 'gotoSitesPage')}`;
+                ${renderPageBar(paginationState.sites.total || sites.length, page, 'gotoSitesPage')}`;
         }
 
+        // 搜索防抖：改词后重新拉第一页
+        let siteSearchTimer = null;
         function filterSites() {
-            paginationState.sites.page = 1;
             const query = document.getElementById('siteSearchInput').value;
-            renderSites(query);
+            clearTimeout(siteSearchTimer);
+            siteSearchTimer = setTimeout(async () => {
+                if (query.trim() === (paginationState.sites.q || '').trim()) return;
+                paginationState.sites.q = query.trim();
+                paginationState.sites.page = 1;
+                const el = document.getElementById('tab-sites');
+                if (el) el.innerHTML = '<div class="loading-state"><i class="fas fa-circle-notch"></i></div>';
+                try {
+                    await loadSitesPage(1);
+                } catch (err) {
+                    if (el) el.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${esc(err.message)}</p></div>`;
+                    return;
+                }
+                renderSites();
+            }, 300);
         }
 
         function renderUsers() {
-            if (!allData.users.length) {
+            const users = allData.users;
+            if (!users.length) {
+                // 删完末页最后一条时自动退回上一页
+                if (paginationState.users.page > 1) {
+                    gotoUsersPage(paginationState.users.page - 1);
+                    return;
+                }
                 document.getElementById('tab-users').innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>暂无用户</p></div>';
                 return;
             }
             const page = paginationState.users.page;
-            const start = (page - 1) * PAGE_SIZE;
-            const users = allData.users.slice(start, start + PAGE_SIZE);
             const rows = users.map(u => {
                 const createdAt = new Date(u.createdAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
                 const sitesHtml = u.sites && u.sites.length
@@ -376,7 +399,7 @@
                         <tbody>${rows}</tbody>
                     </table>
                 </div>
-                ${renderPageBar(allData.users.length, page, 'gotoUsersPage')}`;
+                ${renderPageBar(paginationState.users.total || users.length, page, 'gotoUsersPage')}`;
         }
 
         function editSite(name, siteType) {
@@ -461,7 +484,7 @@
                 }
                 showToast('保存成功', 'success');
                 closeEditModal();
-                loadData();
+                refreshSites();
             } catch (err) {
                 showToast(err.message, 'error');
             }
@@ -732,6 +755,22 @@
             document.getElementById('deleteModal').classList.remove('active');
             pendingDeleteSite = null;
         }
+        // 数据变更后只重新拉取当前页，避免整量重载
+        async function refreshSites() {
+            const el = document.getElementById('tab-sites');
+            if (el) el.innerHTML = '<div class="loading-state"><i class="fas fa-circle-notch"></i></div>';
+            try {
+                await loadSitesPage(paginationState.sites.page || 1);
+                if (!allData.sites.length && paginationState.sites.page > 1) {
+                    await loadSitesPage(paginationState.sites.page - 1);
+                }
+                renderSites();
+                loadUsersSilent();
+            } catch (err) {
+                if (el) el.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${esc(err.message)}</p></div>`;
+            }
+        }
+
         async function confirmDelete() {
             if (!pendingDeleteSite) return;
             const token = checkAuth();
@@ -748,7 +787,7 @@
                 }
                 showToast('删除成功', 'success');
                 closeDeleteModal();
-                loadData();
+                refreshSites();
             } catch (err) { showToast(err.message, 'error'); }
         }
 
@@ -780,7 +819,7 @@
                 }
                 showToast('用户已删除', 'success');
                 closeDeleteUserModal();
-                loadData();
+                refreshSites();
                 loadUsers();
             } catch (err) { showToast(err.message, 'error'); }
         }
