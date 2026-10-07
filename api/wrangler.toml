@@ -3,6 +3,15 @@ main = "worker.js"
 compatibility_date = "2026-07-27"
 
 [vars]
+# CORS：默认【允许所有跨域】，任何来源的浏览器都能直接调 API。
+# 想收紧成白名单就改成 "off"（此时仅放行 host.goose.cc.cd / *.goose.cc.cd
+# 以及下面 CORS_EXTRA_ORIGINS 里登记的域名）。
+CORS_ALLOW_ALL = "on"
+
+# 额外的 CORS 来源（逗号分隔）。只在 CORS_ALLOW_ALL = "off" 时才需要登记，
+# 例如 Cloudflare Pages 的预览域名：CORS_EXTRA_ORIGINS = "https://xxx.pages.dev"
+CORS_EXTRA_ORIGINS = ""
+
 API_URL = "https://page.goose.cc.cd"
 ADMIN_USER_IDS = "de90a631-30b0-4b4a-afe4-dba9dd72e288,4ee286ea-945e-44ad-8513-6dc5d4ec2955"
 
@@ -13,3 +22,9 @@ AI_MAX_TOKENS = "4096"
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
 id = "12b92271a0a44fa692fa99e2a639a5f9"
+
+# API Key 存储（保存的是 SHA-256 摘要，不是明文）
+# Namespace: API_KEYS_KV
+[[kv_namespaces]]
+binding = "API_KEYS_KV"
+id = "a660a8cd825a488abe4cb38620450578"

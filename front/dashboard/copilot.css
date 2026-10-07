@@ -135,6 +135,7 @@
     width: 100%;
     max-width: 720px;
     flex-shrink: 0;
+    position: relative;
     align-self: center;
     background: var(--gai-acrylic-panel);
     -webkit-backdrop-filter: blur(8px);
@@ -153,8 +154,16 @@
 }
 .cop-textarea {
     width: 100%;
-    min-height: 28px;
+    /* 关键：min-height 必须容纳「一行文字 + 内边距」。
+       font-size:15px × line-height:1.55 ≈ 23px，而 box-sizing:border-box
+       下 min-height 含 padding —— 原来写 28px 意味着内容区只剩 4px，
+       空状态的一行文字被裁掉大半，看起来就像「被压了一节」。
+       这里给 24px(一行) + 上下 padding 的余量，并统一 JS 的下限值。 */
+    min-height: 24px;
+    height: 24px;
     max-height: 180px;
+    padding: 0;
+    margin: 0;
     resize: none;
     border: none;
     outline: none;
@@ -163,7 +172,7 @@
     font-size: 15px;
     line-height: 1.55;
     font-family: inherit;
-    overflow-y: auto;
+    overflow-y: hidden;
 }
 .cop-textarea::placeholder { color: var(--gai-text-secondary); }
 .cop-input-tools {
@@ -203,6 +212,145 @@
     background: var(--gai-brand-soft);
     border-color: rgba(2, 255, 142, 0.35);
 }
+/* ===== 模型选择器 ===== */
+.cop-model-chip {
+    max-width: 240px;
+}
+.cop-model-caret {
+    font-size: 10px;
+    opacity: .55;
+    margin-left: 1px;
+    transition: transform .18s ease;
+}
+.cop-model-chip[aria-expanded="true"] .cop-model-caret { transform: rotate(180deg); }
+.cop-model-chip.is-image {
+    color: var(--gai-brand);
+    background: var(--gai-brand-soft);
+    border-color: rgba(2, 255, 142, 0.45);
+}
+
+.cop-model-panel {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: calc(100% + 8px);
+    background: rgba(10, 20, 14, 0.98);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(2, 255, 142, 0.22);
+    border-radius: var(--gai-radius-sm);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+    padding: 12px 12px 10px;
+    z-index: 40;
+}
+.cop-model-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.32);
+    margin-bottom: 8px;
+}
+.cop-model-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 9px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: rgba(255, 255, 255, 0.72);
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s, border-color .15s;
+}
+.cop-model-item:hover { background: rgba(2, 255, 142, 0.07); }
+.cop-model-item.active {
+    background: var(--gai-brand-soft);
+    border-color: rgba(2, 255, 142, 0.35);
+    color: var(--gai-text);
+}
+.cop-model-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+}
+.cop-model-item.active .cop-model-dot {
+    background: var(--gai-brand);
+    box-shadow: 0 0 8px rgba(2, 255, 142, 0.65);
+}
+.cop-model-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.88);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.35;
+}.cop-model-check { color: var(--gai-brand); font-size: 12px; flex-shrink: 0; }
+
+.cop-model-div {
+    height: 1px;
+    background: rgba(2, 255, 142, 0.14);
+    margin: 10px 0;
+}
+.cop-model-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.cop-model-rowt { font-size: 12px; color: rgba(255, 255, 255, 0.55); }
+.cop-seg {
+    display: inline-flex;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--gai-border);
+    border-radius: 9px;
+    padding: 2px;
+    gap: 2px;
+}
+.cop-seg-btn {
+    padding: 4px 14px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.cop-seg-btn.on {
+    background: var(--gai-brand-soft);
+    color: var(--gai-brand);
+}
+.cop-model-sw {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 2px;
+    cursor: pointer;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.72);
+}
+.cop-model-sw input {
+    width: 15px; height: 15px;
+    accent-color: #02ff8e;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.cop-model-sw span { flex-shrink: 0; }
+.cop-model-sw i {
+    font-style: normal;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
 .cop-tool-right {
     display: flex;
     align-items: center;
@@ -405,65 +553,7 @@
     word-break: break-word;
     min-height: 0;
 }
-.cop-model-form {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    min-height: 0;
-}
-.cop-model-tip {
-    font-size: 12px;
-    line-height: 1.6;
-    color: var(--gai-text-secondary);
-    background: var(--gai-acrylic-bar);
-    border: 1px solid var(--gai-border);
-    border-radius: 8px;
-    padding: 8px 10px;
-}
-.cop-field { display: flex; flex-direction: column; gap: 5px; }
-.cop-field-label { font-size: 12px; font-weight: 500; color: var(--gai-text); }
-.cop-field-hint { font-size: 11px; color: var(--gai-text-secondary); }
 .cop-cmd { color: var(--gai-brand); }
-.cop-model-form .cop-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 7px 10px;
-    border-radius: 7px;
-    border: 1px solid var(--gai-border);
-    background: var(--gai-acrylic-bar);
-    color: var(--gai-text);
-    font-size: 12.5px;
-    font-family: inherit;
-    outline: none;
-    transition: border-color .15s, box-shadow .15s;
-}
-.cop-model-form .cop-input:focus {
-    border-color: var(--gai-brand);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-}
-.cop-model-form .cop-input::placeholder { color: var(--gai-text-secondary); }
-.cop-switch {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12.5px;
-    color: var(--gai-text);
-    cursor: pointer;
-    user-select: none;
-}
-.cop-switch input { width: 15px; height: 15px; accent-color: var(--gai-brand); cursor: pointer; flex-shrink: 0; }
-.cop-model-status {
-    font-size: 11.5px;
-    line-height: 1.6;
-    color: var(--gai-text-secondary);
-    word-break: break-all;
-}
-.cop-model-status.ok { color: #4ade80; }
-.cop-model-status.warn { color: #fbbf24; }
-.cop-model-status.err { color: #f87171; }
 .cop-mini-btn:disabled { opacity: .6; cursor: not-allowed; }
 .cop-err { color: #fca5a5; }
 .cop-term-row {
@@ -692,18 +782,34 @@
     .cop-ai-content.cop-streaming::after { animation: none; }
     .cop-dot-loading span { opacity: .6; }
 }
+/* ===== Copilot 全屏：突破 1200px 居中列，铺满视口 =====
+   .content 的 max-width:1200px 已在下面清掉，但真正的外框是
+   .main-layout 的左右 padding（= (100% - 1200px)/2）。
+   所以还要把 main-layout 的 padding 归零，才能真正贴到屏幕两边。 */
+body.cop-fullscreen .main-layout {
+    padding-left: 0;
+    padding-right: 0;
+}
+
 .content.copilot-fullscreen {
     padding: 0;
     max-width: none;
+    margin-left: 0;
+    width: 100%;
     overflow: hidden;             
     align-self: stretch;
     min-height: 0;
     display: flex;
     flex-direction: column;
 }
+
+/* Copilot 页不显示公告：聊天区是沉浸式全屏布局，
+   顶部横条会把 #page-copilot 挤下去，也破坏了铺满的观感。 */
+body.cop-fullscreen #announcementBanner {
+    display: none !important;
+}
 .content.copilot-fullscreen #announcementBanner {
-    flex-shrink: 0;
-    margin: 10px 12px 0;
+    display: none !important;
 }
 .content.copilot-fullscreen #page-copilot {
     flex: 1;
@@ -724,7 +830,10 @@
     .cop-input-wrap { border-radius: var(--gai-radius-sm); }
     .cop-messages { padding: 14px 10px; gap: 16px; }
     .cop-user-bubble { max-width: 85%; }
-    .cop-tool-left { display: none; }
+    /* 以前这里把 .cop-tool-left 整条隐藏，导致挂在其中的「模型选择器」在竖屏彻底消失，
+       手机用户根本没法换模型。改成只隐藏普通快捷 chip，保留模型入口。 */
+    .cop-tool-left { display: flex; flex: 0 0 auto; overflow: visible; }
+    .cop-tool-left > .cop-tool-chip:not(.cop-model-chip) { display: none; }
     .cop-overlay.show { display: block; opacity: 1; }
     .cop-drawer-close { display: flex; }
     .cop-right-panel {
@@ -748,82 +857,3 @@
     .cop-right-panel.collapsed .cop-right-panel-count,
     .cop-right-panel.collapsed .cop-right-panel-body { display: revert; }
 }
-
-/* ============================================================================
-   自定义模型面板（静态 HTML 版）补充样式
-   设计规范：毛玻璃深底 + #02ff8e 品牌绿描边，与上方变量保持一致
-   ============================================================================ */
-
-/* —— 下拉框包裹层：原生 <select> 统一风格 —— */
-.cop-select-wrap {
-    position: relative;
-    display: block;
-}
-.cop-select-wrap .cop-select {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 10px 34px 10px 12px;   /* 右侧留箭头空间 */
-    border-radius: 8px;
-    border: 1px solid var(--gai-border);
-    background: var(--gai-acrylic-bar);
-    color: var(--gai-text);
-    font-size: 13px;
-    font-family: inherit;
-    outline: none;
-    cursor: pointer;
-    transition: border-color .15s, box-shadow .15s;
-}
-.cop-select-wrap .cop-select:focus {
-    border-color: var(--gai-brand);
-    box-shadow: 0 0 0 2px rgba(2, 255, 142, 0.15);
-}
-.cop-select-wrap .cop-select option {
-    background: #141a1f;             /* 深色系统下下拉列表的可读性 */
-    color: var(--gai-text);
-}
-.cop-select-arrow {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--gai-text-secondary);
-    font-size: 11px;
-    pointer-events: none;
-}
-
-/* —— 高级：手动填写 Endpoint（默认隐藏，provider=custom 时显示）—— */
-.cop-advanced {
-    display: none;
-    animation: copAdvIn .2s ease;
-}
-.cop-advanced.is-visible { display: flex; }
-@keyframes copAdvIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-/* —— 主操作按钮（启用）—— */
-.cop-mini-btn.cop-primary {
-    background: var(--gai-brand);
-    border-color: var(--gai-brand);
-    color: #04120b;
-    font-weight: 600;
-}
-.cop-mini-btn.cop-primary:hover {
-    background: #2bffa5;
-    border-color: #2bffa5;
-    color: #04120b;
-}
-
-/* —— 底部操作栏：测试 / 启用 / 默认 右对齐、间距均匀 —— */
-.cop-model-form + .cop-pane-foot,
-.cop-pane-foot:has(.cop-primary) {
-    justify-content: flex-end;
-}
-.cop-pane-foot .cop-mini-btn { min-width: 64px; justify-content: center; }
-
-/* —— 状态行位置补偿 —— */
-.cop-model-status { margin-top: auto; padding-top: 8px; }

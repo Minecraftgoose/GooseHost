@@ -1,7 +1,7 @@
         /* 钉钉进步体字体 */
         @font-face {
             font-family: 'DingTalk JinBuTi';
-            src: url('/fonts/DingTalk JinBuTi.ttf') format('truetype');
+            src: url('/fonts/DingTalkJinBuTi.woff2') format('woff2');
             font-weight: normal;
             font-style: normal;
             font-display: swap;
@@ -77,7 +77,9 @@
         .flag-dots.on { opacity: 1; }
 
 
-        /* ===== 顶部导航栏 ===== */
+        /* ===== 顶部导航栏 =====
+           背景条通栏铺满屏幕宽度；
+           内部菜单用左右 padding 收进 1200px 内容列，与下方正文左边缘对齐。 */
         .navbar {
             position: fixed;
             top: 0;
@@ -89,34 +91,28 @@
             border-bottom: 1px solid rgba(2, 255, 142, 0.1);
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 0 1.5rem;
+            justify-content: flex-start;
+            padding: 0 max(1rem, calc((100% - 1200px) / 2));
+            gap: 0.5rem;
             z-index: 100;
         }
 
-        .navbar-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
+        /* Logo：默认横屏隐藏，竖屏显示（见 768 断点） */
         .navbar-icon {
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
+            flex: none;
         }
+        .navbar-icon img { display: block; }
 
-        .navbar-right {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        /* 移动端菜单按钮 */
+        /* 三道杠：默认横屏隐藏（菜单常驻），竖屏显示（见 768 断点） */
         .menu-toggle {
-            display: flex;
+            display: none;
             width: 40px;
             height: 40px;
+            flex: none;
+            margin-left: auto;
             background: rgba(2, 255, 142, 0.1);
             border: 1px solid rgba(2, 255, 142, 0.2);
             border-radius: 6px;
@@ -125,105 +121,131 @@
             cursor: pointer;
             align-items: center;
             justify-content: center;
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+        }
+        .menu-toggle:hover {
+            background: rgba(2, 255, 142, 0.18);
+            border-color: rgba(2, 255, 142, 0.35);
+        }
+        .menu-toggle:active { transform: scale(0.94); }
+        .menu-toggle i { pointer-events: none; }
+        .menu-toggle[aria-expanded="true"] {
+            background: rgba(2, 255, 142, 0.22);
+            border-color: rgba(2, 255, 142, 0.45);
+        }
+
+        /* 遮罩：仅竖屏菜单展开时启用 */
+        .sidebar-overlay {
+            display: none;
         }
 
         /* ===== 主布局 ===== */
         .main-layout {
             display: flex;
             padding-top: 60px;
+            padding-left: max(1rem, calc((100% - 1200px) / 2));
+            padding-right: max(1rem, calc((100% - 1200px) / 2));
             min-height: 100vh;
             position: relative;
             z-index: 1;
         }
 
-        /* ===== 侧边栏 ===== */
+        /* ===== 导航菜单（常驻导航栏，永不折叠） ===== */
         .sidebar {
-            width: 240px;
-            background: rgba(10, 20, 15, 0.95);
-            backdrop-filter: blur(20px);
-            border-right: 1px solid rgba(2, 255, 142, 0.1);
-            position: fixed;
-            top: 60px;
-            left: 0;
-            bottom: 0;
-            padding: 1.5rem 0;
-            overflow-y: auto;
-            transition: transform 0.3s ease, width 0.3s ease;
-            z-index: 90;
+            flex: 1 1 auto;
+            min-width: 0;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.25rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
-
-        .sidebar.collapsed {
-            width: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-
-        .sidebar.collapsed .nav-section,
-        .sidebar.collapsed .nav-divider {
-            display: none;
-        }
+        .sidebar::-webkit-scrollbar { display: none; }
 
         .sidebar-toggler {
             display: none;
         }
 
+        /* 分组：横向排布 */
         .nav-section {
-            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.25rem;
+            margin-bottom: 0;
         }
 
+        /* 融入导航栏后分组标题不占位（仅保留可访问性文本） */
         .nav-section-title {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, 0.3);
-            padding: 0 1.25rem;
-            margin-bottom: 0.5rem;
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            clip-path: inset(50%);
+            white-space: nowrap;
         }
 
         .nav-item {
             display: flex;
+            flex-direction: row;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1.25rem;
+            justify-content: center;
+            gap: 0.45rem;
+            height: 38px;
+            padding: 0 0.8rem;
+            flex: none;
+            border-radius: 8px;
             color: rgba(255, 255, 255, 0.6);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            white-space: nowrap;
             cursor: pointer;
             transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-            border-left: 3px solid transparent;
+            border: 1px solid transparent;
             position: relative;
             overflow: hidden;
         }
 
         .nav-item:hover {
-            background: rgba(2, 255, 142, 0.05);
+            background: rgba(2, 255, 142, 0.08);
             color: rgba(255, 255, 255, 0.9);
         }
 
         .nav-item.active {
-            background: rgba(2, 255, 142, 0.1);
+            background: rgba(2, 255, 142, 0.12);
             color: #02ff8e;
-            border-left-color: #02ff8e;
+            border-color: rgba(2, 255, 142, 0.45);
         }
 
         .nav-item i {
-            width: 20px;
+            width: auto;
             text-align: center;
-            font-size: 1rem;
+            font-size: 0.95rem;
+            flex: none;
         }
 
+        .nav-item svg { flex: none; }
+
+        /* 分组之间的竖线分隔符 */
         .nav-divider {
-            height: 1px;
-            background: rgba(2, 255, 142, 0.1);
-            margin: 1rem 1.25rem;
+            width: 1px;
+            height: 22px;
+            background: rgba(2, 255, 142, 0.18);
+            margin: 0 0.35rem;
+            flex: none;
         }
 
-        /* ===== 主内容区 ===== */
+        /* ===== 主内容区（菜单改抽屉后不再预留左侧宽度） ===== */
         .content {
-            flex: 1;
-            margin-left: 240px;
+            flex: 1 1 auto;
+            margin: 0 auto;
             padding: 2rem;
             max-width: 1200px;
+            width: 100%;
             overflow-x: hidden;
             transition: margin-left 0.3s ease;
         }
@@ -315,7 +337,7 @@
         .card {
             background: rgba(20, 35, 25, 0.8);
             border: 1px solid rgba(2, 255, 142, 0.15);
-            border-radius: 6px;
+            border-radius: 40px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             transition: box-shadow 0.3s ease, border-color 0.3s ease;
@@ -357,7 +379,7 @@
         .stat-card {
             background: linear-gradient(135deg, rgba(2, 255, 142, 0.1) 0%, rgba(2, 255, 142, 0.02) 100%);
             border: 1px solid rgba(2, 255, 142, 0.15);
-            border-radius: 6px;
+            border-radius: 28px;
             padding: 1.25rem;
             display: flex;
             align-items: center;
@@ -381,7 +403,7 @@
             width: 48px;
             height: 48px;
             background: rgba(2, 255, 142, 0.15);
-            border-radius: 6px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -520,7 +542,7 @@
         /* ===== 文件拖拽上传 ===== */
         .file-drop-zone {
             border: 2px dashed rgba(2, 255, 142, 0.3);
-            border-radius: 6px;
+            border-radius: 24px;
             padding: 1.5rem;
             text-align: center;
             margin-bottom: 1rem;
@@ -579,7 +601,7 @@
             align-items: center;
             padding: 1rem 1.25rem;
             background: rgba(0, 0, 0, 0.2);
-            border-radius: 6px;
+            border-radius: 24px;
             border: 1px solid rgba(2, 255, 142, 0.1);
             gap: 1rem;
             cursor: pointer;
@@ -715,8 +737,12 @@
         .modal-content {
             width: 100%;
             max-width: 800px;
-            max-height: 90vh;
-            overflow: auto;
+            /* 关键：容器本身不滚动（否则整个弹窗外框会挂一条滚动条），
+               改由 .modal-body 在内容真的超长时内部滚动 —— 标题和底部按钮始终可见。 */
+            max-height: calc(100vh - 2rem);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
             transform: scale(0.9) translateY(20px);
             transition: transform 0.3s ease;
         }
@@ -731,6 +757,7 @@
             align-items: center;
             padding: 1.25rem 1.5rem;
             border-bottom: 1px solid rgba(2, 255, 142, 0.15);
+            flex: none;
         }
 
         .modal-title {
@@ -753,14 +780,62 @@
 
         .modal-close:hover { color: #fff; }
 
-        .modal-body { padding: 1.5rem; }
+        .modal-body {
+            padding: 1.5rem;
+            flex: 1 1 auto;
+            min-height: 0;            /* 允许在 flex 容器里正确收缩并滚动 */
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            /* 纵向 flex：子块默认按内容高度排列（不会被动拉伸），
+               只有标了 --fill 的弹窗才会让输入区吃掉剩余空间 */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== 编辑类弹窗：输入区自适应剩余高度 =====
+           问题：textarea 写死 min-height（HTML/全局 300px、项目文件 380px），
+           在稍矮的屏幕（视口高 ≲600px）上会把弹窗顶出几像素，
+           于是内容区冒出一条滚动条 —— 看着像内容被"挤"出来了。
+           解法：让输入区随可用高度伸缩，而不是固定高度外撑。 */
+        .modal-body--fill .form-group {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 高度直接用视口计算，而不是靠 flex 收缩链。
+           为什么不用 flex：编辑面板外面还套了一层 #html-editor-panel，
+           而 JS 切换 HTML/MD 面板时会写死 inline `display: block`，
+           会覆盖掉 CSS 里的 display:flex，导致内层收缩链断掉（实测无效）。
+           clamp 不受 display 影响，也不依赖嵌套结构，最稳。
+           系数 310 / 258 = 实测「除输入区以外的固定占用 + 安全余量」。 */
+        .modal-body--fill textarea {
+            flex: none;
+            min-height: 0;                                  /* 覆盖全局的 300px，否则 clamp 下限失效 */
+            height: clamp(140px, calc(100vh - 310px), 300px);
+        }
+        /* 文件编辑框内容更长，给更高的默认高度 */
+        .modal-body--fill #projFileContent {
+            height: clamp(140px, calc(100vh - 258px), 380px);
+        }
+        .modal-body--fill .drop-hint { flex: none; }
 
         .modal-footer {
             display: flex;
             gap: 0.75rem;
             padding: 1rem 1.5rem;
             border-top: 1px solid rgba(2, 255, 142, 0.15);
+            flex: none;
         }
+
+        /* 弹窗内滚动条细化，避免粗滚动条影响观感 */
+        .modal-body::-webkit-scrollbar { width: 6px; }
+        .modal-body::-webkit-scrollbar-track { background: transparent; }
+        .modal-body::-webkit-scrollbar-thumb {
+            background: rgba(2, 255, 142, 0.25);
+            border-radius: 3px;
+        }
+        .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(2, 255, 142, 0.4); }
 
         /* ===== 自定义对话框 ===== */
         .custom-dialog {
@@ -779,7 +854,7 @@
         .dialog-card {
             background: var(--bg-card, #1a1e24);
             border: 1px solid var(--border, rgba(255,255,255,0.1));
-            border-radius: 12px;
+            border-radius: 40px;
             max-width: 400px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
@@ -816,7 +891,7 @@
             left: 50%;
             transform: translateX(-50%) translateY(100px);
             padding: 1rem 1.5rem;
-            border-radius: 6px;
+            border-radius: 24px;
             color: #fff;
             font-size: 0.9rem;
             opacity: 0;
@@ -849,7 +924,7 @@
         .confirm-box {
             background: rgba(20, 35, 25, 0.98);
             border: 1px solid rgba(2, 255, 142, 0.2);
-            border-radius: 6px;
+            border-radius: 40px;
             padding: 1.75rem 2rem;
             max-width: 360px;
             width: 90%;
@@ -968,7 +1043,7 @@
             background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
             background-size: 200% 100%;
             animation: skeleton-shimmer 1.5s infinite;
-            border-radius: 6px;
+            border-radius: 40px;
         }
         @keyframes skeleton-shimmer {
             0% { background-position: 200% 0; }
@@ -1019,7 +1094,7 @@
         .loading i { animation: spin 1s linear infinite; color: #02ff8e; font-size: 1.5rem; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        /* 水波纹点击效果 */
+        /* 水波纹点击效果（仅左侧边栏 .nav-item 使用） */
         .ripple {
             position: absolute;
             border-radius: 50%;
@@ -1036,13 +1111,6 @@
             }
         }
 
-        /* 带波纹的按钮 */
-        .ripple-btn {
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
         /* ===== 快捷操作卡片 ===== */
         .quick-actions {
             display: grid;
@@ -1057,7 +1125,7 @@
             gap: 0.75rem;
             padding: 1.5rem;
             background: rgba(0, 0, 0, 0.2);
-            border-radius: 6px;
+            border-radius: 24px;
             text-decoration: none;
             color: #fff;
             transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
@@ -1073,21 +1141,6 @@
 
         .quick-action i { font-size: 1.5rem; color: #02ff8e; }
         .quick-action span { font-size: 0.9rem; }
-
-        /* ===== 移动端菜单按钮 ===== */
-        .mobile-menu-toggle {
-            display: none;
-            width: 40px;
-            height: 40px;
-            background: rgba(2, 255, 142, 0.1);
-            border: 1px solid rgba(2, 255, 142, 0.2);
-            border-radius: 6px;
-            color: #02ff8e;
-            font-size: 1.2rem;
-            cursor: pointer;
-            align-items: center;
-            justify-content: center;
-        }
 
         /* ===== 响应式布局 ===== */
         @media (max-width: 1024px) {
@@ -1122,26 +1175,124 @@
             }
         }
 
-        @media (max-width: 768px) {
-            .menu-toggle { display: none !important; }
-            .mobile-menu-toggle { display: flex !important; }
+        /* ===== 竖屏：左侧 SVG Logo + 右侧三道杠，菜单竖排下拉 =====
+           注意：用 orientation: portrait 限定，
+           手机横屏（如 667x375）宽度虽 <768 但仍是横屏，应走常驻横排菜单，不出现三道杠。 */
+        @media (max-width: 768px) and (orientation: portrait) {
+            .navbar {
+                justify-content: space-between;
+                padding: 0 1rem;
+                gap: 0;
+                overflow: visible;
+            }
+            .main-layout { padding-left: 0; padding-right: 0; }
 
+            /* 左 Logo / 右三道杠 */
+            .navbar-icon { display: flex; }
+            .menu-toggle { display: flex; }
+
+            /* 菜单改为导航栏下方的竖排下拉面板 */
             .sidebar {
-                transform: translateX(-100%);
+                position: absolute;
+                top: 60px;
+                left: 0;
+                right: 0;
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.15rem;
+                max-height: calc(100dvh - 60px);
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                background: rgba(10, 20, 15, 0.98);
+                backdrop-filter: blur(20px);
+                border-bottom: 1px solid rgba(2, 255, 142, 0.14);
+                border-radius: 0 0 14px 14px;
+                box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+                padding: 0.6rem 0.75rem 0.85rem;
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(-8px);
+                transition: opacity 0.24s ease, transform 0.24s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.24s;
+                z-index: 99;
             }
-
             .sidebar.open {
-                transform: translateX(0);
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
             }
 
-            .sidebar.collapsed {
-                transform: translateX(-100%);
+            .nav-section {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.15rem;
             }
 
-            .sidebar-toggler {
-                display: none !important;
+            /* 下拉里恢复分组标题 */
+            .nav-section-title {
+                position: static;
+                width: auto;
+                height: auto;
+                overflow: visible;
+                clip: auto;
+                clip-path: none;
+                padding: 0.5rem 0.5rem 0.25rem;
+                font-size: 0.65rem;
             }
 
+            .nav-item {
+                justify-content: flex-start;
+                width: 100%;
+                height: 44px;
+                padding: 0 0.9rem;
+                font-size: 0.9rem;
+                gap: 0.7rem;
+                border-radius: 10px;
+            }
+            .nav-item span { display: inline; }
+            .nav-item i { width: 20px; font-size: 1rem; }
+
+            .nav-divider {
+                width: 100%;
+                height: 1px;
+                margin: 0.4rem 0;
+            }
+
+            /* 遮罩：展开时压暗正文，点击关闭 */
+            .sidebar-overlay {
+                display: block;
+                position: fixed;
+                top: 60px;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.45);
+                backdrop-filter: blur(2px);
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transition: opacity 0.24s ease, visibility 0.24s;
+                z-index: 95;
+            }
+            .sidebar-overlay.active {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+            }
+        }
+
+        /* 小屏横屏（如手机横放）：菜单常驻横排，紧凑 + 可横滑 */
+        @media (max-width: 900px) and (orientation: landscape) {
+            .navbar { padding: 0 0.75rem; height: 52px; }
+            .main-layout { padding-top: 52px; }
+            .nav-item { height: 34px; padding: 0 0.55rem; font-size: 0.8rem; gap: 0.35rem; }
+            .nav-divider { margin: 0 0.15rem; }
+            .content { padding: 1.25rem 1rem; }
+        }
+
+        @media (max-width: 768px) {
+            /* 窄屏通用：内容列贴边等 */
+            .main-layout { padding-left: 0; padding-right: 0; }
             .content {
                 margin-left: 0;
                 padding: 1.5rem 1rem;
@@ -1175,6 +1326,12 @@
             }
         }
 
+        @media (max-width: 600px) and (orientation: portrait) {
+            /* 极窄竖屏：下拉菜单项略微收紧，Logo 缩小 */
+            .nav-item { height: 42px; padding: 0 0.75rem; }
+            .navbar-icon img { height: 24px; }
+        }
+
         @media (max-width: 480px) {
             .stats-grid {
                 grid-template-columns: 1fr;
@@ -1192,10 +1349,6 @@
 
             .quick-actions {
                 grid-template-columns: 1fr;
-            }
-
-            .navbar {
-                padding: 0 1rem;
             }
 
             .page-title {
@@ -1217,10 +1370,6 @@
             }
         }
 
-        /* 遮罩层（已禁用） */
-        .sidebar-overlay {
-            display: none;
-        }
         /* ===== 开屏加载动画 ===== */
         .splash-screen {
             position: fixed;
@@ -1325,7 +1474,7 @@
             max-height: 300px;
             overflow-y: auto;
             border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 8px;
+            border-radius: 24px;
             background: rgba(0, 0, 0, 0.2);
         }
         .detail-file {
@@ -1396,7 +1545,7 @@
             padding: 4px;
             background: rgba(0, 0, 0, 0.25);
             border: 1px solid rgba(2, 255, 142, 0.15);
-            border-radius: 8px;
+            border-radius: 24px;
         }
         .type-option {
             flex: 1;
@@ -1408,7 +1557,7 @@
             padding: 0.9rem 0.5rem 0.7rem;
             background: transparent;
             border: none;
-            border-radius: 8px;
+            border-radius: 20px;
             cursor: pointer;
             transition: background 0.2s, color 0.2s;
         }
@@ -1577,6 +1726,81 @@
             text-decoration: underline;
         }
 
+        /* ===== API 密钥列表 ===== */
+        /* 列表行：不再做「卡片里套卡片」，改用贯穿内容列的分隔行。
+           之前给条目加背景框 + 左右 padding，会把里面的吊销按钮往里推约 15px，
+           与同页「修改」「新建密钥」的右边缘对不上；
+           用负 margin 抵消又会让行框超出内容列、按钮贴死在边框上（像被吞掉一半）。
+           现在行框宽度 = 内容列宽度，按钮自然落在与其它按钮同一条竖线上。 */
+        .token-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(2, 255, 142, 0.1);
+            transition: border-color 0.2s ease;
+        }
+        .token-item:first-child { border-top: 1px solid rgba(2, 255, 142, 0.1); }
+        .token-item:last-child { border-bottom: none; }
+        .token-item:hover { border-bottom-color: rgba(2, 255, 142, 0.3); }
+        .token-item-main { min-width: 0; flex: 1; }
+        .token-item-name {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.88rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .token-item-name i { color: #02ff8e; font-size: 0.8rem; flex: none; }
+        .token-item-meta {
+            margin-top: 0.3rem;
+            font-size: 0.72rem;
+            color: rgba(255, 255, 255, 0.35);
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+        .token-item-meta code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: rgba(255, 255, 255, 0.55);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.05rem 0.35rem;
+            border-radius: 4px;
+        }
+
+        /* 表单输入：弹窗内的单行输入 */
+        .form-input {
+            width: 100%;
+            padding: 0.65rem 0.8rem;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(2, 255, 142, 0.18);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+        .form-input:focus { border-color: rgba(2, 255, 142, 0.5); }
+
+        /* 弹窗底部按钮靠右 */
+        .modal-footer { justify-content: flex-end; }
+
+        @media (max-width: 600px) {
+            /* 窄屏改纵向排布：按钮独占一行并撑满，右边缘依然与其它按钮一致 */
+            .token-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.55rem;
+                padding: 0.8rem 0;
+            }
+            .token-item .btn { width: 100%; justify-content: center; }
+        }
+
         /* ===== 图标微动效 ===== */
         i.fas, i.far, i.fab {
             transition: color 0.15s ease, transform 0.15s ease;
@@ -1621,7 +1845,7 @@
             color: rgba(255, 255, 255, 0.85);
             background: linear-gradient(135deg, rgba(2, 255, 142, 0.12), rgba(2, 255, 142, 0.04));
             border: 1px solid rgba(2, 255, 142, 0.28);
-            border-radius: 8px;
+            border-radius: 24px;
             overflow: hidden;
             max-width: 100%;
         }

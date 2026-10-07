@@ -2,6 +2,8 @@
 
 import { jsonResp } from '../utils/response.js';
 import { checkRateLimit } from '../utils/rate-limit.js';
+import { resolveApiKey, isApiKeyFormat } from '../utils/apikey.js';
+import { makeSupabase } from '../utils/supabase.js';
 
 function extractNickname(user) {
   if (!user) return '';
@@ -10,14 +12,48 @@ function extractNickname(user) {
   return (typeof nick === 'string') ? nick.trim() : '';
 }
 
+function bearerToken(request) {
+  const auth = request.headers.get('Authorization') || '';
+  if (!auth.startsWith('Bearer ')) return null;
+  return auth.substring(7).trim();
+}
+
+/**
+ * 用 API Key 时无法通过 Supabase 的 /auth/v1/user 拿资料
+ * （那个接口只认会话 JWT），这里改用 service role 按 userId 反查。
+ */
+async function meByApiKey(userId, env) {
+  try {
+    const supabase = makeSupabase(env);
+    const { data } = await supabase.auth.admin.getUserById(userId);
+    const user = data?.user;
+    if (!user) return null;
+    return {
+      id: user.id,
+      email: user.email,
+      nickname: extractNickname(user),
+      authType: 'api_key'
+    };
+  } catch {
+    return null;
+  }
+}
+
 // GET /api/me - 返回当前用户基本信息
 export async function handleGetMe(request, env, corsHeaders) {
-  const auth = request.headers.get('Authorization') || '';
-  if (!auth.startsWith('Bearer ')) {
-    return jsonResp({ error: 'Unauthorized' }, 401, corsHeaders);
-  }
-  const token = auth.substring(7);
+  const token = bearerToken(request);
+  if (!token) return jsonResp({ error: 'Unauthorized' }, 401, corsHeaders);
 
+  // ---- API Key 路径 ----
+  if (isApiKeyFormat(token)) {
+    const rec = await resolveApiKey(token, env);
+    if (!rec) return jsonResp({ error: 'Unauthorized' }, 401, corsHeaders);
+    const info = await meByApiKey(rec.userId, env);
+    if (!info) return jsonResp({ error: 'Unauthorized' }, 401, corsHeaders);
+    return jsonResp(info, 200, corsHeaders);
+  }
+
+  // ---- 会话 JWT 路径 ----
   try {
     const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
       headers: {
@@ -30,7 +66,8 @@ export async function handleGetMe(request, env, corsHeaders) {
     return jsonResp({
       id: user.id,
       email: user.email,
-      nickname: extractNickname(user)
+      nickname: extractNickname(user),
+      authType: 'session'
     }, 200, corsHeaders);
   } catch {
     return jsonResp({ error: '服务器错误' }, 500, corsHeaders);
@@ -39,11 +76,13 @@ export async function handleGetMe(request, env, corsHeaders) {
 
 // PUT /api/me - 更新昵称
 export async function handleUpdateMe(request, env, corsHeaders) {
-  const auth = request.headers.get('Authorization') || '';
-  if (!auth.startsWith('Bearer ')) {
-    return jsonResp({ error: 'Unauthorized' }, 401, corsHeaders);
+  const token = bearerToken(request);
+  if (!token) return jsonResp({ error: 'Unauthorized' }, 401, corsHeaders);
+
+  // 改昵称属于账号设置，只允许登录会话操作
+  if (isApiKeyFormat(token)) {
+    return jsonResp({ error: '修改账号信息需使用登录会话' }, 403, corsHeaders);
   }
-  const token = auth.substring(7);
 
   const rl = await checkRateLimit(request, env, 'me_update');
   if (!rl.allowed) {

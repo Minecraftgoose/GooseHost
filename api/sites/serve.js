@@ -40,7 +40,7 @@ function render404Page(msg) {
     <style>
         @font-face {
             font-family: 'DingTalk JinBuTi';
-            src: url('https://host.goose.cc.cd/fonts/DingTalk%20JinBuTi.ttf') format('truetype');
+            src: url('https://host.goose.cc.cd/fonts/DingTalkJinBuTi.woff2') format('woff2');
             font-weight: normal;
             font-style: normal;
             font-display: swap;

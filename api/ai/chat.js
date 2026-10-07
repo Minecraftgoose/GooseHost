@@ -1,5 +1,4 @@
 import { getUserId } from '../utils/jwt.js';
-import { checkRateLimit } from '../utils/rate-limit.js';
 import { jsonResp } from '../utils/response.js';
 const DEFAULT_BASE = 'https://open.bigmodel.cn/api/paas/v4';
 const DEFAULT_MODELS = ['glm-4.7-flash', 'glm-4.6', 'glm-4-flash'];
@@ -53,6 +52,17 @@ const PROVIDERS = {
   // 全量模型与元数据可拉取：https://opencode.ai/zen/v1/models
   // ⚠️ deepseek-v4-flash 不带 -free 后缀，是【付费模型】；免费端点是
   // deepseek-v4-flash-free（已在列表中）。两者不要混用。
+  // Agnes：Copilot 的第二个引擎（源自 ZIran）。
+  // 与默认引擎（GLM）并存，由前端在请求体里通过 provider:"agnes" 选择；
+  // 上游地址与 Key 全部由服务端环境变量决定，前端无法指定 endpoint / key。
+  //   AGNES_API_KEYS（或 AGNES_API_KEY）— 必填，逗号分隔可轮换
+  agnes: {
+    label: 'Agnes',
+    baseURL: 'https://api.agnes-ai.cn/v1',
+    models: ['agnes-2.5-flash', 'agnes-2.5-pro'],
+    extraBody: {},
+    serverSearch: true
+  },
   'opencode-zen': {
     label: 'OpenCode Zen',
     baseURL: 'https://opencode.ai/zen/v1',
@@ -95,28 +105,37 @@ function zenPathFor(model) {
   }
   return '/chat/completions';
 }
-// 判定一个 endpoint 是否指向 OpenCode Zen。
-// 只看 host + path，不看 query/fragment——否则形如
-// https://other.com/?u=opencode.ai/zen 这种地址会被误判成 Zen 而套错校验规则。
-function isZenEndpoint(url) {
-  const raw = String(url || '').trim();
-  if (!raw) return false;
-  try {
-    const u = new URL(raw);
-    const host = u.hostname.toLowerCase();
-    if (host === 'zen.opencode.ai') return true;
-    return (host === 'opencode.ai' || host.endsWith('.opencode.ai'))
-      && /^\/zen(\/|$)/i.test(u.pathname);
-  } catch {
-    // 非合法 URL（用户随手填的片段）时退化为「host/path 部分」的字面匹配
-    const hostPath = raw.split(/[?#]/)[0];
-    return /\/\/(zen\.)?opencode\.ai\/zen(\/|$)/i.test(hostPath)
-      || /\/\/zen\.opencode\.ai(\/|$)/i.test(hostPath);
-  }
-}
 function resolveProvider(env) {
   const name = String(env.AI_PROVIDER || '').trim().toLowerCase();
   return name ? PROVIDERS[name] || null : null;
+}
+/**
+ * 决定本次请求用哪个 provider。
+ * 前端只能传名字（如 "agnes"），且必须命中 PROVIDERS 白名单；
+ * 传了未知名字就回落到环境变量配置的默认 provider。
+ * 这样即便前端被篡改，也无法把请求打到任意上游地址。
+ */
+function pickProvider(payload, env) {
+  const want = String((payload && payload.provider) || '').trim().toLowerCase();
+  if (want && Object.prototype.hasOwnProperty.call(PROVIDERS, want)) return PROVIDERS[want];
+  return resolveProvider(env);
+}
+/** 与 provider 对应的 Key 链：agnes 用独立环境变量，其余用通用 AI_API_KEYS */
+function keyChainFor(provider, env) {
+  if (provider === PROVIDERS.agnes) {
+    return String(env.AGNES_API_KEYS || env.AGNES_API_KEY || '')
+      .split(',').map(s => s.trim()).filter(Boolean);
+  }
+  return keyChain(env);
+}
+/** provider 对应的默认模型链 */
+function modelChainFor(provider, env) {
+  if (provider) {
+    const raw = (env.AI_MODEL || '').trim();
+    // 只有默认 provider 才吃 AI_MODEL 覆盖；显式选 agnes 时不串味
+    if (!(raw && provider === resolveProvider(env))) return provider.models.slice();
+  }
+  return modelChain(env);
 }
 function modelChain(env) {
   const provider = resolveProvider(env);
@@ -227,14 +246,7 @@ function parseRetryAfter(resp) {
 export async function handleAiChat(request, env, corsHeaders) {
   const userId = await getUserId(request, env);
   if (!userId) return jsonResp({ error: 'Unauthorized' }, 401, corsHeaders);
-  const rl = await checkRateLimit(request, env, 'ai_chat');
-  if (!rl.allowed) {
-    const msg = rl.locked
-      ? `操作过于频繁，请在 ${Math.ceil(rl.resetIn / 60)} 分钟后重试`
-      : `请求过于频繁，请在 ${Math.ceil(rl.resetIn)} 秒后重试`;
-    return jsonResp({ error: msg, retryAfter: Math.ceil(rl.resetIn) }, 429, corsHeaders);
-  }
-  const serverKeyList = keyChain(env);
+  // AI 链路不做限流：交互型请求被限流会直接毁掉体验，成本由模型侧的额度兜底。
   const errors = [];                       // 函数级作用域：tryModelOnce 闭包与汇总返回都会 push
   let payload;
   try { payload = await request.json(); } catch {
@@ -243,55 +255,28 @@ export async function handleAiChat(request, env, corsHeaders) {
   if (!Array.isArray(payload?.messages) || !payload.messages.length) {
     return jsonResp({ error: 'messages 不能为空' }, 400, corsHeaders);
   }
-  const provider = resolveProvider(env);
-  // 「一键接入」透传：前端自定义模型把 endpoint / apiKey 放进请求体，走本代理转发。
-  // 预检实测（2026-09-22，Origin: https://example.com，请求头 authorization,content-type）：
-  //   · OpenCode Zen  https://opencode.ai/zen/v1/chat/completions → OPTIONS 404，
-  //     且无任何 Access-Control-Allow-* 响应头 → 浏览器直连必然被 CORS 拦，必须走代理；
-  //   · DeepSeek      https://api.deepseek.com/chat/completions → OPTIONS 200，
-  //     带 access-control-allow-origin/methods/headers → 直连预检其实是通过的。
-  //     仍统一走代理，是为了隐藏用户 Key、复用 Key 轮换与限流，而不是因为 CORS。
-  // 优先级：请求体 endpoint > AI_BASE_URL > provider 预设 > 默认 GLM
-  //
-  // ⚠️ Endpoint 归一化策略（2026-09 调整）：
-  // 前端已移除「自动补全 /chat/completions」，用户填的 URL 被视为【完整地址】，
-  // 后端必须【原样使用】，不再做路径假设——否则用户填第三方网关
-  // （如 /api/v1/chat、/completions、带子路径的代理）会被强制改坏。
-  // 这里只做：去尾斜杠 + 兼容旧数据（若仍以 /chat/completions 结尾则保留，不再剥离）。
-  const customEndpoint = String(payload.endpoint || '').trim().replace(/\/+$/, '');
-  // OpenCode Zen 识别：Endpoint 命中 opencode.ai/zen 时，自动套用 opencode-zen
-  // provider 预设（免费模型列表、计费提示），无需前端额外传 provider 名。
-  // 仅做路由匹配，不读取、不持久化用户的 API Key。
-  // 注意：用【原始 endpoint】匹配，因为用户可能填的是完整 URL
-  // （如 https://opencode.ai/zen/v1/chat/completions），只要包含路径片段即命中。
-  const zenDetected = isZenEndpoint(customEndpoint);
-  const zenProvider = zenDetected ? PROVIDERS['opencode-zen'] : null;
-  const activeProvider = provider || zenProvider;
-  // base：用户填的自定义 endpoint 的处理——
-  // ⚠️ 2026-09 调整：前端已移除「自动补全 /chat/completions」，用户填的 URL 被视为
-  // 【完整请求地址】，后端【原样使用，绝不追加任何路径】。
-  // 理由：自定义模型端点可能是任意 OpenAI 兼容网关（/api/v1/chat、/completions、
-  // 带子路径的代理、第三方中转），若后端再硬拼 /chat/completions 会把这些地址改坏。
-  // 一键接入（PRESETS）在前端就已填入完整地址（如 https://opencode.ai/zen/v1/chat/completions），
-  // 用户手动填时也按「填什么请求什么」处理。仅做去尾斜杠规范化。
-  const customBase = customEndpoint ? customEndpoint.replace(/\/$/, '') : '';
-  const base = customBase
-    ? customBase
-    : (env.AI_BASE_URL || (provider && provider.baseURL) || DEFAULT_BASE).replace(/\/$/, '');
-  // 前端传了自定义 key（用户自己的 DeepSeek Key）时，以它作为唯一 key；
-  // 否则沿用服务端配置的 key 轮换列表。
-  const customKey = String(payload.apiKey || '').trim();
-  const keyList = customKey ? [customKey] : serverKeyList;
+  // 上游地址与 API Key 一律由服务端环境变量决定（AI_BASE_URL / AI_PROVIDER / AI_API_KEYS / AI_MODEL），
+  // 请求体中的 endpoint / apiKey 不再生效。
+  // provider 是唯一允许前端选择的东西，且必须是 PROVIDERS 白名单里的名字（如 "agnes"）。
+  const activeProvider = pickProvider(payload, env);
+  const isAgnes = activeProvider === PROVIDERS.agnes;
+  const base = isAgnes
+    ? activeProvider.baseURL
+    : (env.AI_BASE_URL || (activeProvider && activeProvider.baseURL) || DEFAULT_BASE).replace(/\/$/, '');
+  const keyList = keyChainFor(activeProvider, env);
   if (!keyList.length) {
-    return jsonResp({ error: '服务端未配置 AI_API_KEYS 或 AI_API_KEY' }, 500, corsHeaders);
+    return jsonResp({
+      error: isAgnes
+        ? '服务端未配置 AGNES_API_KEYS / AGNES_API_KEY'
+        : '服务端未配置 AI_API_KEYS 或 AI_API_KEY'
+    }, 500, corsHeaders);
   }
-  const models = customEndpoint || customKey
-    ? (String(payload.model || '').trim() ? [String(payload.model).trim()] : (activeProvider ? activeProvider.models : modelChain(env)))
-    : modelChain(env);
+
+  const models = modelChainFor(activeProvider, env);
   // OpenCode Zen：本代理只会发 Chat Completions 格式的请求体，
   // 但 Zen 的 GPT / Grok / Claude / Qwen / Gemini / Jev 走的是别的 endpoint 和别的协议。
   // 与其静默打到 /chat/completions 拿一个难懂的错误，不如直接告诉用户该用哪个端点。
-  if (zenDetected || resolveProvider(env) === PROVIDERS['opencode-zen']) {
+  if (resolveProvider(env) === PROVIDERS['opencode-zen']) {
     const unsupported = models
       .map(m => ({ model: m, path: zenPathFor(m) }))
       .filter(x => x.path !== '/chat/completions');
@@ -334,14 +319,10 @@ export async function handleAiChat(request, env, corsHeaders) {
         body: JSON.stringify(buildBody(model, payload, env, wantStream, activeProvider))
       };
       const thisTimeout = Math.min(upstreamTimeout, Math.max(remain(), 1000));
-      // 组装最终上游 URL：
-      //   · 用户自定义 endpoint（customEndpoint）→ 视为完整地址，原样请求；
-      //   · 服务端 base（AI_BASE_URL / provider 预设 / 默认 GLM）→ 裸 base，补 /chat/completions。
+      // 组装最终上游 URL：服务端 base（AI_BASE_URL / provider 预设 / 默认 GLM）→ 裸 base，补 /chat/completions。
       // 例外：OpenCode Zen 的 endpoint 按模型族区分（见 zenPathFor），
       //   若命中的是 /chat/completions 之外的模型族，前面已做校验拦截，这里不会走到。
-      const upstreamUrl = customEndpoint
-        ? base
-        : (/\/chat\/completions$/i.test(base) ? base : base + '/chat/completions');
+      const upstreamUrl = /\/chat\/completions$/i.test(base) ? base : base + '/chat/completions';
       try {
         if (wantStream) {
           const r = await fetchUpstream(upstreamUrl, opts, thisTimeout);
@@ -400,7 +381,33 @@ export async function handleAiChat(request, env, corsHeaders) {
       if (r.ok) {
         const elapsed = Date.now() - t0;
         if (r.streamResp) {
-          return new Response(r.streamResp.body, {
+          // 不能裸透传上游 body：上游一旦中途断流（限流/超时/连接重置），
+          // 客户端 fetch 会抛「Error in input stream」这种看不懂的原生错误。
+          // 这里做一层隔离：断流时补发一条可读的 SSE 事件再正常收尾，
+          // 客户端就能把它当普通消息显示，而不是整个请求炸掉。
+          const src = r.streamResp.body;
+          const reader = src.getReader();
+          const enc = new TextEncoder();
+          const guarded = new ReadableStream({
+            async pull(ctrl) {
+              try {
+                const { done, value } = await reader.read();
+                if (done) { ctrl.close(); return; }
+                ctrl.enqueue(value);
+              } catch (e) {
+                const msg = (e && e.message) ? e.message : String(e);
+                try {
+                  ctrl.enqueue(enc.encode('data: ' + JSON.stringify({
+                    choices: [{ delta: { content: '\n\n> 上游连接中断：' + msg + '（已收到的内容仍然有效）' } }]
+                  }) + '\n\n'));
+                  ctrl.enqueue(enc.encode('data: [DONE]\n\n'));
+                } catch (_) { }
+                try { ctrl.close(); } catch (_) { }
+              }
+            },
+            cancel(reason) { try { reader.cancel(reason); } catch (_) { } }
+          });
+          return new Response(guarded, {
             status: 200,
             headers: sseHeaders(corsHeaders, model, r.keyIdx, keyList.length, errors, elapsed)
           });
@@ -426,8 +433,16 @@ export async function handleAiChat(request, env, corsHeaders) {
   const toolCount = Array.isArray(payload.tools) ? payload.tools.length : 0;
   let payloadBytes = 0;
   try { payloadBytes = JSON.stringify(payload).length; } catch {  }
+  // 必须声明在 handleAiChat 内部：errors 是函数级作用域，
+  // 之前误插到模块级的 fetchUpstream 里会直接 ReferenceError 崩掉整个 Worker。
+  const allRateLimited = errors.length > 0 && errors.every(x => /HTTP\s*429/.test(String(x)));
   return jsonResp({
-    error: '所有模型与 API Key 均调用失败',
+    // 全是 429 时给一句人话，别让用户面对一串 HTTP 状态码发懵
+    error: allRateLimited
+      ? '上游限流，暂时无法响应。请稍后再试，或在服务端为该引擎补充更多可用 Key（逗号分隔）。'
+      : '所有模型与 API Key 均调用失败',
+    // 1015 是 Cloudflare 的标准限流码：说明上游站点前面挂了 CF 且已触发配额/速率限制
+    rateLimited: allRateLimited || undefined,
     tried: errors,
     models,
     elapsedMs: Date.now() - t0,

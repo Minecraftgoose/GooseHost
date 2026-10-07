@@ -28,6 +28,30 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="GooseHost">
     <link rel="manifest" href="/manifest.json">
+    <!--
+      Service Worker 自愈脚本（必须内联）
+      本站未部署 sw.js，但历史版本可能注册过残留的 Service Worker。
+      它会拦截 /dashboard/app.js、字体、JS 等请求并报未知错误，
+      导致 app.js 整体加载失败 → 内联 onclick 报 navigateTo is not defined。
+      这段代码不能放进 app.js：app.js 本身正是被 SW 阻断的那个资源，
+      写在里面永远执行不到。因此内联在 head 里，先注销再重载一次自愈。
+    -->
+    <script>
+    (function () {
+        if (!('serviceWorker' in navigator) || !navigator.serviceWorker.getRegistrations) return;
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+            if (!regs || !regs.length) return;
+            Promise.all(regs.map(function (r) {
+                try { return r.unregister(); } catch (e) { return Promise.resolve(); }
+            })).then(function () {
+                var flag = 'sw-cleanup-reloaded';
+                if (sessionStorage.getItem(flag)) return;   // 只重载一次，避免死循环
+                sessionStorage.setItem(flag, '1');
+                try { location.reload(); } catch (e) {}
+            });
+        }).catch(function () {});
+    })();
+    </script>
     <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/dashboard/style.css">
     <link rel="stylesheet" href="/dashboard/copilot.css">
@@ -47,40 +71,26 @@
     <canvas id="flagDots" class="flag-dots" aria-hidden="true"></canvas>
     <!-- 顶部导航栏 -->
     <nav class="navbar">
-        <div class="navbar-left">
-            <button class="menu-toggle" id="menuToggle" onclick="toggleSidebarDesktop()">
-                <i class="fas fa-outdent"></i>
-            </button>
-            <button class="mobile-menu-toggle" id="mobileMenuToggle" onclick="toggleSidebarMobile()">
-                <i class="fas fa-bars"></i>
-            </button>
-            <div class="navbar-icon">
-                <img src="/logo.svg" height="36" alt="Logo">
-            </div>
+        <!-- 竖屏：左侧 SVG Logo -->
+        <div class="navbar-icon" id="navLogo">
+            <img src="/logo.svg" height="28" alt="GooseHost">
         </div>
-    </nav>
 
-    <div class="sidebar-overlay" onclick="toggleSidebarMobile()"></div>
-
-    <!-- 主布局 -->
-    <div class="main-layout" id="mainContent" onclick="closeSidebarOnMobile(event)">
-        <!-- 侧边栏 -->
-        <aside class="sidebar" id="sidebar">
+        <!-- ===== 导航菜单（宽屏常驻横排 / 竖屏由三道杠展开） ===== -->
+        <div class="sidebar" id="sidebar" role="menu" aria-label="主菜单">
             <div class="nav-section">
                 <div class="nav-section-title">主菜单</div>
-                <div class="nav-item active" data-page="overview" onclick="navigateTo('overview')" role="button" tabindex="0">
-                    <i class="fas fa-home"></i>
+                <div class="nav-item active" data-page="overview" onclick="navigateTo('overview')" role="button" tabindex="0" title="概览"><i class="fas fa-home"></i>
                     <span>概览</span>
                 </div>
-                <div class="nav-item" data-page="deploy" onclick="navigateTo('deploy')" role="button" tabindex="0">
-                    <i class="fas fa-rocket"></i>
+                <div class="nav-item" data-page="deploy" onclick="navigateTo('deploy')" role="button" tabindex="0" title="部署"><i class="fas fa-rocket"></i>
                     <span>部署</span>
                 </div>
-                <div class="nav-item" data-page="copilot" onclick="navigateTo('copilot')" role="button" tabindex="0">
+                <div class="nav-item" title="AI Copilot" data-page="copilot" onclick="navigateTo('copilot')" role="button" tabindex="0">
                     <!--
                       Bot 图标：与 copilot.js 的 botIcon() **图形完全一致**，
                       只是尺寸不同（这里 18px 匹配 nav-item 的 1rem 图标槽位）。
-                      必须内联而非 JS 注入 —— 侧边栏首屏就要渲染，
+                      必须内联而非 JS 注入 —— 导航栏菜单首屏就要渲染，
                       靠 JS 替换会先闪一下旧图标。
                       图形一致性由 tests/test-bot-icon.mjs 守着。
                     -->
@@ -94,12 +104,10 @@
                     </svg>
                     <span>AI Copilot</span>
                 </div>
-                <div class="nav-item" data-page="sites" onclick="navigateTo('sites')" role="button" tabindex="0">
-                    <i class="fas fa-globe"></i>
+                <div class="nav-item" data-page="sites" onclick="navigateTo('sites')" role="button" tabindex="0" title="我的网站"><i class="fas fa-globe"></i>
                     <span>我的网站</span>
                 </div>
-                <div class="nav-item" onclick="location.href='/playground/'" role="button" tabindex="0">
-                    <i class="fas fa-comments"></i>
+                <div class="nav-item" onclick="location.href='/playground/'" role="button" tabindex="0" title="广场"><i class="fas fa-comments"></i>
                     <span>广场</span>
                 </div>
             </div>
@@ -108,20 +116,29 @@
 
             <div class="nav-section">
                 <div class="nav-section-title">设置</div>
-                <div class="nav-item" data-page="preferences" onclick="navigateTo('preferences')" role="button" tabindex="0">
-                    <i class="fas fa-sliders-h"></i>
+                <div class="nav-item" data-page="preferences" onclick="navigateTo('preferences')" role="button" tabindex="0" title="偏好设置"><i class="fas fa-sliders-h"></i>
                     <span>偏好设置</span>
                 </div>
-                <div class="nav-item" data-page="account" onclick="navigateTo('account')" role="button" tabindex="0">
-                    <i class="fas fa-user-circle"></i>
+                <div class="nav-item" data-page="account" onclick="navigateTo('account')" role="button" tabindex="0" title="账户"><i class="fas fa-user-circle"></i>
                     <span>账户</span>
                 </div>
-                <a href="/status" class="nav-item" style="text-decoration: none;">
+                <a href="/status" class="nav-item" title="系统状态" style="text-decoration: none;">
                     <i class="fas fa-server"></i>
                     <span>系统状态</span>
                 </a>
             </div>
-        </aside>
+        </div>
+
+        <!-- 竖屏：右侧三道杠 -->
+        <button class="menu-toggle" id="menuToggle" type="button" onclick="toggleSidebar()" aria-label="打开菜单" aria-expanded="false" aria-controls="sidebar" disabled>
+            <i class="fas fa-bars"></i>
+        </button>
+    </nav>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- 主布局 -->
+    <div class="main-layout" id="mainContent">
 
         <!-- 主内容区 -->
         <main class="content">
@@ -405,7 +422,7 @@
                             <div class="setting-title">清除本地数据</div>
                             <div class="setting-desc">删除所有保存在本地的数据</div>
                         </div>
-                        <button class="btn btn-danger btn-sm no-ripple" onclick="clearLocalData()">
+                        <button class="btn btn-danger btn-sm" onclick="clearLocalData()">
                             <i class="fas fa-trash"></i> 清除
                         </button>
                     </div>
@@ -428,7 +445,7 @@
                             <div class="setting-title">昵称</div>
                             <div class="setting-desc" id="account-nickname">-</div>
                         </div>
-                        <button class="btn btn-sm no-ripple" onclick="editNickname()" style="border:1px solid var(--border-focus); background:transparent; color:var(--accent);">
+                        <button class="btn btn-sm" onclick="editNickname()" style="border:1px solid var(--border-focus); background:transparent; color:var(--accent);">
                             <i class="fas fa-edit"></i> 修改
                         </button>
                     </div>
@@ -437,6 +454,33 @@
                             <div class="setting-title">登录邮箱</div>
                             <div class="setting-desc" id="account-email">-</div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ===== API 密钥 ===== -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-key"></i> API 密钥
+                            <span id="tokenCount" style="margin-left:0.5rem; font-size:0.72rem; color:rgba(255,255,255,0.35); font-weight:400;">0 / 20</span>
+                        </div>
+                        <button class="btn btn-sm" id="createTokenBtn" onclick="showCreateTokenModal()" style="border:1px solid var(--border-focus); background:transparent; color:var(--accent);">
+                            <i class="fas fa-plus"></i> 新建密钥
+                        </button>
+                    </div>
+
+                    <div class="setting-item" style="align-items:flex-start; border:none; padding-top:0.25rem;">
+                        <div class="setting-info">
+                            <div class="setting-title">用于 CLI 与脚本调用</div>
+                            <div class="setting-desc">
+                                长期有效、不会因登录会话刷新而失效，适合命令行工具与自动化脚本。
+                                密钥仅创建时显示一次，请妥善保存；泄露后可随时吊销。
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tokenList" style="margin-top:0.5rem;">
+                        <div class="loading"><i class="fas fa-spinner fa-spin"></i> 加载中…</div>
                     </div>
                 </div>
 
@@ -449,7 +493,7 @@
                             <div class="setting-title">退出当前账户</div>
                             <div class="setting-desc">清除登录状态,返回登录页面</div>
                         </div>
-                        <button class="btn btn-danger ripple-btn" onclick="logout()">
+                        <button class="btn btn-danger" onclick="logout()">
                             <i class="fas fa-sign-out-alt"></i> 退出登录
                         </button>
                     </div>
@@ -464,7 +508,7 @@
                             <div class="setting-title">永久删除账户</div>
                             <div class="setting-desc">将删除你的全部站点与文件，且不可恢复</div>
                         </div>
-                        <button class="btn btn-danger ripple-btn" onclick="confirmDeleteAccount()">
+                        <button class="btn btn-danger" onclick="confirmDeleteAccount()">
                             <i class="fas fa-user-slash"></i> 注销账号
                         </button>
                     </div>
@@ -483,90 +527,77 @@
                 <div id="pageDetailBody"></div>
             </div>
             <!-- AI Copilot 页（整体结构由 copilot.js buildPage() 生成）。
-                 「自定义模型」面板：DOM 直接写在 HTML 里（不通过 JS 拼接、也不用 <template> 克隆），
-                 符合「DOM 不用 JS 加载」的要求。设计稿：模型提供商 / 选择模型 / 填写 key + 测试·启用·默认。
-
-                 位置约定：面板必须与 #page-copilot 平级（同属 .content），不能嵌套在 #page-copilot 内部。
-                 buildPage() 会对 #page-copilot 执行 innerHTML 重建聊天区骨架，若面板是其子节点会被一并清掉。
-                 copilot.js 的 mountStaticModelPane() 负责在初始化时把本面板 append 进右侧栏 .cop-right-panel-body。 -->
+                 位置约定：#page-copilot 为 .content 的直接子级，buildPage() 会在其上
+                 重建聊天区 + 右侧栏（文件 / 终端）骨架。 -->
             <div class="page" id="page-copilot"></div>
-
-            <div class="cop-pane" id="copModelPaneInline" data-pane="model">
-    <div class="cop-model-form">
-
-        <!-- ===== 说明条 ===== -->
-        <div class="cop-model-tip">
-            启用后，Copilot 通过 GooseHost 后端代理转发到你填写的 OpenAI 兼容接口
-            （DeepSeek / OpenAI 官方 API 均不开放浏览器 CORS，前端直连会被拦截，故必须经代理）。
-            配置（含 API Key）保存在本机浏览器 localStorage，仅在你发起对话时经本站后端转发，
-            不会公开暴露；清理浏览器数据或换设备需重新填写。
-        </div>
-
-        <!-- ===== 1. 模型提供商（原生 select，含 自定义服务）=====
-             设计原则：一个服务商 = 一个端点。
-             DeepSeek 只有一个端点，模型差异（Flash / Pro）放在下方「选择模型」区，
-             不在这里拆成两个 provider（避免出现 "DeepSeek Pro" 这种伪提供商）。
-             切到 OpenCode / 自定义服务 时，下方的 datalist 提示会随之切换。 -->
-        <label class="cop-field">
-            <span class="cop-field-label">模型提供商</span>
-            <div class="cop-select-wrap">
-                <select class="cop-input cop-select" id="copModelProvider">
-                    <option value="deepseek">DeepSeek</option>
-                    <option value="opencode-zen">OpenCode 免费端点</option>
-                    <option value="custom">自定义服务</option>
-                </select>
-                <span class="cop-select-arrow" aria-hidden="true">▾</span>
-            </div>
-            <span class="cop-field-hint" id="copProviderHint">选择服务商后将自动填入 Endpoint，只需再选模型、粘贴 API Key 即可。</span>
-        </label>
-
-        <!-- ===== 2. 选择模型（原生 select，按当前 provider 动态切换可选模型）=====
-             为什么不用 datalist：模型清单取决于所选 provider，原生 select 可直接由 JS 重写
-             options，且能明确区分「预置可选」与「自由输入」（accept 任意 OpenAI 兼容模型 ID）。
-             默认选中项由 PROVIDER_PRESETS[provider].model 决定。 -->
-        <label class="cop-field">
-            <span class="cop-field-label">选择模型</span>
-            <div class="cop-select-wrap">
-                <select class="cop-input cop-select" id="copModelId"></select>
-                <span class="cop-select-arrow" aria-hidden="true">▾</span>
-            </div>
-            <span class="cop-field-hint" id="copModelHint">也可直接输入任意 OpenAI 兼容的模型 ID。</span>
-        </label>
-
-        <!-- ===== 3. 填写 key ===== -->
-        <label class="cop-field">
-            <span class="cop-field-label">填写 key</span>
-            <input class="cop-input" id="copModelKey" type="password" placeholder="sk-..." autocomplete="new-password" spellcheck="false">
-            <span class="cop-field-hint">API Key 仅存于本机 localStorage，仅在你发送消息时经本站后端转发。</span>
-        </label>
-
-        <!-- ===== 4. 高级：自定义服务（仅 provider = custom 时显示）===== -->
-        <div class="cop-field cop-advanced" id="copAdvanced">
-            <span class="cop-field-label">高级：手动填写 Endpoint</span>
-            <input class="cop-input" id="copModelEndpoint" type="text" placeholder="https://api.openai.com/v1/chat/completions" autocomplete="off" spellcheck="false">
-            <span class="cop-field-hint">填完整请求地址（须含 /chat/completions）；可改为任意 OpenAI 兼容端点。</span>
-        </div>
-
-        <!-- ===== 5. 启用开关 ===== -->
-        <label class="cop-switch">
-            <input type="checkbox" id="copModelEnable">
-            <span>启用自定义模型（替代默认 GooseHost 模型）</span>
-        </label>
-
-        <!-- ===== 6. 状态行 ===== -->
-        <div class="cop-model-status" id="copModelStatus"></div>
-
-    </div>
-
-    <!-- ===== 底部操作栏：测试 · 启用 · 默认 ===== -->
-    <div class="cop-pane-foot">
-        <button class="cop-mini-btn" id="copModelTest" title="用一条最短消息验证连通性"><i class="fas fa-plug"></i> 测试</button>
-        <button class="cop-mini-btn cop-primary" id="copModelSave" title="保存并启用"><i class="fas fa-check"></i> 启用</button>
-        <button class="cop-mini-btn danger" id="copModelReset" title="恢复为默认模型"><i class="fas fa-rotate-left"></i> 默认</button>
-    </div>
-</div>
-            </div>
         </main>
+    </div>
+
+    <!-- ===== API 密钥：创建弹窗 ===== -->
+    <div id="tokenCreateModal" class="modal">
+        <div class="modal-content card" style="padding: 0; max-width: 560px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-key"></i> 新建 API 密钥</div>
+                <button class="modal-close" onclick="closeTokenCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">名称（可选，便于区分用途）</label>
+                    <input type="text" id="tokenName" class="form-input" maxlength="40"
+                           placeholder="例如：我的笔记本 CLI" autocomplete="off">
+                </div>
+                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); display: flex; align-items: center; gap: 0.3rem;">
+                    <i class="fas fa-info-circle"></i> 密钥长期有效，仅在此次创建后显示一次
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeTokenCreateModal()">取消</button>
+                <button class="btn btn-primary" id="tokenCreateBtn" onclick="createToken()">
+                    <i class="fas fa-plus"></i> 创建
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== API 密钥：明文展示（仅一次） ===== -->
+    <div id="tokenShowModal" class="modal">
+        <div class="modal-content card" style="padding: 0; max-width: 620px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-shield-alt"></i> 请立即保存你的密钥</div>
+                <button class="modal-close" onclick="closeTokenShowModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="padding: 0.6rem 0.75rem; border-radius: 8px; margin-bottom: 0.75rem;
+                            background: rgba(2,255,142,0.08); border: 1px solid rgba(2,255,142,0.25);
+                            font-size: 0.8rem; color: rgba(255,255,255,0.7); display: flex; gap: 0.4rem;">
+                    <i class="fas fa-exclamation-triangle" style="color:#02ff8e; margin-top:2px;"></i>
+                    <span>关闭后<b style="color:#02ff8e;">无法再次查看</b>完整密钥，遗失请吊销后重建。</span>
+                </div>
+                <div style="display:flex; gap:0.5rem; align-items:stretch;">
+                    <code id="tokenPlain" style="flex:1; min-width:0; padding:0.7rem 0.8rem; border-radius:8px;
+                          background:rgba(0,0,0,0.4); border:1px solid rgba(2,255,142,0.25);
+                          font-family:Consolas,'Courier New',monospace; font-size:0.85rem; color:#02ff8e;
+                          /* 单行显示：换行会把弹窗撑高，横向滚动只在窄屏才需要 */
+                          white-space:nowrap; overflow-x:auto; overflow-y:hidden;
+                          display:flex; align-items:center; user-select:all;
+                          scrollbar-width:thin;"></code>
+                    <button class="btn btn-sm" onclick="copyTokenPlain()" style="border:1px solid var(--border-focus); background:transparent; color:var(--accent); white-space:nowrap;">
+                        <i class="fas fa-copy"></i> 复制
+                    </button>
+                </div>
+                <div style="margin-top:0.9rem; font-size:0.78rem; color:rgba(255,255,255,0.45);">
+                    使用方式：
+                    <code style="display:block; margin-top:0.35rem; padding:0.5rem 0.65rem; border-radius:6px;
+                                 background:rgba(0,0,0,0.35); color:rgba(255,255,255,0.75); font-size:0.75rem;
+                                 white-space:nowrap; overflow-x:auto; scrollbar-width:thin;">
+                        Authorization: Bearer <span id="tokenPlainEcho" style="color:#02ff8e;"></span>
+                    </code>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeTokenShowModal()">我已保存</button>
+            </div>
+        </div>
     </div>
 
     <!-- 编辑弹窗 -->
@@ -578,19 +609,19 @@
                     <i class="fas fa-file-code"></i> 编辑文件
                     <span id="projFileTitle" style="color: #02ff8e; font-family: Consolas, monospace; font-size: 0.9rem; margin-left: 0.5rem;"></span>
                 </div>
-                <button class="modal-close no-ripple" onclick="closeProjFileModal()">&times;</button>
+                <button class="modal-close" onclick="closeProjFileModal()">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body modal-body--fill">
                 <input type="hidden" id="projFileSlug">
                 <input type="hidden" id="projFilePath">
-                <textarea id="projFileContent" placeholder="文件内容..." style="min-height: 380px; font-family: Consolas, 'Courier New', monospace; font-size: 0.85rem; line-height: 1.6; padding: 12px; width: 100%; background: rgba(0,0,0,0.35); border: 1px solid rgba(2,255,142,0.2); border-radius: 6px; color: #fff; resize: vertical;"></textarea>
-                <div id="projFileHint" style="margin-top: 0.5rem; font-size: 0.78rem; color: rgba(255,255,255,0.4); display: flex; align-items: center; gap: 0.3rem;">
+                <textarea id="projFileContent" placeholder="文件内容..." style="font-family: Consolas, 'Courier New', monospace; font-size: 0.85rem; line-height: 1.6; padding: 12px; width: 100%; background: rgba(0,0,0,0.35); border: 1px solid rgba(2,255,142,0.2); border-radius: 6px; color: #fff; resize: vertical;"></textarea>
+                <div id="projFileHint" style="flex:none; margin-top: 0.5rem; font-size: 0.78rem; color: rgba(255,255,255,0.4); display: flex; align-items: center; gap: 0.3rem;">
                     <i class="fas fa-info-circle"></i> 保存将覆盖原文件，单文件上限 200KB
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary no-ripple" onclick="closeProjFileModal()">取消</button>
-                <button class="btn btn-primary ripple-btn" id="projFileSaveBtn" onclick="saveProjFile()"><i class="fas fa-save"></i> 保存文件</button>
+                <button class="btn btn-secondary" onclick="closeProjFileModal()">取消</button>
+                <button class="btn btn-primary" id="projFileSaveBtn" onclick="saveProjFile()"><i class="fas fa-save"></i> 保存文件</button>
             </div>
         </div>
     </div>
@@ -602,9 +633,9 @@
                     <i class="fas fa-edit"></i> 编辑网站
                     <span id="edit-type-badge" class="type-tag" style="margin-left:8px;"></span>
                 </div>
-                <button class="modal-close no-ripple" onclick="closeModal()">&times;</button>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body modal-body--fill">
                 <input type="hidden" id="editSlug">
                 <input type="hidden" id="editType">
 
@@ -629,8 +660,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary ripple-btn" onclick="updateSite()"><i class="fas fa-save"></i> 保存修改</button>
-                <button class="btn btn-secondary no-ripple" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="updateSite()"><i class="fas fa-save"></i> 保存修改</button>
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
             </div>
         </div>
     </div>
@@ -653,6 +684,8 @@
 
     <div id="toast" class="toast"></div>
 
+    <script type="module" src="/squircle.js"></script>
+    <script src="/auth-session.js"></script>
     <script src="/dashboard/app.js"></script>
     <!-- 注意：不要在这里引 JSZip。它是同步 script，国内访问 jsdelivr 很慢，
          会阻塞整个面板渲染（连没改过的页面也一起遭殃）。
@@ -665,14 +698,14 @@
         <div class="dialog-card">
             <div class="dialog-header">
                 <div class="dialog-title"><i class="fas fa-exclamation-triangle"></i> 确认注销账号</div>
-                <button class="dialog-close no-ripple" onclick="closeDeleteModal()">&times;</button>
+                <button class="dialog-close" onclick="closeDeleteModal()">&times;</button>
             </div>
             <div class="dialog-body">
                 <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin-bottom:1rem;">
                     此操作将<strong style="color:var(--error);">永久删除</strong>你的账户、全部站点与存储文件，且<strong style="color:var(--error);">不可恢复</strong>。确定要继续吗？
                 </p>
                 <div id="deleteMsg" class="msg"></div>
-                <button id="deleteConfirmBtn" class="btn btn-danger ripple-btn" style="width:100%;justify-content:center;" onclick="deleteAccount()">
+                <button id="deleteConfirmBtn" class="btn btn-danger" style="width:100%;justify-content:center;" onclick="deleteAccount()">
                     <i class="fas fa-user-slash"></i> 我确定，注销
                 </button>
                 <button onclick="closeDeleteModal()" style="margin-top:0.5rem;w">

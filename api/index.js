@@ -12,6 +12,7 @@ import { handleMacosSubmit, handleMacosStatus } from './macos.js';
 import { handleForgotPassword } from './auth/forgot-password.js';
 import { handleResetPassword } from './auth/reset-password.js';
 import { handleDeleteAccount } from './auth/delete-account.js';
+import { handleListTokens, handleCreateToken, handleRevokeToken } from './auth/tokens.js';
 
 import { handleCreate } from './sites/create.js';
 import { handleUpdate } from './sites/update.js';
@@ -40,9 +41,12 @@ import {
   handleAdminPlayStats
 } from './admin/play.js';
 
+import { enforceApiKeyScope } from './utils/apikey-scope.js';
 import { handleDebugSyncEmails, handleDebugTestAuth } from './debug.js';
 
 import { handleAiChat } from './ai/chat.js';
+import { handleAiImage } from './ai/image.js';
+import { handleAiSearch } from './ai/search.js';
 
 import {
   handlePlayListPosts,
@@ -82,7 +86,7 @@ function makeHandler(inner) {
       // "CORS 头缺少 Access-Control-Allow-Origin"，把真实错误掩盖掉。
       // 生产响应体只返回 requestId，堆栈走日志查。
       const reqId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'n/a';
-      return jsonResp({ error: '服务端内部错误', requestId: reqId }, 500, getCorsHeaders(request));
+      return jsonResp({ error: '服务端内部错误', requestId: reqId }, 500, getCorsHeaders(request, env));
     }
   };
 }
@@ -91,7 +95,7 @@ export default {
     const url = new URL(request.url);
     const method = request.method;
     const pathParts = url.pathname.split('/').filter(Boolean);
-    const corsHeaders = getCorsHeaders(request);
+    const corsHeaders = getCorsHeaders(request, env);
 
     if (method === 'OPTIONS') {
       return new Response('', { status: 200, headers: corsHeaders });
@@ -139,6 +143,23 @@ export default {
       return await handleUpdateMe(request, env, corsHeaders);
     }
 
+    // === API Key 管理（需登录会话，不接受用 Key 自我增殖） ===
+
+    // GET /api/tokens - 列出当前账号的 API Key（仅脱敏串）
+    if (url.pathname === '/api/tokens' && method === 'GET') {
+      return await handleListTokens(request, env, corsHeaders);
+    }
+
+    // POST /api/tokens - 创建 API Key，明文仅本次返回
+    if (url.pathname === '/api/tokens' && method === 'POST') {
+      return await handleCreateToken(request, env, corsHeaders);
+    }
+
+    // DELETE /api/tokens/:id - 吊销 API Key
+    if (pathParts[0] === 'api' && pathParts[1] === 'tokens' && pathParts[2] && !pathParts[3] && method === 'DELETE') {
+      return await handleRevokeToken(request, env, corsHeaders, pathParts[2]);
+    }
+
     // POST /api/macos/submit - 提交站点到 macOS 开发者计划
     if (url.pathname === '/api/macos/submit' && method === 'POST') {
       return await handleMacosSubmit(request, env, corsHeaders);
@@ -164,6 +185,14 @@ export default {
       return await handleSignup(request, env, corsHeaders);  
     }
 
+    // === API Key 作用域闸门 ===
+    // 只拦截「用 gooseh- 密钥访问白名单外接口」的请求；登录会话不受影响。
+    // 放在这里（所有认证路由之前）是为了让新增接口默认拒绝，必须显式登记才放行。
+    {
+      const blocked = enforceApiKeyScope(request, env, corsHeaders, method, pathParts);
+      if (blocked) return blocked;
+    }
+
     // === 需要认证的路由 ===
 
     // POST /api/delete-account - 销号
@@ -174,6 +203,16 @@ export default {
     // POST /api/ai/chat - AI Copilot 转发（认证与限流在 handler 内）
     if (url.pathname === '/api/ai/chat' && method === 'POST') {
       return await handleAiChat(request, env, corsHeaders);
+    }
+
+    // POST /api/ai/search - 联网检索（供 Copilot 的 web_search 工具调用）
+    if (url.pathname === '/api/ai/search' && method === 'POST') {
+      return await handleAiSearch(request, env, corsHeaders);
+    }
+
+    // POST /api/ai/image - AI 生图转发（认证与限流在 handler 内）
+    if (url.pathname === '/api/ai/image' && method === 'POST') {
+      return await handleAiImage(request, env, corsHeaders);
     }
 
     // POST /api/create - 创建站点

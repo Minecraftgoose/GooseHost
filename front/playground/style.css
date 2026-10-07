@@ -3,7 +3,7 @@
 
 @font-face {
     font-family: 'DingTalk JinBuTi';
-    src: url('/fonts/DingTalk JinBuTi.ttf') format('truetype');
+    src: url('/fonts/DingTalkJinBuTi.woff2') format('woff2');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
@@ -140,7 +140,7 @@ body {
 .pg-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 32px;
     padding: 16px;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -184,7 +184,7 @@ body {
 .pg-post {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 32px;
     padding: 16px;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -219,11 +219,11 @@ body {
     margin-top: 12px; padding: 10px;
     background: rgba(0, 0, 0, 0.25);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 24px;
 }
 .pg-site-preview {
     width: 148px; min-height: 92px; flex-shrink: 0;
-    border-radius: 6px; overflow: hidden;
+    border-radius: 16px; overflow: hidden;
     background: rgba(255, 255, 255, 0.04);
     display: flex; align-items: center; justify-content: center;
     color: var(--text-3); font-size: 12px; text-align: center; padding: 6px;
@@ -306,7 +306,7 @@ body {
 /* ===== 详情 ===== */
 .pg-detail {
     background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 20px;
+    border-radius: 40px; padding: 20px;
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
 }
 .pg-back {
@@ -397,7 +397,7 @@ body {
 .pg-modal-box {
     width: 100%; max-width: 520px; max-height: 86vh;
     background: #141a18; border: 1px solid var(--border);
-    border-radius: 12px; display: flex; flex-direction: column;
+    border-radius: 40px; display: flex; flex-direction: column;
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
     animation: pgPop .22s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -426,7 +426,7 @@ body {
 .pg-site-options { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; }
 .pg-site-option {
     display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; border-radius: 8px; cursor: pointer;
+    padding: 10px 12px; border-radius: 20px; cursor: pointer;
     border: 1px solid var(--border); background: rgba(255, 255, 255, 0.03);
     transition: all .2s;
 }
@@ -447,7 +447,7 @@ body {
 .pg-load-more { text-align: center; }
 
 .pg-skeleton {
-    height: 128px; border-radius: var(--radius);
+    height: 128px; border-radius: 32px;
     background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 37%, rgba(255,255,255,0.04) 63%);
     background-size: 400% 100%;
     animation: pgShine 1.4s ease infinite;

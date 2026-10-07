@@ -115,9 +115,6 @@
             timer = setTimeout(scanViewport, 120);
         }, { passive: true });
     })();
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(function() {});
-    }
 
     // ----- 全站统计 -----
     (function() {

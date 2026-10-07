@@ -61,6 +61,36 @@
             copilot: '/dashboard/copilot'
         };
 
+        /**
+         * 进入部署页时，按当前选中的网站类型同步显示对应的输入区。
+         * 页面初次进入 / 从别的页切回来时，HTML / Markdown / 多文件三个输入区
+         * 的显示状态可能与单选框不一致（例如上次停留在 project 但面板已被重置），
+         * 这里统一按 :checked 重新对齐，避免「选了 MD 却显示 HTML 输入框」。
+         */
+        function updateEditorVisibility() {
+            // 以「高亮选中的类型卡片」为准；若没有高亮（首次进入）再看单选框。
+            const sel = document.querySelector('.type-option.selected input[name="siteType"]');
+            const checked = document.querySelector('.type-option input[name="siteType"]:checked');
+            const input = sel || checked;
+            const type = input ? input.value : 'html';
+
+            const groups = { html: 'html-input-group', md: 'md-input-group', project: 'project-input-group' };
+
+            Object.keys(groups).forEach(function (key) {
+                const group = document.getElementById(groups[key]);
+                if (group) group.style.display = (key === type) ? 'block' : 'none';
+            });
+
+            // 顺带把单选框与卡片高亮重新对齐，防止两者状态脱节
+            document.querySelectorAll('.type-option').forEach(function (opt) {
+                const radio = opt.querySelector('input[name="siteType"]');
+                if (!radio) return;
+                const on = radio.value === type;
+                radio.checked = on;
+                opt.classList.toggle('selected', on);
+            });
+        }
+
         function navigateTo(page) {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             const navItem = document.querySelector(`[data-page="${page}"]`);
@@ -80,6 +110,7 @@
             closeSidebar();
 
             if (page === 'sites') loadSites();
+            if (page === 'account') loadTokens();
             if (page === 'deploy') updateEditorVisibility();
 
             runPageTypewriter(page);
@@ -137,58 +168,94 @@
         document.addEventListener('DOMContentLoaded', parseRoute);
         if (document.readyState !== 'loading') parseRoute();
 
-        function closeSidebarOnMobile(event) {
-            if (window.innerWidth <= 768) {
-                const target = event.target;
-                const sidebar = document.getElementById('sidebar');
-                if (sidebar && sidebar.contains(target)) {
-                    return;
-                }
-                closeSidebar();
+        /* ===== 导航菜单展开/收起 =====
+           两种形态由「屏幕方向 + 宽度」决定，CSS 与 JS 用同一条查询，避免只改一边：
+
+           横屏（含手机横放，如 844x390）：菜单常驻导航栏横排。
+               → Logo 与三道杠 display:none，且按钮 disabled + aria-hidden，
+                 点击不触发任何逻辑，也不会被 Tab 聚焦。
+           竖屏（窄屏 + 纵向，如 390x844）：左侧 Logo、右侧三道杠，点击展开竖排下拉。
+
+           路由跳转处（navigateTo / showSiteDetail）会调用 closeSidebar()，保持兼容。 */
+        const NAV_PORTRAIT_MQ = window.matchMedia('(max-width: 768px) and (orientation: portrait)');
+        const isPortraitNav = () => NAV_PORTRAIT_MQ.matches;
+
+        /* 按当前方向同步 Logo / 三道杠 / 遮罩的可用状态。
+           横屏下按钮彻底失活（display:none 只管外观，disabled 才管交互）。 */
+        function syncNavMode() {
+            const portrait = isPortraitNav();
+            const btn = document.getElementById('menuToggle');
+            const logo = document.getElementById('navLogo');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            if (btn) {
+                btn.disabled = !portrait;
+                btn.setAttribute('aria-hidden', portrait ? 'false' : 'true');
+                btn.tabIndex = portrait ? 0 : -1;
             }
+            if (logo) logo.setAttribute('aria-hidden', portrait ? 'false' : 'true');
+            if (overlay && !portrait) overlay.classList.remove('active');
+            // 横屏菜单常驻，清掉可能残留的展开态
+            if (!portrait) {
+                const sb = document.getElementById('sidebar');
+                if (sb) sb.classList.remove('open');
+            }
+            if (btn) setMenuIcon(portrait && btn.getAttribute('aria-expanded') === 'true');
+        }
+
+        function setMenuIcon(open) {
+            const btn = document.getElementById('menuToggle');
+            if (!btn) return;
+            btn.innerHTML = open ? '<i class="fas fa-xmark"></i>' : '<i class="fas fa-bars"></i>';
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.setAttribute('aria-label', open ? '关闭菜单' : '打开菜单');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (overlay) overlay.classList.toggle('active', open && isPortraitNav());
         }
 
         function closeSidebar() {
             const sidebar = document.getElementById('sidebar');
-            sidebar.classList.remove('open');
-            if (window.innerWidth <= 768) {
-                sidebar.classList.remove('collapsed');
-            }
+            if (sidebar) sidebar.classList.remove('open');
+            setMenuIcon(false);
         }
 
+        /* 三道杠的点击入口：横屏直接短路，不产生任何展开状态 */
         function toggleSidebar() {
+            if (!isPortraitNav()) return;
             const sidebar = document.getElementById('sidebar');
-            if (sidebar.classList.contains('open')) {
-                closeSidebar();
-            } else {
-                sidebar.classList.add('open');
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.remove('collapsed');
-                }
-            }
+            if (!sidebar) return;
+            const open = !sidebar.classList.contains('open');
+            sidebar.classList.toggle('open', open);
+            setMenuIcon(open);
         }
 
-        function toggleSidebarDesktop() {
-            const sidebar = document.getElementById('sidebar');
-            const menuToggle = document.getElementById('menuToggle');
-            const content = document.querySelector('.content');
+        // 兼容旧调用名
+        function toggleSidebarDesktop() { toggleSidebar(); }
+        function toggleSidebarMobile() { toggleSidebar(); }
 
-            if (sidebar.classList.contains('collapsed')) {
-                sidebar.classList.remove('collapsed');
-                content.classList.remove('sidebar-collapsed');
-                menuToggle.innerHTML = '<i class="fas fa-outdent"></i>';
-            } else {
-                sidebar.classList.add('collapsed');
-                content.classList.add('sidebar-collapsed');
-                menuToggle.innerHTML = '<i class="fas fa-indent"></i>';
-            }
-        }
-
-        function toggleSidebarMobile() {
+        // 竖屏下：点击面板外 / 按 ESC 关闭
+        document.addEventListener('click', function (e) {
             const sidebar = document.getElementById('sidebar');
-            sidebar.classList.remove('collapsed');
-            sidebar.classList.toggle('open');
+            if (!sidebar || !sidebar.classList.contains('open')) return;
+            if (sidebar.contains(e.target)) return;
+            if (e.target.closest && e.target.closest('.menu-toggle')) return;
+            closeSidebar();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeSidebar();
+        });
+
+        // 方向 / 尺寸变化：重新同步模式，并清掉竖屏残留的展开态与遮罩
+        function onNavModeChange() { syncNavMode(); }
+        window.addEventListener('resize', onNavModeChange);
+        window.addEventListener('orientationchange', onNavModeChange);
+        if (NAV_PORTRAIT_MQ.addEventListener) {
+            NAV_PORTRAIT_MQ.addEventListener('change', onNavModeChange);
+        } else if (NAV_PORTRAIT_MQ.addListener) {
+            NAV_PORTRAIT_MQ.addListener(onNavModeChange);
         }
+        syncNavMode(); // 首屏立即按当前方向初始化
+        document.addEventListener('DOMContentLoaded', syncNavMode); // DOM 就绪后再对齐一次
 
         function showToast(msg, type = 'success') {
             const t = document.getElementById('toast');
@@ -201,6 +268,173 @@
             localStorage.removeItem('sb_token');
             localStorage.removeItem('sb_user');
             location.href = '/login/';
+        }
+
+        /* ================= API 密钥管理 =================
+           Key 形如 gooseh-<33位base58>，服务端只存 sha256 摘要，
+           明文仅在创建响应里返回一次 —— 所以这里必须提醒用户立刻保存。
+
+           注意：密钥的创建/吊销属于「账号管理」操作，必须走登录会话，
+           不允许用 API Key 自己管自己（后端也会拒绝）。
+           apiFetch 携带的是 sb_token，天然满足这一点。 */
+
+        const TOKEN_MAX = 20;
+
+        function tokenTime(iso) {
+            if (!iso) return '从未使用';
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return '从未使用';
+            const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+            if (diff < 60) return '刚刚';
+            if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前';
+            if (diff < 86400) return Math.floor(diff / 3600) + ' 小时前';
+            if (diff < 2592000) return Math.floor(diff / 86400) + ' 天前';
+            return d.toLocaleDateString('zh-CN');
+        }
+
+        function tokenEscape(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+        }
+
+        async function loadTokens() {
+            const box = document.getElementById('tokenList');
+            if (!box) return;
+            box.innerHTML = '<div style="font-size:0.8rem; color:rgba(255,255,255,0.35); padding:0.5rem 0;">'
+                + '<i class="fas fa-spinner fa-spin"></i> 载入中...</div>';
+            try {
+                const res = await apiFetch(API_URL + '/api/tokens');
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    box.innerHTML = '<div style="font-size:0.8rem; color:rgba(255,120,120,0.8); padding:0.5rem 0;">'
+                        + '<i class="fas fa-triangle-exclamation"></i> ' + tokenEscape(data.error || '载入失败') + '</div>';
+                    return;
+                }
+                const list = data.keys || [];
+                const cnt = document.getElementById('tokenCount');
+                if (cnt) cnt.textContent = list.length + ' / ' + TOKEN_MAX;
+                const btn = document.getElementById('createTokenBtn');
+                if (btn) btn.disabled = list.length >= TOKEN_MAX;
+
+                if (!list.length) {
+                    box.innerHTML = '<div style="font-size:0.8rem; color:rgba(255,255,255,0.35); padding:0.5rem 0;">'
+                        + '还没有 API 密钥。创建一个即可在 CLI 或脚本中长期调用，无需反复登录。</div>';
+                    return;
+                }
+                box.innerHTML = list.map(k => `
+                    <div class="token-item">
+                        <div class="token-item-main">
+                            <div class="token-item-name">
+                                <i class="fas fa-key"></i>
+                                ${tokenEscape(k.name || '未命名')}
+                            </div>
+                            <div class="token-item-meta">
+                                <code>${tokenEscape(k.masked || '')}</code>
+                                <span>·</span> 创建于 ${tokenTime(k.createdAt)}
+                                <span>·</span> 最近使用 ${tokenTime(k.lastUsedAt)}
+                            </div>
+                        </div>
+                        <button class="btn btn-danger btn-sm" onclick="revokeToken('${tokenEscape(k.id)}')">
+                            <i class="fas fa-trash"></i> 吊销
+                        </button>
+                    </div>`).join('');
+            } catch (e) {
+                box.innerHTML = '<div style="font-size:0.8rem; color:rgba(255,120,120,0.8); padding:0.5rem 0;">'
+                    + '<i class="fas fa-triangle-exclamation"></i> 网络错误</div>';
+            }
+        }
+
+        function showCreateTokenModal() {
+            const m = document.getElementById('tokenCreateModal');
+            const inp = document.getElementById('tokenName');
+            if (inp) inp.value = '';
+            if (m) m.classList.add('active');
+            setTimeout(() => inp && inp.focus(), 80);
+        }
+        function closeTokenCreateModal() {
+            const m = document.getElementById('tokenCreateModal');
+            if (m) m.classList.remove('active');
+        }
+
+        async function createToken() {
+            const btn = document.getElementById('tokenCreateBtn');
+            const nameEl = document.getElementById('tokenName');
+            const name = nameEl ? nameEl.value.trim() : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 创建中...'; }
+            try {
+                const res = await apiFetch(API_URL + '/api/tokens', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.key) {
+                    closeTokenCreateModal();
+                    showTokenPlain(data.key);
+                    await loadTokens();
+                } else {
+                    showToast(data.error || '创建失败', 'error');
+                }
+            } catch (e) {
+                showToast('网络错误', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> 创建'; }
+            }
+        }
+
+        function showTokenPlain(key) {
+            const m = document.getElementById('tokenShowModal');
+            const code = document.getElementById('tokenPlain');
+            const echo = document.getElementById('tokenPlainEcho');
+            if (code) code.textContent = key;
+            if (echo) echo.textContent = key;
+            if (m) m.classList.add('active');
+        }
+        function closeTokenShowModal() {
+            const m = document.getElementById('tokenShowModal');
+            if (m) m.classList.remove('active');
+        }
+
+        async function copyTokenPlain() {
+            const code = document.getElementById('tokenPlain');
+            const txt = code ? code.textContent : '';
+            if (!txt) return;
+            try {
+                await navigator.clipboard.writeText(txt);
+                showToast('已复制到剪贴板');
+            } catch (e) {
+                // 降级：老浏览器 / 非 HTTPS 环境
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = txt;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast('已复制到剪贴板');
+                } catch (e2) {
+                    showToast('复制失败，请手动选中', 'error');
+                }
+            }
+        }
+
+        async function revokeToken(id) {
+            if (!confirm('吊销后使用该密钥的程序将立即失效，且无法恢复。确定吊销？')) return;
+            try {
+                const res = await apiFetch(API_URL + '/api/tokens/' + encodeURIComponent(id), { method: 'DELETE' });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    showToast('已吊销');
+                    await loadTokens();
+                } else {
+                    showToast(data.error || '吊销失败', 'error');
+                }
+            } catch (e) {
+                showToast('网络错误', 'error');
+            }
         }
 
         function confirmDeleteAccount() {
@@ -627,80 +861,20 @@
                 btn.innerHTML = '<i class="fas fa-rocket"></i> 部署网站';
             }
         }
-        let refreshPromise = null;
+        /* ===== 会话续期与鉴权请求 =====
+           原本这里内联了一份 refreshSession / apiFetch，存在并发刷新踩踏：
+           Supabase 的 refresh_token 是一次性的（Rotation），并发刷新会让后来的
+           请求拿到 invalid_grant，旧代码随即删掉 sb_refresh_token，导致反复掉线。
+           现已统一收敛到 /auth-session.js（GHAuth），具备：
+             · 页面内 single-flight（并发合流，只发一次 refresh）
+             · 跨标签页锁 + BroadcastChannel（多标签页排队，不互相作废）
+             · 失败分类（网络/限流可重试，仅确认失效才登出）
+           下面保留同名函数指向 GHAuth，确保既有的 refreshSession / apiFetch 调用无损。 */
+        // 用函数声明而非 const 赋值：函数声明会提升，避免顶层代码出现 TDZ 报错
+        function refreshSession(force) { return GHAuth.refreshSession(force); }
+        function apiFetch(url, options) { return GHAuth.apiFetch(url, options); }
+        function jwtExpiry(token) { return GHAuth.jwtExpiry(token); }
 
-        function jwtExpiry(token) {
-            try {
-                const parts = token.split('.');
-                if (parts.length !== 3) return null;
-                const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-                const pad = '='.repeat((4 - (b64.length % 4)) % 4);
-                const binary = atob(b64 + pad);
-                const payload = JSON.parse(new TextDecoder().decode(new Uint8Array([...binary].map(c => c.charCodeAt(0)))));
-                return payload.exp ? payload.exp * 1000 : null;
-            } catch { return null; }
-        }
-
-        async function refreshSession() {
-            const rt = localStorage.getItem('sb_refresh_token');
-            if (!rt) return false;
-            try {
-                const res = await fetch(API_URL + '/auth/refresh', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ refresh_token: rt })
-                });
-                const data = await res.json();
-                if (res.ok && data.access_token) {
-                    localStorage.setItem('sb_token', data.access_token);
-                    if (data.refresh_token) localStorage.setItem('sb_refresh_token', data.refresh_token);
-                    if (data.user) localStorage.setItem('sb_user', JSON.stringify(data.user));
-                    return true;
-                }
-                localStorage.removeItem('sb_refresh_token');
-                return false;
-            } catch {
-                return false;
-            }
-        }
-
-        async function apiFetch(url, options = {}) {
-            const cur = localStorage.getItem('sb_token');
-            const exp = cur ? jwtExpiry(cur) : null;
-            if (cur && exp && (exp - Date.now() < 5 * 60 * 1000)) {
-                await refreshSession();
-            }
-            const latest = localStorage.getItem('sb_token');
-            const hdr = new Headers(options.headers || {});
-            if (latest) hdr.set('Authorization', 'Bearer ' + latest);
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 15000);
-            try {
-                let res = await fetch(url, { ...options, headers: hdr, signal: controller.signal });
-                if (res.status === 401 && localStorage.getItem('sb_refresh_token')) {
-                    const ok = await refreshSession();
-                    if (ok) {
-                        const nt = localStorage.getItem('sb_token');
-                        const hdr2 = new Headers(options.headers || {});
-                        if (nt) hdr2.set('Authorization', 'Bearer ' + nt);
-                        res = await fetch(url, { ...options, headers: hdr2, signal: controller.signal });
-                    }
-                }
-                clearTimeout(timeout);
-                if (res.status === 401) {
-                    localStorage.removeItem('sb_token');
-                    localStorage.removeItem('sb_user');
-                    localStorage.removeItem('sb_refresh_token');
-                    location.href = '/login/';
-                    throw new Error('Unauthorized');
-                }
-                return res;
-            } catch (e) {
-                clearTimeout(timeout);
-                if (e.name === 'AbortError') throw new Error('请求超时');
-                throw e;
-            }
-        }
 
         function escapeHtml(str) {
             if (!str) return '';
@@ -1276,18 +1450,11 @@
             ripple.addEventListener('animationend', () => ripple.remove());
         }
 
+        // 水波纹仅保留在左侧边栏导航项（.nav-item）上，其余按钮不再产生波纹
         document.addEventListener('click', function(e) {
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-                const btn = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
-                if (!btn.classList.contains('no-ripple')) {
-                    createRipple({ currentTarget: btn });
-                }
-            }
-            if (e.target.classList.contains('nav-item') || e.target.closest('.nav-item')) {
-                const nav = e.target.classList.contains('nav-item') ? e.target : e.target.closest('.nav-item');
-                if (!nav.classList.contains('no-ripple')) {
-                    createRipple({ currentTarget: nav });
-                }
+            const nav = e.target && e.target.closest ? e.target.closest('.nav-item') : null;
+            if (nav && !nav.classList.contains('no-ripple')) {
+                createRipple({ currentTarget: nav, clientX: e.clientX, clientY: e.clientY });
             }
         });
 
@@ -1414,6 +1581,3 @@
 
         loadSites();
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(function() {});
-        }

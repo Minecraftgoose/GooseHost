@@ -4,183 +4,276 @@
 
 > **基础 URL**：`https://page.goose.cc.cd`
 > **响应格式**：JSON（UTF-8）
-> **认证方式**：Bearer Token
-> **最后更新** : 2026/8/20
+> **认证方式**：`Authorization: Bearer <API 密钥>`（`gooseh-` 前缀）
+> **最后更新** : 2026/10/6
 
 ---
 
-## 1. 认证与账号
+## 1. 认证
 
-### 1.1 用户登录
+GooseHost API 使用 **API 密钥** 认证。密钥长期有效、不过期、不轮换，
+适用于 CLI、CI、脚本等无人值守场景。
 
-**端点**：`POST /auth/login`
+### 1.1 获取密钥
 
-**请求体**：
+密钥只能在网页端创建：
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| email | string | 是 | 注册邮箱 |
-| password | string | 是 | 密码 |
+1. 登录 [GooseHost 控制台](https://host.goose.cc.cd/)
+2. 进入 **账户** 页面
+3. 在「API 密钥」卡片中点击 **新建密钥**
 
-**限流**：每 IP 每 60 秒 **20** 次。
+> 创建时明文只显示一次，关闭弹窗后无法再次查看完整内容。
+> 遗失请吊销后重新创建。
 
-**成功响应（200）**：
+### 1.2 密钥格式
 
-```json
-{
-  "access_token": "eyJ...",
-  "token_type": "bearer",
-  "expires_in": 3600,
-  "refresh_token": "def...",
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "nickname": "大鹅"
-  }
-}
+```
+gooseh-<33 位 base58 字符>
 ```
 
-**错误示例**：
+示例：`gooseh-3C4oW5TsKpQr7XvN2mHd9LzYbAFgE1uGm`（共 40 字符）
 
-- `400`：`{"error":"邮箱或密码格式不正确"}`
-- `429`：`{"error":"请求过于频繁，请在 X 秒后重试","retryAfter":X}`
+| 特性 | 说明 |
+|------|------|
+| 字符表 | base58，剔除 `0`、`O`、`I`、`l`，避免抄写与肉眼核对时的歧义 |
+| 服务端存储 | **只存 SHA-256 摘要**，不保存明文，泄露风险可控 |
+| 前缀识别 | 服务端按 `gooseh-` 前缀自动识别，与请求路径无关 |
 
----
+### 1.3 使用方式
 
-### 1.2 刷新 Token
+放在 `Authorization` 请求头里：
 
-**端点**：`POST /auth/refresh`
-
-**请求体**：
-
-| 字段 | 类型 | 必填 |
-|------|------|------|
-| refresh_token | string | 是 |
-
-**响应**：同登录成功响应，返回新的 `access_token` 和 `refresh_token`。
-
----
-
-### 1.3 用户注册
-
-**端点**：`POST /api/register`
-
-**请求体**：
-
-| 字段 | 类型 | 校验规则 |
-|------|------|----------|
-| email | string | 符合邮箱格式；禁止临时邮箱（黑名单含数百个域名，如 `mailinator.com`、`10minutemail.com` 等） |
-| password | string | 至少 6 个字符 |
-| nickname | string | 长度 2~20；仅允许中英文、数字、空格、`_`、`-`（正则：`/^[一-龥a-zA-Z0-9_ \-]+$/`） |
-
-**限流**：
-
-- 每 IP 每小时 **5** 次（`reg_ip`），超限锁定 1 小时。
-- 全局创建类限流：每 IP 每 60 秒 **2** 次，超限锁定 10 分钟。
-
-**成功响应（200）**：
-
-```json
-{
-  "success": true,
-  "message": "验证邮件已发送，请查收"
-}
+```bash
+curl https://page.goose.cc.cd/api/my-sites \
+  -H "Authorization: Bearer gooseh-3C4oW5TsKpQr7XvN2mHd9LzYbAFgE1uGm"
 ```
 
-**常见错误**：
+JavaScript 示例：
 
-- `{"error":"昵称不能为空"}`
-- `{"error":"昵称长度需为 2-20 个字符"}`
-- `{"error":"暂不支持该临时邮箱，请使用真实邮箱"}`
-- `{"error":"邮箱格式不正确"}`
+```js
+const res = await fetch('https://page.goose.cc.cd/api/my-sites', {
+  headers: { Authorization: 'Bearer gooseh-3C4oW5TsKpQr7XvN2mHd9LzYbAFgE1uGm' }
+});
+```
+
+**跨域（CORS）**
+
+本 API **允许任意来源跨域调用**，响应头为 `Access-Control-Allow-Origin: *`。
+你可以从任何域名、本地 `localhost`、或第三方集成页面直接用浏览器调接口，
+无需登记来源白名单。
+
+```http
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization
+Access-Control-Expose-Headers: X-Copilot-Model, X-Copilot-Key, X-Copilot-Fallback, X-Copilot-Elapsed, Retry-After
+```
+
+> ⚠️ **在浏览器里用要三思**：网页中的 JS 能看到你写进去的密钥。
+> 只在**你自己控制的页面**这么做；公开站点请把调用放在服务端（Node / PHP / 云函数），
+> 密钥只留在服务端环境变量里。
+
+**安全建议**
+
+- 按密码等级保管，**不要提交进公开仓库**
+- 为不同用途创建不同密钥（如「笔记本 CLI」「GitHub Actions」），便于单独吊销
+- 怀疑泄露立即吊销，吊销后立即生效
 
 ---
 
-### 1.4 获取当前用户信息
+### 1.4 校验密钥
 
-**端点**：`GET /api/me`（需登录）
+**端点**：`GET /api/me`
 
-**响应（200）**：
+用一条请求确认手上的密钥是否有效：
+
+```bash
+curl https://page.goose.cc.cd/api/me \
+  -H "Authorization: Bearer gooseh-3C4oW5TsKpQr7XvN2mHd9LzYbAFgE1uGm"
+```
+
+**响应（200）**
 
 ```json
 {
   "id": "uuid",
   "email": "user@example.com",
-  "nickname": "大鹅"
+  "nickname": "大鹅",
+  "authType": "api_key"
 }
 ```
 
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | string | 用户 UUID |
+| email | string | 注册邮箱 |
+| nickname | string | 昵称，未设置时为空字符串 |
+| authType | string | 凭证类型，使用密钥时恒为 `api_key` |
+
+**错误响应**
+
+- `401`：`{"error":"Unauthorized"}` —— 密钥无效或已被吊销
+
+> ⚠️ **兼容性提醒**：`authType` 为后加字段。
+> 若客户端做**严格 schema 校验**（如 zod `.strict()`、OpenAPI `additionalProperties: false`），
+> 请显式允许该字段。后续新增字段不会移除既有字段，属向后兼容变更。
+
 ---
 
-### 1.5 修改昵称
+### 1.5 密钥列表
 
-**端点**：`PUT /api/me`（需登录）
+**端点**：`GET /api/tokens`
 
-**请求体**：`{ "nickname": "新昵称" }`
-**校验**：同注册。
+> ⚠️ **不能用密钥管理密钥**。管理类接口只接受网页端会话，
+> 携带 `gooseh-` 密钥访问将返回 `403` —— 防止凭证泄露后被用来自我增殖。
 
-**限流**：每 IP 每 60 秒 **20** 次。
+**响应（200）**
 
-**成功响应**：`{"success": true, "nickname": "新昵称"}`
+```json
+{
+  "keys": [
+    {
+      "id": "kid_01HXYZ...",
+      "name": "笔记本 CLI",
+      "masked": "gooseh-3C4oW5Ts…uGmr",
+      "createdAt": 1760000000000,
+      "lastUsedAt": 1760001234000
+    }
+  ],
+  "max": 20
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| id | 密钥 ID，吊销时使用 |
+| name | 创建时的备注名 |
+| masked | 脱敏显示，**仅用于辨认，不能用于请求** |
+| createdAt | 创建时间戳（毫秒） |
+| lastUsedAt | 最近使用时间，`null` 表示从未使用 |
 
 ---
 
-### 1.6 忘记密码（发送重置邮件）
+### 1.6 创建密钥
 
-**端点**：`POST /api/forgot-password`（**无需登录**）
+**端点**：`POST /api/tokens`
 
-**请求体**：`{ "email": "user@example.com" }`
+**请求体**
 
-**限流**：
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| name | string | 否 | 备注名，≤ 40 字符，留空为「未命名」 |
 
-- 每 IP 每小时 **5** 次。
-- 每邮箱每小时 **3** 次。
-
-**成功响应（200）**（无论邮箱是否存在）：
+**成功响应（200）**
 
 ```json
 {
   "success": true,
-  "message": "如果该邮箱已注册，重置链接已发送，请查收垃圾邮件"
+  "key": "gooseh-3C4oW5TsKpQr7XvN2mHd9LzYbAFgE1uGm",
+  "token": {
+    "id": "kid_01HXYZ...",
+    "name": "笔记本 CLI",
+    "masked": "gooseh-3C4oW5Ts…uGmr",
+    "createdAt": 1760000000000
+  },
+  "hint": "请立即保存，此密钥仅显示一次"
 }
 ```
 
+> `key` 字段是**唯一一次**返回明文的机会，之后无法再次获取。
+
+**常见错误**
+
+- `400`：`{"error":"每个账号最多创建 20 个 API Key"}`
+- `400`：`{"error":"名称不能超过 40 个字符"}`
+- `403`：`{"error":"创建 API Key 需使用登录会话"}` —— 用了密钥访问
+- `429`：`{"error":"请求过于频繁，请稍后重试"}`
+- `503`：`{"error":"API 密钥服务未配置"}`
+
 ---
 
-### 1.7 重置密码
+### 1.7 吊销密钥
 
-**端点**：`POST /api/reset-password`（**无需登录**）
+**端点**：`DELETE /api/tokens/<key_id>`
 
-**请求体**：
+**成功响应（200）**
 
-| 字段 | 类型 | 说明 |
+```json
+{ "success": true }
+```
+
+**常见错误**
+
+- `404`：密钥不存在，或不属于当前用户（**不区分**，避免探测他人密钥）
+- `403`：`{"error":"吊销 API Key 需使用登录会话"}` —— 用了密钥访问
+
+吊销后该密钥**立即失效**，用它发起的请求将返回 `401`。
+
+---
+
+### 1.8 密钥的能力边界
+
+密钥**只开放站点管理与文件操作**，其余接口一律 `403`。
+采用**白名单**而非黑名单：**新增接口默认拒绝**，必须显式登记才放行。
+
+**✅ 允许（CLI / CI 核心用途）**
+
+| 操作 | 端点 |
+|------|------|
+| 校验密钥 | `GET /api/me` |
+| 站点列表 | `GET /api/my-sites` |
+| 创建 / 更新 / 删除站点 | `POST /api/create`、`/api/update`、`/api/delete` |
+| 读取站点内容 | `GET /api/file/:slug`、`/api/site-files/:slug` |
+| 多文件站点读写删 | `GET` `PUT` `DELETE /api/proj-file/:slug/:path` |
+| 广场只读 | `GET /api/play/posts`、`/api/play/me`、`/api/play/feed` 等 |
+| macOS 审核状态 | `GET /api/macos/status` |
+
+**❌ 拒绝（返回 403）**
+
+| 操作 | 端点 | 原因 |
 |------|------|------|
-| token | string | 邮件链接中的 `access_token` 参数（JWT） |
-| password | string | 新密码，至少 6 位 |
+| **AI Copilot** | `POST /api/ai/chat` | **按量计费**，开放等于把模型额度公开，本服务会变成免费 AI 中转站 |
+| **AI 生图** | `POST /api/ai/image` | 同上，按量计费 |
+| **AI 联网检索** | `POST /api/ai/search` | 同上，按量计费（Tavily 额度） |
+| 广场发帖 / 评论 / 点赞 / 关注 | `POST /api/play/*` 写操作 | 以你名义的社交行为，且易被脚本刷 |
+| 修改昵称 | `PUT /api/me` | 账号设置 |
+| 注销账号 | `POST /api/delete-account` | 不可逆 |
+| 管理密钥本身 | `/api/tokens` | 防止凭证自我增殖 |
+| 提交 macOS 审核 | `POST /api/macos/submit` | 以你名义提交申请 |
+| 管理员接口 | `/api/admin/*` | 需管理员身份，与密钥无关 |
 
-**限流**：每 IP 每小时 **10** 次。
+**403 响应示例**
 
-**成功响应**：`{"success": true}`
+```json
+{
+  "error": "该接口不支持 API 密钥，请使用登录会话",
+  "hint": "API 密钥仅用于站点管理与文件操作；AI Copilot、广场互动、账号设置需登录后操作"
+}
+```
 
-**失败响应**：`{"error":"重置失败，链接可能已过期"}`（400）
+> 设计原则：密钥用于**资源操作**，不用于**花钱的、以你名义的、账号级的**操作。
 
 ---
 
-### 1.8 注销账号
+### 1.9 限制一览
 
-**端点**：`POST /api/delete-account`（需登录）
-
-**操作**：永久删除该用户及其所有站点（含存储文件），不可逆。
-
-**限流**：每 IP 每小时 **3** 次。
-
-**成功响应**：`{"success": true}`
+| 项目 | 限制 |
+|------|------|
+| 每账号密钥数量 | **20** 个 |
+| 有效期 | 不过期，仅手动吊销 |
+| 吊销生效 | 立即（KV 删除后数秒内全网生效） |
+| 管理接口限流 | 每 IP 每 60 秒 **10** 次 |
+| 单密钥权限 | 单一全权限，等价于账号本身 |
 
 ---
 
-## 2. 网站管理（需登录）
+## 2. 网站管理
 
-所有接口需携带 `Authorization: Bearer <access_token>`。
+所有接口需携带 API 密钥：
+
+```
+Authorization: Bearer gooseh-3C4oW5TsKpQr7XvN2mHd9LzYbAFgE1uGm
+```
 
 ### 2.1 通用规则
 
@@ -333,7 +426,7 @@
 
 ## 3. 多文件站点（Project）操作
 
-以下接口仅适用于 `type = "project"` 的站点，需要登录。
+以下接口仅适用于 `type = "project"` 的站点，需携带 API 密钥。
 
 ### 3.1 获取文件列表
 
@@ -457,8 +550,8 @@
 |--------|------|
 | 200 | 成功 |
 | 400 | 参数错误（字段缺失、格式非法、文件超限等） |
-| 401 | 未登录或 Token 无效 |
-| 403 | 无权限（非所有者） |
+| 401 | API 密钥无效或已被吊销 |
+| 403 | 无权限（非所有者，或该接口不接受 API 密钥） |
 | 404 | 资源不存在 |
 | 409 | Slug 已被占用 |
 | 429 | 触发限流（响应体含 `retryAfter` 秒数） |
@@ -470,13 +563,12 @@
 |------|------|
 | `/api/register` | 每 IP 每小时 5 次（锁定 1 小时） |
 | `/api/create` | 每 IP 每 60 秒 2 次（锁定 10 分钟） |
-| `/auth/login` | 每 IP 每 60 秒 20 次 |
-| `/auth/refresh` | 每 IP 每 60 秒 100 次 |
 | `/api/update` | 每 IP 每 60 秒 10 次 |
 | `/api/me` (PUT) | 每 IP 每 60 秒 20 次 |
 | `/api/forgot-password` | IP 每小时 5 次 + 邮箱每小时 3 次 |
 | `/api/reset-password` | 每 IP 每小时 10 次 |
 | `/api/delete-account` | 每 IP 每小时 3 次 |
+| `/api/tokens` | 每 IP 每 60 秒 10 次 |
 | `/api/file` (GET) | 每 IP 每 10 秒 10 次 |
 | 其他 GET 接口 | 每 IP 每 60 秒 100 次 |
 
@@ -486,7 +578,33 @@
 
 - **时区**：所有时间戳为 UTC（ISO 8601）。
 - **Slug 唯一性**：三种站点类型共享同一命名空间。
+- **认证**：所有需授权的接口统一使用 `gooseh-` API 密钥，
+  见 [第 1 章](#1-认证)。
+- **密钥权限**：单一全权限，等价于账号本身，请按密码等级保管；
+  能力边界见 [1.8 密钥的能力边界](#18-密钥的能力边界)。
+- **跨域**：允许任意来源，浏览器可直接调用，见 [1.3 使用方式](#13-使用方式)。
 
+
+## 附录 A：账号管理
+
+注册、修改昵称、重置密码、注销账号等账号类操作 **在网页端完成**，
+不提供 API 接口，也不接受 API 密钥调用。
+
+| 操作 | 位置 |
+|------|------|
+| 注册账号 | [GooseHost 注册页](https://host.goose.cc.cd/register/index.html) |
+| 修改昵称 / 创建密钥 / 注销账号 | 控制台 → 账户页 |
+| 忘记密码 | 登录页 → 忘记密码，通过邮件重置 |
+
+注册校验规则（供参考）：
+
+| 字段 | 规则 |
+|------|------|
+| email | 符合邮箱格式；禁止临时邮箱（黑名单含数百个域名，如 `mailinator.com`、`10minutemail.com`） |
+| password | 至少 6 个字符 |
+| nickname | 长度 2~20；仅允许中英文、数字、空格、`_`、`-` |
+
+---
 
 <footer style="text-align: center; color: #888; font-size: 14px; padding: 20px 0; border-top: 1px solid #ddd;">
   <p>© 2026 GooseHost. </p>

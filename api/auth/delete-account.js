@@ -1,11 +1,17 @@
 // ===== 注销账号 =====
 
-import { getUserId } from '../utils/jwt.js';
+import { getUserId, isApiKeyRequest } from '../utils/jwt.js';
 import { checkRateLimit } from '../utils/rate-limit.js';
 import { makeSupabase } from '../utils/supabase.js';
 import { jsonResp } from '../utils/response.js';
 
 export async function handleDeleteAccount(request, env, corsHeaders) {
+  // 销号是不可逆操作：一枚落到 CI 里的 API 密钥不该具备抹掉整个账号的能力。
+  // 这里与「修改昵称」保持一致 —— 账号级危险操作必须回到登录会话下确认。
+  if (isApiKeyRequest(request)) {
+    return jsonResp({ error: '注销账号需使用登录会话' }, 403, corsHeaders);
+  }
+
   const userId = await getUserId(request, env);
   if (!userId) return jsonResp({ error: 'Unauthorized' }, 401, corsHeaders);
 

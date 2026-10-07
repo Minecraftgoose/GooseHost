@@ -42,6 +42,31 @@
     <meta name="twitter:description" content="免费的静态网站托管平台，支持 HTML 上传，一键部署，全球 CDN 加速。" />
 
     <title>GooseHost - 静态网站托管</title>
+    <!--
+      Service Worker 自愈脚本（必须内联）
+      本站未部署 sw.js，但历史版本可能注册过残留的 Service Worker。
+      它会拦截 /dashboard/app.js、字体、JS 等请求并报未知错误，
+      导致 app.js 整体加载失败 → 内联 onclick 报 navigateTo is not defined。
+      这段代码不能放进 app.js：app.js 本身正是被 SW 阻断的那个资源，
+      写在里面永远执行不到。因此内联在 head 里，先注销再重载一次自愈。
+    -->
+    <script>
+    (function () {
+        if (!('serviceWorker' in navigator) || !navigator.serviceWorker.getRegistrations) return;
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+            if (!regs || !regs.length) return;
+            Promise.all(regs.map(function (r) {
+                try { return r.unregister(); } catch (e) { return Promise.resolve(); }
+            })).then(function () {
+                var flag = 'sw-cleanup-reloaded';
+                if (sessionStorage.getItem(flag)) return;   // 只重载一次，避免死循环
+                sessionStorage.setItem(flag, '1');
+                try { location.reload(); } catch (e) {}
+            });
+        }).catch(function () {});
+    })();
+    </script>
+
 
     <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
@@ -320,6 +345,7 @@
 
     </div>
 
+<script type="module" src="/squircle.js"></script>
 <script src="app.js"></script>
 <script src="flag-dots.js"></script>
 </body>

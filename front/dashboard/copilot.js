@@ -2,73 +2,139 @@
     'use strict';
     var API_FALLBACK = 'https://page.goose.cc.cd';
 
-    var CUSTOM_MODEL_KEY = 'cop_custom_model_v1';
-    var customModel = loadCustomModel();
-
-    function loadCustomModel() {
-        try {
-            var o = JSON.parse(localStorage.getItem(CUSTOM_MODEL_KEY) || 'null') || {};
-            return {
-                enabled: !!o.enabled,
-                endpoint: String(o.endpoint || '').trim(),
-                apiKey: String(o.apiKey || '').trim(),
-                model: String(o.model || '').trim()
-            };
-        } catch (e) {
-            return { enabled: false, endpoint: '', apiKey: '', model: '' };
-        }
-    }
-    function saveCustomModel(cfg) {
-        customModel = {
-            enabled: !!cfg.enabled,
-            endpoint: String(cfg.endpoint || '').trim(),
-            apiKey: String(cfg.apiKey || '').trim(),
-            model: String(cfg.model || '').trim()
-        };
-        try {
-            var persisted = {
-                enabled: customModel.enabled,
-                endpoint: customModel.endpoint,
-                apiKey: customModel.apiKey,
-                model: customModel.model
-            };
-            localStorage.setItem(CUSTOM_MODEL_KEY, JSON.stringify(persisted));
-        } catch (e) { }
-        return customModel;
-    }
-    // ⚠️ 已移除「自动补全 /chat/completions」（2026-09）。
-    // 原因：一键接入 / 自定义模型一律走后端代理转发，URL 由【用户填写的完整地址】
-    // 决定，后端不再做任何路径假设。前端只负责：去空格、去尾斜杠、原样透传。
-    // 这样用户填第三方网关（/api/v1/chat、/completions、带子路径代理）都能正常工作，
-    // 不会被强制改成 .../chat/completions 而报错。
-    function normalizeEndpoint(v) {
-        return String(v || '').trim().replace(/\/+$/, '');
-    }
-    function customModelReady() {
-        return !!(customModel.enabled && customModel.endpoint && customModel.apiKey);
-    }
+    // 统一走后端代理 /api/ai/chat：模型与 API Key 一律由服务端（AI_API_KEYS /
+    // AI_PROVIDER / AI_MODEL 等环境变量）配置，前端不再支持自定义 endpoint / apiKey / model。
     function chatEndpoint() {
-        // 自定义模型一律走后端代理 /api/ai/chat：DeepSeek / OpenAI 官方 API 不开放
-        // 浏览器 CORS（预检 OPTIONS 返回 403，无 Access-Control-Allow-Origin），
-        // 前端直连会被浏览器拦截，故由后端透传 endpoint / apiKey。
-        if (customModelReady()) {
-            if (window.COPILOT_CHAT_URL) return window.COPILOT_CHAT_URL;
-            var base = (window.API_URL || API_FALLBACK).replace(/\/$/, '');
-            return base + '/api/ai/chat';
-        }
         if (window.COPILOT_CHAT_URL) return window.COPILOT_CHAT_URL;
-        var base2 = (window.API_URL || API_FALLBACK).replace(/\/$/, '');
-        return base2 + '/api/ai/chat';
+        var base = (window.API_URL || API_FALLBACK).replace(/\/$/, '');
+        return base + '/api/ai/chat';
     }
-    function buildChatBody(messages, stream) {
-        var body = { messages: messages, tools: TOOLS, temperature: 0.3 };
-        if (customModelReady()) {
-            // 一键接入：把用户的 endpoint / apiKey 随请求体带给后端代理转发。
-            // endpoint 原样透传（已移除自动补全），后端按「完整地址优先」处理。
-            if (customModel.endpoint) body.endpoint = customModel.endpoint.trim().replace(/\/+$/, '');
-            if (customModel.apiKey) body.apiKey = customModel.apiKey;
-            if (customModel.model) body.model = customModel.model;
+    /* ===== 引擎 / 模型选择器 =====
+       两套引擎：
+         · goose —— 原有 GooseHost Copilot，带建站工具链，服务端默认 provider
+         · agnes —— 外部融合模型，支持联网检索、深度思考、生图
+       前端只发「引擎标识 + 模型名」，Key 全在后端环境变量里，永不外泄。 */
+    /* ===== 模型（唯一需要用户选的东西）=====
+       能力不再按引擎割裂：联网检索与深度思考由服务端默认开启（换哪个模型都有），
+       生图与建站一样是「工具」，由模型自己判断要不要调。
+       所以这里只描述模型本身，不再有 caps / 模式 / 开关。 */
+    var ENGINES = [
+        { id: 'goose',       label: 'GooseHost Copilot', provider: null,    model: null,              tools: true },
+        { id: 'agnes-flash', label: 'Agnes Flash',      provider: 'agnes', model: 'agnes-2.5-flash', tools: true },
+        { id: 'agnes-pro',   label: 'Agnes Pro',        provider: 'agnes', model: 'agnes-2.5-pro',   tools: true }
+    ];
+    var ENGINE_KEY = 'cop_engine_v1';
+    var currentEngine = ENGINES[0];
+
+    function loadEnginePref() {
+        try {
+            var id = localStorage.getItem(ENGINE_KEY);
+            var found = ENGINES.filter(function (e) { return e.id === id; })[0];
+            if (found) currentEngine = found;
+        } catch (e) { }
+    }
+    function saveEnginePref() {
+        try { localStorage.setItem(ENGINE_KEY, currentEngine.id); } catch (e) { }
+    }
+    function isAgnes() { return currentEngine.provider === 'agnes'; }
+
+    /* ===== 模型选择器 UI =====
+       位置：输入框上方（原「赞美Minecraft_goose」chip 所在的那一行）。
+       收起时是一个 chip，展开为面板：引擎列表 + 能力开关。 */
+    function mountModelPicker() {
+        var wrap = document.getElementById('copInputWrap') || document.querySelector('.cop-input-wrap');
+        var bar = document.getElementById('copQuick');
+        if (!wrap || !bar) return;
+
+        // 收起态 chip
+        var chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'cop-tool-chip cop-model-chip';
+        chip.id = 'copModelChip';
+        bar.insertBefore(chip, bar.firstChild);
+
+        // 展开面板
+        var panel = document.createElement('div');
+        panel.className = 'cop-model-panel';
+        panel.id = 'copModelPanel';
+        panel.style.display = 'none';
+        bar.parentNode.insertBefore(panel, bar.nextSibling);
+
+        function renderChip() {
+            chip.innerHTML = '<i class="fas fa-cube"></i> '
+                + esc(currentEngine.label) + ' <span class="cop-model-caret">▾</span>';
+            chip.setAttribute('aria-expanded', panel.style.display === 'none' ? 'false' : 'true');
         }
+        function renderPanel() {
+            var list = ENGINES.map(function (e) {
+                var on = e.id === currentEngine.id;
+                return '<button type="button" class="cop-model-item' + (on ? ' active' : '') + '" data-engine="' + esc(e.id) + '">'
+                    + '<span class="cop-model-dot"></span>'
+                    + '<span class="cop-model-name">' + esc(e.label) + '</span>'
+                    + (on ? '<span class="cop-model-check"><i class="fas fa-check"></i></span>' : '')
+                    + '</button>';
+            }).join('');
+
+            panel.innerHTML = '<div class="cop-model-title">选择模型</div>' + list;
+
+            Array.prototype.forEach.call(panel.querySelectorAll('.cop-model-item'), function (b) {
+                b.onclick = function (ev) {
+                    // 必须阻止冒泡：下面 renderPanel() 会重建 innerHTML，
+                    // 令 e.target 脱离文档，document 上的「点击别处收起」判断
+                    // panel.contains(e.target) 就会变成 false，导致刚选完就被关掉。
+                    if (ev && ev.stopPropagation) ev.stopPropagation();
+                    var id = b.getAttribute('data-engine');
+                    var e = ENGINES.filter(function (x) { return x.id === id; })[0];
+                    if (!e) return;
+                    currentEngine = e;
+                    saveEnginePref();
+                    renderChip(); renderPanel();
+                };
+            });
+        }
+        chip.onclick = function (e) {
+            e.stopPropagation();
+            var showing = panel.style.display !== 'none';
+            panel.style.display = showing ? 'none' : 'block';
+            if (!showing) renderPanel();
+            renderChip();
+        };
+
+        loadEnginePref();
+        renderChip();
+        panel.style.display = 'none';
+
+        // 点击别处 / 按 Esc 收起
+        document.addEventListener('click', function (e) {
+            if (panel.style.display === 'none') return;
+            if (panel.contains(e.target) || chip.contains(e.target)) return;
+            panel.style.display = 'none';
+            renderChip();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && panel.style.display !== 'none') {
+                panel.style.display = 'none';
+                renderChip();
+            }
+        });
+    }
+
+    function syncPlaceholder() {
+        var input = document.getElementById('copInput');
+        if (!input) return;
+        // 一句话既能建站也能生图：具体做什么由模型自己判断并调工具
+        input.placeholder = '描述你想要的页面，或说「画一张…」，Enter 发送';
+    }
+
+    function buildChatBody(messages, stream) {
+        var body = { messages: messages, temperature: 0.3 };
+        // 工具对所有模型开放：建站文件工具 + 生图工具一视同仁，
+        // 用不用、什么时候用由模型自己判断，用户不需要切模式。
+        body.tools = TOOLS;
+        if (currentEngine.provider) body.provider = currentEngine.provider;
+        if (currentEngine.model) body.model = currentEngine.model;
+        // 联网检索与深度思考：服务端默认开启（换哪个模型都有），
+        // 这里不传开关，避免前端状态和服务端行为不一致。
         if (stream) body.stream = true;
         return JSON.stringify(body);
     }
@@ -848,6 +914,146 @@
 		'GooseHost 是一个面向新手、极简操作、基于 Cloudflare + Supabase 架构的开源静态托管平台，适合快速分享 HTML/Markdown 页面或小型前端项目，无需服务器、无需命令行，粘贴代码即可全球 CDN 加速访问。',
 		'当用户询问你关于GooseHost的问题时根据以上内容回答'
     ].join('\n');
+    /* ===== 文本工具协议（Agnes 等不支持原生 function calling 的引擎）=====
+       这类引擎会把工具调用以文本形式吐出来，例如：
+           <tool_call>
+           <function=list_my_sites>
+           {}
+           </function>
+           </tool_call>
+       以前前端完全不认识，于是 ① 原始标签直接渲染给用户看 ② 工具根本没执行
+       ③ 还误报「不支持 function calling」。
+       现在：解析 → 真执行 → 结果回喂模型 → 继续对话，标签从展示文本里剔除。 */
+    var TOOL_CALL_RE = /<tool_call>([\s\S]*?)<\/tool_call>/gi;
+    var FN_RE = /<function=([A-Za-z_][A-Za-z0-9_]*)>([\s\S]*?)<\/function>/gi;
+    var FN_LOOSE_RE = /<function=([A-Za-z_][A-Za-z0-9_]*)>([\s\S]*?)(?=<\/function>|<tool_call>|$)/gi;
+
+    function stripToolCallText(text) {
+        var s = String(text == null ? '' : text);
+        if (!s) return '';
+        s = s.replace(TOOL_CALL_RE, '');
+        var i = s.search(/<tool_call>/i);
+        if (i >= 0) s = s.slice(0, i);           // 流式中途：还没闭合，先整段藏起来
+        var j = s.search(/<function=/i);
+        if (j >= 0) s = s.slice(0, j);           // 只有内层标签的兜底
+        return s.replace(/\s+$/, '');
+    }
+
+    function repairJson(t) {
+        // 流式/截断场景常见：JSON 被切了一半。逐步回退到最后一个合法边界再试。
+        var s = String(t || '').trim();
+        if (!s) return null;
+        var tries = [s];
+        var q = s.lastIndexOf('"');
+        if (q > 0) tries.push(s.slice(0, q + 1) + '}');
+        var b = s.lastIndexOf('}');
+        if (b > 0) tries.push(s.slice(0, b + 1));
+        for (var i = 0; i < tries.length; i++) {
+            try { var v = JSON.parse(tries[i]); if (v && typeof v === 'object') return v; } catch (e) { }
+        }
+        return null;
+    }
+
+    function parseToolArgs(raw) {
+        var t = String(raw == null ? '' : raw).trim();
+        if (!t) return {};
+        // <parameter=name>value</parameter> 形式
+        if (/<parameter=/i.test(t)) {
+            var out = {}, re = /<parameter=([^>]+)>([\s\S]*?)<\/parameter>/gi, m;
+            while ((m = re.exec(t))) out[m[1].trim()] = m[2];
+            return out;
+        }
+        if (t.charAt(0) === '{') {
+            try { return JSON.parse(t) || {}; } catch (e) { }
+            var fixed = repairJson(t);
+            if (fixed) return fixed;
+        }
+        // key = value 行式
+        var kv = {};
+        String(t).split(/\n/).forEach(function (line) {
+            var i = line.indexOf('=');
+            if (i > 0) kv[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+        });
+        return Object.keys(kv).length ? kv : {};
+    }
+
+    function parseTextToolCalls(text) {
+        var s = String(text == null ? '' : text);
+        var calls = [];
+        if (!s) return { clean: '', calls: calls };
+        var m;
+        TOOL_CALL_RE.lastIndex = 0;
+        while ((m = TOOL_CALL_RE.exec(s))) {
+            var inner = m[1] || '';
+            var f, found = false;
+            FN_RE.lastIndex = 0;
+            while ((f = FN_RE.exec(inner))) {
+                calls.push({ name: f[1], args: parseToolArgs(f[2]), id: 'text_' + calls.length });
+                found = true;
+            }
+            if (!found) {
+                // 外层有 tool_call 但没有 function 标签：尝试整体按「名字 + JSON」解析
+                var bare = inner.trim();
+                var bm = /^([A-Za-z_][A-Za-z0-9_]*)\s*(\{[\s\S]*\})?\s*$/.exec(bare);
+                if (bm) calls.push({ name: bm[1], args: parseToolArgs(bm[2] || ''), id: 'text_' + calls.length });
+            }
+        }
+        if (!calls.length) {
+            // 兜底：只有 <function=...> 没有 <tool_call> 包裹
+            var f2; FN_LOOSE_RE.lastIndex = 0;
+            while ((f2 = FN_LOOSE_RE.exec(s))) {
+                calls.push({ name: f2[1], args: parseToolArgs(f2[2]), id: 'text_' + calls.length });
+            }
+        }
+        return { clean: stripToolCallText(s), calls: calls };
+    }
+
+    // 给支持原生 function calling 的模型：只需一句提醒，说明图片要走工具
+    function toolHintPrompt() {
+        return [
+            '',
+            '【补充能力】',
+            '- 联网检索：遇到新闻、时效事件、实时数据等你不确定的信息时，'
+            + '调用 web_search 工具拿真实结果，并用 [编号](链接) 标注来源；'
+            + '**严禁凭记忆编造时事**。**用Markdown格式输出！**',
+            '- 生图：用户要图片时调用 generate_image 工具拿到真实地址，'
+            + '把返回的 Markdown 图片放进回复；**严禁自己编造图片链接**。**用Markdown格式输出！**'
+        ].join('\n');
+    }
+
+    // 给不支持原生 FC 的引擎用的工具说明书：直接由 TOOLS 生成，永不手写、不会和代码脱节
+    function toolProtocolPrompt() {
+        var lines = TOOLS.map(function (t) {
+            var fn = t.function || {};
+            var ps = (fn.parameters && fn.parameters.properties) || {};
+            var req = (fn.parameters && fn.parameters.required) || [];
+            var keys = Object.keys(ps).map(function (k) {
+                return k + (req.indexOf(k) >= 0 ? '*' : '') + ':' + ((ps[k] && ps[k].type) || 'string');
+            }).join(', ');
+            return '- ' + fn.name + '(' + (keys || '') + ') — ' + String(fn.description || '').split('\n')[0];
+        });
+        return [
+            '',
+            '【工具调用方式 · 本引擎不支持原生 function calling，必须按以下文本协议调用】',
+            '需要操作文件 / 站点时，严格输出如下块（可连续多个，每次回复只输出你确定要执行的）：',
+            '<tool_call>',
+            '<function=工具名>',
+            '{"参数名":"值"}',
+            '</function>',
+            '</tool_call>',
+            '约束：',
+            '1. 参数必须是一个合法 JSON 对象；无参数时写 {}。',
+            '2. 不要在同一条回复里既输出工具块又输出最终结论 —— 先调工具，拿到结果后再回答。',
+            '3. 一次只调用真正需要的工具，禁止编造下面列表里没有的工具名。',
+            '4. 工具结果会以「【工具返回】<工具名> ...」的形式回传给你，据此继续。',
+            '5. 需要最新信息时主动调用 web_search，不要说「我无法搜索」——你能搜。',
+            '6. 不需要工具时，正常用自然语言回答，不要输出任何 tool_call 标签。',
+            '',
+            '可用工具（* 表示必填）：',
+            lines.join('\n')
+        ].join('\n');
+    }
+
     var TOOLS = [
         {
             type: 'function',
@@ -1104,9 +1310,42 @@
         {
             type: 'function',
             function: {
+                name: 'web_search',
+                description: '联网检索实时信息。当用户问到新闻、时效事件、实时数据、'
+                    + '你不确定的最新事实时调用它；纯代码/网页/创作类问题不要调用。'
+                    + '返回结果含标题、链接与摘要，回答时要用 [编号](链接) 标注来源。',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        query: { type: 'string', description: '检索关键词，中文或英文均可，越具体越好' }
+                    },
+                    required: ['query']
+                }
+            }
+        },
+        {
+            type: 'function',
+            function: {
                 name: 'get_platform_stats',
                 description: '读取全站统计数据：站点总数与总访问量（无需登录）',
                 parameters: { type: 'object', properties: {}, required: [] }
+            }
+        },
+        {
+            type: 'function',
+            function: {
+                name: 'generate_image',
+                description: '根据文字描述生成一张图片。用户说「画/生成/来一张…图片」「配图」「插图」'
+                    + '等需求时调用它；纯网页、代码、文字类需求不要用。'
+                    + '调用后会返回图片地址，你必须把它以 Markdown 图片形式放进回复里展示给用户。',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        prompt: { type: 'string', description: '画面的英文或中文描述，越具体越好（主体、风格、构图、光线）' },
+                        size: { type: 'string', description: '画幅，可选：1024x1024（默认）、1024x1536 竖版、1536x1024 横版' }
+                    },
+                    required: ['prompt']
+                }
             }
         }
     ];
@@ -1254,6 +1493,22 @@
                     var an = await dashGet('/api/announcement');
                     return ok(an.announcement ? ('公告（' + String(an.created_at || '').slice(0, 10) + '）：\n' + an.announcement) : '当前没有平台公告');
                 }
+                case 'generate_image': {
+                    var img = await sendImage(args.prompt, args.size);
+                    // 返回 Markdown，模型直接把它放进回复就能渲染出图
+                    return ok('图片已生成，请把下面这行原样放进你的回复中展示给用户：\n'
+                        + '![' + String(args.prompt || '生成结果').replace(/[\n\]]/g, ' ').slice(0, 50) + '](' + img.url + ')'
+                        + '\n\n（模型：' + (img.model || '') + ' ｜ 尺寸：' + (img.size || '1024x1024') + '）');
+                }
+                case 'web_search': {
+                    var sr = await webSearch(args.query);
+                    if (!sr.ok) return 'ERROR: ' + sr.error;
+                    var lines = sr.results.map(function (h, i) {
+                        return '[' + (i + 1) + '] ' + h.title + '\n' + h.url + '\n' + h.content;
+                    });
+                    return ok('检索到 ' + sr.results.length + ' 条结果（耗时 ' + sr.elapsedMs + 'ms），'
+                        + '请基于它们回答并用 [编号](链接) 标注来源：\n\n' + lines.join('\n\n'));
+                }
                 case 'get_platform_stats': {
                     var stt = await dashGet('/api/stats');
                     return ok('全站站点数 ' + (stt.total_sites || 0) + '，累计访问 ' + (stt.total_visits || 0));
@@ -1348,31 +1603,78 @@
     var busy = false, aborted = false;
     var currentAbort = null;   
     var pageRoot = null;       
-    async function copFetch(url, options, timeout, custom) {
+    async function copFetch(url, options, timeout) {
         var doFetch = function () {
             var hdr = new Headers((options && options.headers) || {});
-            if (custom) {
-                // 走后端代理（/api/ai/chat）时：Authorization 必须是用户 JWT 用于身份鉴权，
-                // 自定义模型的 apiKey 已在请求体 endpoint/apiKey 字段中透传，不能再塞进 Authorization，
-                // 否则后端 getUserId 会把它当 token 解析而鉴权失败。
-                var t = localStorage.getItem('sb_token');
-                if (t) hdr.set('Authorization', 'Bearer ' + t);
-            } else {
-                var t2 = localStorage.getItem('sb_token');
-                if (t2) hdr.set('Authorization', 'Bearer ' + t2);
-            }
+            // Authorization 固定使用用户 JWT 做身份鉴权；
+            // 上游模型的 API Key 由服务端配置，前端不再透传。
+            var t = localStorage.getItem('sb_token');
+            if (t) hdr.set('Authorization', 'Bearer ' + t);
             return fetch(url, Object.assign({}, options, { headers: hdr }));
         };
         var res = await withTimeout(doFetch, timeout || 120000);
-        if (!custom && res.status === 401 && localStorage.getItem('sb_refresh_token') && typeof refreshSession === 'function') {
+        if (res.status === 401 && localStorage.getItem('sb_refresh_token') && typeof refreshSession === 'function') {
             var okRefresh = await refreshSession();
             if (okRefresh) res = await withTimeout(doFetch, timeout || 120000);
         }
         if (res.status === 401) {
-            throw new Error(custom ? '自定义模型鉴权失败（401），请检查 API Key' : '登录已失效，请重新登录');
+            throw new Error('登录已失效，请重新登录');
         }
         return res;
     }
+    /* ===== 网络层错误的诊断 =====
+       fetch 抛 "NetworkError when attempting to fetch resource" / TypeError: Failed to fetch
+       时，浏览器【不提供任何状态码】，用户看到的就是一句无从下手的话。
+       真实原因通常是这几种，这里逐个自动探测，把结论直接摆出来。 */
+    async function diagnoseNetworkError(url) {
+        var out = [];
+        try {
+            // ① Service Worker 拦截（本站历史上踩过：注册了不存在的 sw.js）
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                out.push('· 检测到 Service Worker 正在接管页面，它会拦截 API 请求。'
+                    + '建议在 F12 → Application → Service Workers 里 Unregister，然后强制刷新。');
+            }
+            // ② 纯连通性：no-cors 模式下能发出去说明网络通，问题在 CORS
+            var reachable = false, corsBlocked = false;
+            try {
+                var ping = await fetch(url, { method: 'POST', mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' }, body: '{}' });
+                reachable = true;    // no-cors 下 opaque 响应也代表请求发出去了
+            } catch (e) { reachable = false; }
+            if (reachable) {
+                corsBlocked = true;
+                out.push('· 网络可达，但正常请求被拦 —— 基本是 CORS 或 Service Worker 问题。'
+                    + '请确认访问域名与 API 白名单匹配（当前来源：' + location.origin + '）。');
+            } else {
+                out.push('· 请求根本没发出去：可能是断网、DNS 解析失败，或 API 域名不可达。');
+            }
+            // ③ 顺带看 API 是否活着（GET 一个轻量接口）
+            try {
+                var cfg = await fetch(String(url).replace(/\/api\/ai\/chat$/, '/api/config'),
+                    { method: 'GET' });
+                out.push('· API 连通性探测：HTTP ' + cfg.status + (cfg.ok ? '（服务正常）' : '（服务异常）'));
+            } catch (e) {
+                out.push('· API 连通性探测：失败（' + (e && e.message ? e.message : e) + '）');
+            }
+        } catch (e) { }
+        return out;
+    }
+
+    function isNetworkError(e) {
+        var m = String((e && e.message) || e || '').toLowerCase();
+        return (e instanceof TypeError && /fetch|network/i.test(m))
+            || /networkerror|failed to fetch|load failed|network request failed/i.test(m);
+    }
+
+    async function explainError(e, url) {
+        var m = String((e && e.message) || e || '');
+        if (!isNetworkError(e)) return m;
+        var tips = await diagnoseNetworkError(url || chatEndpoint());
+        return '网络请求失败（浏览器未返回状态码，常见于 CORS / Service Worker / 断网）。\n'
+            + (tips.length ? tips.join('\n') : '')
+            + '\n· 原始信息：' + m;
+    }
+
     function withTimeout(fn, ms) {
      return new Promise(function (res, rej) {
         var timer = setTimeout(function () {
@@ -1384,12 +1686,11 @@
     }
     var currentModel = '';
     async function callAI(messages) {
-        var custom = customModelReady() ? customModel : null;
         var res = await copFetch(chatEndpoint(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: buildChatBody(messages, false)
-        }, 120000, custom);
+        }, 120000);
         var data = null;
         try { data = await res.json(); } catch (e) { }
         if (!res.ok) {
@@ -1401,9 +1702,6 @@
         }
         if (!data || !data.choices || !data.choices[0]) throw new Error('AI 返回格式异常：' + JSON.stringify(data).slice(0, 300));
         var used = res.headers.get('X-Copilot-Model');
-        if (!used && custom) {
-            used = (data && data.model) || custom.model || '自定义模型';
-        }
         if (used) {
             currentModel = used;
             if (!busy) setModelLabel(used);
@@ -1507,13 +1805,19 @@
         if (!el) return;
         var ph = el.querySelector('[data-thinking]');
         if (ph) ph.remove();
-        safeRender(el, renderMarkdown(text || ''));
+        // 流式过程中就把 <tool_call> 及其未闭合的前半段藏掉，
+        // 否则用户会看到一串原始标签先闪一遍再消失。
+        var shown = text;
+        try { if (typeof isAgnes === 'function' && isAgnes()) shown = stripToolCallText(text || ''); } catch (e) { }
+        safeRender(el, renderMarkdown(shown || ''));
         scrollMsgsToEnd();
     }
     function endStreamMsg(el, text) {
         if (!el) return;
         el.classList.remove('cop-streaming');
-        safeRender(el, renderMarkdown(text || ''));
+        var shown2 = text;
+        try { if (typeof isAgnes === 'function' && isAgnes()) shown2 = stripToolCallText(text || ''); } catch (e) { }
+        safeRender(el, renderMarkdown(shown2 || ''));
         var turn = el.parentNode && el.parentNode.parentNode;
         if (turn && turn.classList) turn.classList.remove('cop-streaming');
         scrollMsgsToEnd();
@@ -1615,7 +1919,6 @@
         var content = '';   
         var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
         currentAbort = controller;
-        var custom = customModelReady() ? customModel : null;
         var res;
         try {
             res = await copFetch(chatEndpoint(), {
@@ -1623,7 +1926,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: buildChatBody(messages, true),
                 signal: controller ? controller.signal : undefined
-            }, 120000, custom);
+            }, 120000);
         } catch (e) {
             if (controller && controller.signal.aborted) {
                 return { role: 'assistant', content: content };
@@ -1631,7 +1934,6 @@
             throw e;
         }
         var used = res.headers.get('X-Copilot-Model');
-        if (!used && custom) used = custom.model || '自定义模型';
         if (used && cb.onModel) cb.onModel(used);
         if (!res.ok) {
             var data = null;
@@ -1705,14 +2007,57 @@
         if (built.length) msg.tool_calls = built;
         return msg;
     }
+    /* ===== 生图（Agnes 专用模式）=====
+       走后端代理 /api/ai/image，Key 不落前端。 */
+    /* ===== 联网检索（工具化）=====
+       以前是每次对话都由服务端先跑一遍检索再发给模型，等于给每轮白加 1～5 秒，
+       还会把 prompt 撑长、拖慢首 token。现在只在模型真的需要时才调。 */
+    async function webSearch(query) {
+        var q = String(query == null ? '' : query).trim();
+        if (!q) return { ok: false, error: 'query 不能为空' };
+        try {
+            var res = await copFetch(chatEndpoint().replace(/\/api\/ai\/chat$/, '/api/ai/search'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: q })
+            }, 20000);
+            var data = null;
+            try { data = await res.json(); } catch (e) { }
+            if (!res.ok || !data) {
+                return { ok: false, error: (data && data.error) || ('检索失败（HTTP ' + res.status + '）') };
+            }
+            if (!data.ok) return { ok: false, error: data.error || '检索失败' };
+            return { ok: true, results: data.results || [], elapsedMs: data.elapsedMs || 0 };
+        } catch (e) {
+            return { ok: false, error: (e && e.message) ? e.message : String(e) };
+        }
+    }
+
+    async function sendImage(prompt, size) {
+        var res = await copFetch((window.API_URL || 'https://page.goose.cc.cd') + '/api/ai/image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt, size: size || '1024x1024' })
+        }, 120000);
+        var data = null;
+        try { data = await res.json(); } catch (e) { }
+        if (!res.ok) throw new Error((data && data.error) || ('生图失败（HTTP ' + res.status + '）'));
+        if (!data || !data.url) throw new Error('生图返回缺少图片地址');
+        return data;
+    }
+
     async function send(text) {
         if (busy) return;
         if (!text || !text.trim()) return;
+
         busy = true; aborted = false;
         setBusy(true);
         pushMsg('user', text);
         history.push({ role: 'user', content: text });
-        var sysMsgs = [{ role: 'system', content: SYSTEM_PROMPT }];
+        // Agnes 不支持原生 function calling → 追加文本工具协议，否则它会把
+        // <tool_call> 当普通文字吐给我们，而前端根本不认识（既不执行也不隐藏）。
+        var sysText = isAgnes() ? (SYSTEM_PROMPT + '\n' + toolProtocolPrompt()) : (SYSTEM_PROMPT + '\n' + toolHintPrompt());
+        var sysMsgs = [{ role: 'system', content: sysText }];
         var digest = siteDigest();
         if (digest) sysMsgs.push({ role: 'system', content: digest });
         var messages = sysMsgs.concat(history);
@@ -1746,6 +2091,37 @@
                     else removeStreamMsg(streamEl);
                     break;
                 }
+                // 文本协议的工具调用（Agnes 等）：解析 → 执行 → 回喂
+                if (isAgnes() && msg && typeof msg.content === 'string' && msg.content.indexOf('<tool_call') >= 0) {
+                    var parsed = parseTextToolCalls(msg.content);
+                    if (parsed.calls.length) {
+                        toolCalls += parsed.calls.length;
+                        history.push({ role: 'assistant', content: parsed.clean || '' });
+                        if (parsed.clean) endStreamMsg(streamEl, parsed.clean);
+                        else removeStreamMsg(streamEl);
+                        for (var ti = 0; ti < parsed.calls.length; ti++) {
+                            if (aborted) break;
+                            var call = parsed.calls[ti];
+                            var tnode = null, tstop = null, tout;
+                            try {
+                                tnode = pushTool(call.name, call.args);
+                                tstop = startToolTimer(tnode);
+                            } catch (uiErr) { }
+                            try {
+                                tout = await execTool(call.name, call.args);
+                            } catch (te) {
+                                tout = 'ERROR: ' + (te && te.message ? te.message : String(te));
+                            } finally {
+                                if (tstop) tstop();
+                            }
+                            if (tnode) finishTool(tnode, tout);
+                            messages.push({ role: 'user', content: '【工具返回】' + call.name + '\n' + tout });
+                            history.push({ role: 'tool', name: call.name, content: tout });
+                        }
+                        continue;
+                    }
+                    msg.content = parsed.clean;   // 只剩标签垃圾，清掉再展示
+                }
                 messages.push(msg);
                 if (msg.tool_calls && msg.tool_calls.length) {
                     toolCalls += msg.tool_calls.length;
@@ -1775,13 +2151,23 @@
                 history.push({ role: 'assistant', content: msg.content || '' });
                 endStreamMsg(streamEl, msg.content || '（无输出）');
                 if (toolCalls === 0 && looksLikeBuildRequest(text)) {
-                    pushMsg('system', '未调用文件工具：模型「' + (currentModel || '当前')
-                        + '」不支持 function calling');
+                    // Agnes 走的是文本工具协议，没有原生 FC，这条提示对它不适用，
+                    // 换成可操作的引导，而不是甩一句「不支持」。
+                    pushMsg('system', isAgnes()
+                        ? '没有执行任何工具：请更明确地说出要做的事，或切换到「GooseHost Copilot」（原生工具调用，建站更稳）。'
+                        : '未调用文件工具：模型「' + (currentModel || '当前') + '」不支持 function calling');
                 }
                 return;
             }
         } catch (e) {
-            pushMsg('system', '出错了：' + (e && e.message ? e.message : String(e)));
+            var msg = (e && e.message) ? e.message : String(e);
+            pushMsg('system', '出错了：' + msg);
+            // 网络层错误没有状态码，自动跑一遍诊断，把结论补在后面
+            if (isNetworkError(e)) {
+                explainError(e).then(function (detail) {
+                    if (detail && detail !== msg) pushMsg('system', detail);
+                }).catch(function () { });
+            }
         } finally {
             busy = false;
             setBusy(false);
@@ -1789,126 +2175,6 @@
             ChatStore.save(history);
         }
     }
-    function bindCustomModelForm() {
-        var elEndpoint = document.getElementById('copModelEndpoint');
-        var elKey = document.getElementById('copModelKey');
-        var elModel = document.getElementById('copModelId');
-        var elEnable = document.getElementById('copModelEnable');
-        var elStatus = document.getElementById('copModelStatus');
-        var elTest = document.getElementById('copModelTest');
-        var elSave = document.getElementById('copModelSave');
-        var elReset = document.getElementById('copModelReset');
-        if (!elEndpoint) return;
-
-        function setStatus(text, kind) {
-            if (!elStatus) return;
-            elStatus.textContent = text || '';
-            elStatus.className = 'cop-model-status' + (kind ? ' ' + kind : '');
-        }
-        function syncStatus() {
-            if (customModelReady()) {
-                setStatus('● 已启用自定义模型' + (customModel.model ? '：' + customModel.model : ''), 'ok');
-            } else if (customModel.endpoint || customModel.apiKey || customModel.model) {
-                setStatus('○ 使用 GooseHost 默认模型（配置已保存但未启用）', 'warn');
-            } else {
-                setStatus('○ 使用 GooseHost 默认模型', '');
-            }
-        }
-        function fillForm() {
-            elEndpoint.value = customModel.endpoint || '';
-            elKey.value = customModel.apiKey || '';
-            elModel.value = customModel.model || '';
-            elEnable.checked = !!customModel.enabled;
-            syncStatus();
-        }
-        function readForm() {
-            return {
-                endpoint: elEndpoint.value.trim(),
-                apiKey: elKey.value.trim(),
-                model: elModel.value.trim(),
-                enabled: !!elEnable.checked
-            };
-        }
-        elSave.onclick = function () {
-            var cfg = readForm();
-            if (cfg.endpoint && !/^https?:\/\//i.test(cfg.endpoint)) {
-                setStatus('接入地址需以 http:// 或 https:// 开头', 'err');
-                return;
-            }
-            if (cfg.enabled && !cfg.endpoint) { setStatus('启用前请先填写接入地址', 'err'); return; }
-            if (cfg.enabled && !cfg.apiKey) { setStatus('启用前请先填写 API Key', 'err'); return; }
-            saveCustomModel(cfg);
-            if (customModelReady()) {
-                setModelLabel(cfg.model || '自定义模型');
-                setStatus('● 已保存并启用自定义模型' + (cfg.model ? '：' + cfg.model : ''), 'ok');
-            } else {
-                setModelLabel(currentModel || '闲着呢');
-                setStatus('○ 已保存，当前仍使用 GooseHost 默认模型', 'warn');
-            }
-        };
-        elReset.onclick = function () {
-            saveCustomModel({ enabled: false, endpoint: '', apiKey: '', model: '' });
-            fillForm();
-            setModelLabel(currentModel || '闲着呢');
-            setStatus('○ 已清空配置，恢复 GooseHost 默认模型', '');
-        };
-        elTest.onclick = async function () {
-            var cfg = readForm();
-            if (!cfg.endpoint) { setStatus('请先填写接入地址', 'err'); return; }
-            if (!/^https?:\/\//i.test(cfg.endpoint)) { setStatus('接入地址需以 http:// 或 https:// 开头', 'err'); return; }
-            if (!cfg.apiKey) { setStatus('请先填写 API Key', 'err'); return; }
-            // 经后端代理转发测试（浏览器直连会因 CORS 被服务商网关拦截）。
-            // endpoint 原样透传给后端，由后端决定如何请求（完整地址优先）。
-            var proxyBase = (window.API_URL || API_FALLBACK).replace(/\/$/, '');
-            var testBody = {
-                endpoint: cfg.endpoint.replace(/\/+$/, ''),
-                apiKey: cfg.apiKey,
-                model: cfg.model || (function () {
-                    // OpenCode Zen 一键接入：未填模型时默认用 big-pickle（免费模型）
-                    var ep = (cfg.endpoint || '').replace(/\/+$/, '').toLowerCase();
-                    if (ep.indexOf('opencode.ai/zen') !== -1) return 'big-pickle';
-                    // DeepSeek 官方在售名为 deepseek-flash（deepseek-v4-flash 是已退役模型的旧别名）
-                    return 'deepseek-flash';
-                })(),
-                messages: [{ role: 'user', content: 'hi' }],
-                max_tokens: 1,
-                stream: false
-            };
-            var oldHtml = elTest.innerHTML;
-            elTest.disabled = true;
-            elTest.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 测试中';
-            setStatus('正在通过代理连接 ' + cfg.endpoint + ' …', '');
-            try {
-                var res = await copFetch(proxyBase + '/api/ai/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(testBody)
-                }, 30000, true);
-                var data = null;
-                try { data = await res.json(); } catch (e) { }
-                if (res.ok) {
-                    var used = (data && data.model) || cfg.model || '';
-                    setStatus('● 连接成功' + (used ? '，模型可用：' + used : ''), 'ok');
-                    termPrint('自定义模型连接成功：' + cfg.endpoint + (used ? '（' + used + '）' : ''));
-                } else {
-                    var err = data && data.error;
-                    var detail = (err && (err.message || err.code || err)) || ('HTTP ' + res.status);
-                    setStatus('连接失败：' + detail, 'err');
-                }
-            } catch (e) {
-                setStatus('连接失败：' + (e && e.message ? e.message : e), 'err');
-            } finally {
-                elTest.disabled = false;
-                elTest.innerHTML = oldHtml;
-            }
-        };
-        fillForm();
-        bindQuickConnect();
-    }
-    // ===== 一键接入逻辑已迁移到 bindProviderSelect()（原生 select 联动）=====
-    // 原「按钮组 cop-provider-grid」UI 已废弃（DOM 中不再存在），
-    // 服务商选择改由 <select id="copModelProvider"> 驱动，预设数据见 PROVIDER_PRESETS。
-    function bindQuickConnect() { /* deprecated, no-op */ }
     function esc(s) {
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1966,7 +2232,6 @@
             '    <div class="cop-right-panel-tabs">',
             '      <button class="cop-right-tab active" data-tab="files"><i class="fas fa-folder"></i> 文件</button>',
             '      <button class="cop-right-tab" data-tab="term"><i class="fas fa-terminal"></i> 终端</button>',
-            '      <button class="cop-right-tab" data-tab="model"><i class="fas fa-sliders"></i> 自定义模型</button>',
             '      <span class="cop-right-panel-count" id="copFileCount"></span>',
             '      <button class="cop-drawer-close" id="copDrawerClose" title="关闭"><i class="fas fa-xmark"></i></button>',
             '    </div>',
@@ -1993,10 +2258,6 @@
             '</div>'
         ].join('');
 
-        // 挂载静态「自定义模型」面板（HTML 直接写在 index.html，不通过 JS 拼接）
-        // 必须在骨架 page.innerHTML 赋值之后调用 —— 此时 #copRightPanel .cop-right-panel-body 才存在。
-        mountStaticModelPane(page);
-
         bindUI(page);
         mounted = true;
         trackMsgScroll();
@@ -2004,190 +2265,18 @@
         refreshTree();
         termPrint('GooseHost Copilot 沙箱已就绪，输入 help 查看命令。');
     }
-
-    /**
-     * 把 index.html 中预置的静态「自定义模型」面板（data-pane="model"）注入到
-     * 右侧栏 #copRightPanel .cop-right-panel-body 末尾。
-     *
-     * 设计稿：模型提供商 / 选择模型 / 填写 key + 测试 · 启用 · 默认
-     *
-     * 关键点：
-     * · 静态 HTML 中的元素 id 与 bindCustomModelForm() 中的 getElementById 完全一致，
-     *   JS 逻辑（保存 / 测试 / localStorage 回填 / 状态行）无需任何改动；
-     * · 这里只额外处理「模型提供商」切换 → 自动填入 Endpoint + 模型 + 显隐高级区，
-     *   等价于原一键接入（cop-provider-grid 点击），只是触发源从按钮组换成原生 select；
-     * · 使用 appendChild(cloneNode) 而非 innerHTML，遵守本文件「不用 innerHTML 注入
-     *   含表单的片段」的安全原则（参见 safeSetHtml / sanitizeHtml）。
-     */
-    // 挂载「自定义模型」面板到右侧栏。
-    // 面板 DOM 直接写在 index.html（与 #page-copilot 平级，id="copModelPaneInline"），
-    // 不走 <template> 克隆 —— 满足「DOM 不用 JS 加载」的要求。
-    // 此处只负责：① 首次初始化时把它 append 进右侧栏 .cop-right-panel-body；② 绑定 select 联动。
-    // 幂等：重复调用不会重复挂载（靠 #copRightPanel 内的 data-pane="model" 判断）。
-    function mountStaticModelPane(page) {
-        var pane = document.getElementById('copModelPaneInline');
-        var body = page && page.querySelector('#copRightPanel .cop-right-panel-body');
-        if (!body) {
-            console.warn('[copilot] 右侧栏 .cop-right-panel-body 尚未生成，无法挂载 model 面板');
-            return;
-        }
-        // 骨架中预置了 files / term 两个占位 pane；model 面板是「自定义模型」tab 的内容，
-        // 需在骨架生成后（innerHTML 已写入）才 append，故此处追加到末尾。
-        if (!body.querySelector('.cop-pane[data-pane="model"]')) {
-            if (pane) {
-                body.appendChild(pane);   // 从 .content 平级移动到右侧栏（同一节点，不丢失状态）
-            } else {
-                console.warn('[copilot] #copModelPaneInline 未找到');
-            }
-        }
-        bindProviderSelect();
-    }
-
-    // 「模型提供商」select 切换 → 自动填入 Endpoint + 刷新「选择模型」的可选列表
-    //
-    // 设计原则：一个 provider = 一个 endpoint。模型差异不在这里拆 provider，
-    // 而是放在 PROVIDER_PRESETS[provider].models 里（如 DeepSeek 的 Flash / Pro）。
-    // provider 值：deepseek / opencode-zen / custom
-    var PROVIDER_PRESETS = {
-        'deepseek': {
-            endpoint: 'https://api.deepseek.com/chat/completions',
-            // DeepSeek 官方（OpenAI 格式）base_url = https://api.deepseek.com，只有两个在售模型：
-            // deepseek-flash（DeepSeek-V4.1-Flash）、deepseek-v4-pro（DeepSeek-V4-Pro-0813）。
-            // ⚠️ 不要再用 deepseek-v4-flash：官方文档说明该名称是【已退役模型的旧别名】，
-            // 虽仍被接受，但请求由 DeepSeek-V4.1-Flash 承接并按 Flash 计价。
-            models: [
-                { value: 'deepseek-flash', label: 'deepseek-flash（通用 / 快速）' },
-                { value: 'deepseek-v4-pro', label: 'deepseek-v4-pro（强推理）' }
-            ],
-            model: 'deepseek-v4-pro',   // 默认档位：DeepSeek 默认走 Pro（强推理）
-            label: 'DeepSeek'
-        },
-        'opencode-zen': {
-            endpoint: 'https://opencode.ai/zen/v1/chat/completions',
-            // OpenCode Zen 免费模型（官方定价表标 Free，多为限时提供）。
-            // ⚠️ 只列走 /chat/completions 的模型——Zen 的 endpoint 按模型族区分：
-            //   GPT/Grok/Muse Spark → /responses；Claude/Qwen → /messages；
-            //   Gemini → /models/<id>；Jev → /systemone。
-            // 本代理只发 Chat Completions 请求体，填其它模型族会打错端点。
-            // 已移除文档中不存在的：deepseek-v4-flash-free / qwen3.6-plus-free /
-            // minimax-m3-free / north-mini-code-free（qwen3.6-plus、minimax-m3 是付费模型，
-            // 没有 -free 版本）。参考 https://opencode.ai/docs/zen
-            models: [
-                { value: 'big-pickle', label: 'big-pickle（免费默认）' },
-                { value: 'mimo-v2.6-flash-free', label: 'mimo-v2.6-flash-free（免费）' },
-                { value: 'mimo-v2.5-free', label: 'mimo-v2.5-free（免费）' },
-                { value: 'ling-3.0-flash-fin-free', label: 'ling-3.0-flash-fin-free（免费）' },
-                { value: 'nemotron-3-ultra-free', label: 'nemotron-3-ultra-free（免费）' },
-                { value: 'nemotron-3.5-lightning-free', label: 'nemotron-3.5-lightning-free（免费）' },
-                { value: 'deepseek-v4-flash', label: 'deepseek-v4-flash（按量付费）' },
-                { value: 'deepseek-v4-pro', label: 'deepseek-v4-pro（按量付费）' },
-                { value: 'glm-5.3-flash', label: 'glm-5.3-flash（按量付费）' },
-                { value: 'minimax-m3', label: 'minimax-m3（按量付费）' }
-            ],
-            model: 'big-pickle',
-            label: 'OpenCode 免费端点'
-        }
-    };
-    // 通用 OpenAI 兼容模型的兜底建议（provider=custom 时使用）
-    // 只放 Chat Completions 语义下的示例模型 ID。
-    var GENERIC_MODELS = [
-        { value: 'deepseek-v4-pro', label: 'deepseek-v4-pro' },
-        { value: 'deepseek-flash', label: 'deepseek-flash' },
-        { value: 'glm-5.3-flash', label: 'glm-5.3-flash' },
-        { value: 'kimi-k3', label: 'kimi-k3' }
-    ];
-
-    // 刷新「选择模型」下拉选项
-    // selected：应被选中的模型 ID。优先级明确由调用方决定（见 apply()），
-    // 这里**不用 sel.value** 兜底——新建的 <select> 在部分环境（含 jsdom）下
-    // sel.value 读取为 ""，会导致「默认选中第 0 项」的逻辑失效。
-    function renderModelOptions(sel, list, selected) {
-        if (!sel) return;
-        var prev = selected || '';
-        sel.innerHTML = '';
-        for (var i = 0; i < list.length; i++) {
-            var o = list[i];
-            var opt = document.createElement('option');
-            opt.value = o.value;
-            opt.textContent = o.label;
-            if (o.value === prev) opt.selected = true;
-            sel.appendChild(opt);
-        }
-        // 若 prev 不在列表里（用户自由输入的模型 ID），补一条保持显示且不丢失值
-        if (prev && !list.some(function (m) { return m.value === prev; })) {
-            var custom = document.createElement('option');
-            custom.value = prev;
-            custom.textContent = prev + '（自定义）';
-            custom.selected = true;
-            sel.appendChild(custom);
-        }
-    }
-
-    function bindProviderSelect() {
-        var sel = document.getElementById('copModelProvider');
-        var adv = document.getElementById('copAdvanced');
-        var ep = document.getElementById('copModelEndpoint');
-        var md = document.getElementById('copModelId');       // 现在是 <select>，仍可用 .value
-        var hint = document.getElementById('copProviderHint');
-        var modelHint = document.getElementById('copModelHint');
-        if (!sel) return;
-
-        function apply(provider) {
-            var p = PROVIDER_PRESETS[provider];
-            var isCustom = (provider === 'custom');
-            // 已保存的模型优先于 provider 默认模型：切换服务商时若当前已选模型仍在该列表里，保持不变
-            var savedModel = customModel && customModel.model;
-            if (adv) adv.classList.toggle('is-visible', isCustom);
-
-            if (p) {
-                // 已知服务商：填 Endpoint + 刷新模型下拉
-                // 默认选中优先级：
-                // ① 已保存的模型「属于当前 provider 的模型列表」→ 保留（回显用户上次选择，含 flash/pro 切换）
-                // ② 否则用 provider 声明的默认档位（p.model，即 deepseek-v4-pro）
-                var belongs = savedModel && p.models.some(function (m) { return m.value === savedModel; });
-                var defaultForProvider = belongs ? savedModel : p.model;
-                if (ep) ep.value = p.endpoint;
-                renderModelOptions(md, p.models, defaultForProvider);
-                if (modelHint) modelHint.textContent = '也可直接选择其他 OpenAI 兼容模型。';
-            } else {
-                // 自定义服务：Endpoint 留空由用户填，模型给通用建议
-                if (ep && !ep.value) ep.placeholder = 'https://your-host/v1/chat/completions';
-                renderModelOptions(md, GENERIC_MODELS, savedModel || '');
-                if (modelHint) modelHint.textContent = '请填写 OpenAI 兼容的模型 ID（如 gpt-5.5 / deepseek-v4-pro）。';
-            }
-
-            if (hint) {
-                hint.textContent = p
-                    ? '已选择『' + p.label + '』，Endpoint 已自动填入，选好模型并粘贴 API Key 后保存即可。'
-                    : '自定义服务：请在下方「高级：手动填写 Endpoint」中填写完整请求地址（含 /chat/completions）。';
-            }
-        }
-
-        sel.addEventListener('change', function () { apply(sel.value); });
-
-        // 与已保存配置联动：根据 customModel.endpoint 回显「模型提供商」选中项
-        // 默认策略（首次进入、无任何配置）：DeepSeek + Pro —— 这是产品主推组合，
-        // 不能因为没有 localStorage 就退化为「自定义服务」（空表单，体验差）。
-        var savedEp = (customModel && customModel.endpoint || '').replace(/\/+$/, '');
-        var matched = 'deepseek';
-        if (savedEp) {
-            matched = 'custom';
-            for (var k in PROVIDER_PRESETS) {
-                if (!Object.prototype.hasOwnProperty.call(PROVIDER_PRESETS, k)) continue;
-                if (savedEp === (PROVIDER_PRESETS[k].endpoint || '').replace(/\/+$/, '')) { matched = k; break; }
-            }
-        }
-        sel.value = matched;
-        apply(matched);   // 内部已优先回显 customModel.model，无需再单独处理
-    }
     function bindUI(pageEl) {
         var input = document.getElementById('copInput');
         var sendBtn = document.getElementById('copSend');
         var stopBtn = document.getElementById('copStop');
-        var MAX_INPUT_H = 120;   
+        var MAX_INPUT_H = 180;
+        // 一行文字的高度（font-size:15px × line-height:1.55 ≈ 23.25px），
+        // 向上取整到 24。必须与 CSS 的 .cop-textarea min-height 保持一致，
+        // 否则空状态会被 min-height 截断成「少了一截」。
+        var ONE_LINE_H = 24;
         function autoGrow() {
             input.style.height = 'auto';
-            var h = Math.max(24, Math.min(input.scrollHeight, MAX_INPUT_H));
+            var h = Math.max(ONE_LINE_H, Math.min(input.scrollHeight, MAX_INPUT_H));
             input.style.height = h + 'px';
             input.style.overflowY = input.scrollHeight > MAX_INPUT_H ? 'auto' : 'hidden';
         }
@@ -2197,7 +2286,6 @@
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendBtn.click(); }
         });
         var QUICK = [
-            '赞美一下Minecraft_goose',
             '介绍你自己和功能'
         ];
         var quickBox = document.getElementById('copQuick');
@@ -2225,6 +2313,9 @@
                 });
             };
         });
+        mountModelPicker();
+        syncPlaceholder();
+
         sendBtn.onclick = function () {
             var v = input.value;
             if (!v.trim()) return;
@@ -2267,7 +2358,6 @@
         });
         document.getElementById('copClearTerm').onclick = function () { document.getElementById('copTerm').innerHTML = ''; };
         document.getElementById('copTreeRefresh').onclick = refreshTree;
-        bindCustomModelForm();
         var NARROW_Q = '(max-width: 768px)';
         function isNarrow() {
             return !!(window.matchMedia && window.matchMedia(NARROW_Q).matches);
@@ -2332,7 +2422,9 @@
     function setBusy(b) {
         var sendBtn = document.getElementById('copSend');
         var stopBtn = document.getElementById('copStop');
-        setModelLabel(b ? '执行中…' : (currentModel || '闲着呢'));
+        // 兜底：后端若还没配 Access-Control-Expose-Headers，前端读不到 X-Copilot-Model，
+        // 此时退回「当前引擎名」，至少不会一直显示「闲着呢」让人以为没在跑。
+        setModelLabel(b ? '执行中…' : (currentModel || currentEngine.label || '闲着呢'));
         if (sendBtn) sendBtn.style.display = b ? 'none' : 'flex';
         if (stopBtn) stopBtn.style.display = b ? 'flex' : 'none';
         syncSendBtn();
@@ -2770,7 +2862,11 @@
     function syncFullscreen() {
         var content = document.querySelector('.content');
         if (!content || !pageRoot) return;
-        content.classList.toggle('copilot-fullscreen', pageRoot.classList.contains('active'));
+        var on = pageRoot.classList.contains('active');
+        content.classList.toggle('copilot-fullscreen', on);
+        // 同步到 body：让 .main-layout 去掉左右 padding（突破 1200px 居中列）
+        // 同时隐藏公告条。仅靠 .content 上的类无法影响父级容器的 padding。
+        document.body.classList.toggle('cop-fullscreen', on);
     }
     function watchFullscreen() {
         if (!pageRoot || typeof MutationObserver === 'undefined') { syncFullscreen(); return; }

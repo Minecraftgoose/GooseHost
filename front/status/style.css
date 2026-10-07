@@ -1,7 +1,7 @@
         /* 钉钉进步体字体 */
         @font-face {
             font-family: 'DingTalk JinBuTi';
-            src: url('../fonts/DingTalk JinBuTi.ttf') format('truetype');
+            src: url('../fonts/DingTalkJinBuTi.woff2') format('woff2');
             font-weight: normal;
             font-style: normal;
             font-display: swap;
@@ -125,7 +125,7 @@
         .maintenance-banner {
             background: rgba(255, 165, 0, 0.15);
             border: 1px solid rgba(255, 165, 0, 0.4);
-            border-radius: 6px;
+            border-radius: 24px;
             padding: 1rem;
             margin-top: 1.5rem;
             text-align: center;
@@ -154,7 +154,7 @@
         .service-card {
             background: rgba(20, 35, 25, 0.6);
             border: 1px solid rgba(2, 255, 142, 0.15);
-            border-radius: 6px;
+            border-radius: 40px;
             padding: 1.25rem;
             transition: all 0.3s ease;
         }
@@ -180,7 +180,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
+            border-radius: 16px;
             font-size: 1.1rem;
         }
         .service-icon.auth { background: rgba(2, 255, 142, 0.15); color: #02ff8e; }
