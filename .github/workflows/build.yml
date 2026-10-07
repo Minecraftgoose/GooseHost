@@ -4,21 +4,10 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-    paths:
-      - 'GooseHost-CLI/**'
-      - '.github/workflows/build.yml'
-  pull_request:
-    paths:
-      - 'GooseHost-CLI/**'
-      - '.github/workflows/build.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
-
-defaults:
-  run:
-    working-directory: GooseHost-CLI   # ← 关键：所有 run 步骤默认在 CLI 目录里执行
 
 jobs:
   build:
@@ -36,54 +25,86 @@ jobs:
           - { goos: darwin,  goarch: arm64, name: goosehost-darwin-arm64 }
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-go@v5
         with:
           go-version: '1.22'
           cache-dependency-path: GooseHost-CLI/go.sum
 
-      - name: Validate tag (if tag push)
-        if: startsWith(github.ref, 'refs/tags/')
-        working-directory: .              # 校验不用进子目录
+      - name: Determine version
+        id: version
+        working-directory: .
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Tag '$TAG' 不符合语义化版本规范 (vMAJOR.MINOR.PATCH)"
-            exit 1
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          else
+            TAG=$(git tag --points-at ${{ github.sha }} | grep '^v' | head -n1)
+            if [ -n "$TAG" ]; then
+              echo "version=$TAG" >> $GITHUB_OUTPUT
+            else
+              echo "version=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Build
+        working-directory: GooseHost-CLI
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: '0'
         run: |
-          VERSION="${GITHUB_REF_NAME:-dev}"
-          go build -trimpath -ldflags "-s -w -X main.Version=${VERSION}" -o ${{ matrix.name }} .
+          go build -trimpath -ldflags "-s -w -X main.Version=${{ steps.version.outputs.version }}" -o ${{ matrix.name }} .
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
-          path: GooseHost-CLI/${{ matrix.name }}    # ← 注意这里要带子目录前缀
+          path: GooseHost-CLI/${{ matrix.name }}
           if-no-files-found: error
 
   release:
     name: Publish Release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: always() && needs.build.result == 'success'
     runs-on: ubuntu-latest
     steps:
+      - name: Wait for tag sync
+        run: sleep 30
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find tag for current commit
+        id: find_tag
+        run: |
+          SHA="${{ github.sha }}"
+          TAG=$(git tag --points-at $SHA | grep '^v' | head -n1)
+          if [ -z "$TAG" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "::notice::当前 commit 没有对应的 tag，跳过 Release"
+          else
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "::notice::找到 tag: $TAG"
+          fi
+
       - uses: actions/download-artifact@v4
+        if: steps.find_tag.outputs.skip != 'true'
         with:
           path: artifacts
 
       - name: Flatten
+        if: steps.find_tag.outputs.skip != 'true'
         run: |
           mkdir -p release
           find artifacts -type f -exec cp {} release/ \;
           ls -la release/
 
       - uses: softprops/action-gh-release@v2
+        if: steps.find_tag.outputs.skip != 'true'
         with:
+          tag_name: ${{ steps.find_tag.outputs.tag }}
           files: release/*
           generate_release_notes: true
