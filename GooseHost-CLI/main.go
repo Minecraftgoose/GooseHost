@@ -20,7 +20,6 @@ import (
 
 const DEFAULT_API = "https://page.goose.cc.cd"
 
-// 由 ldflags 注入
 var Version = "dev"
 
 // ---------- 颜色 ----------
