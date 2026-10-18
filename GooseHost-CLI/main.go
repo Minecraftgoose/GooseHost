@@ -70,52 +70,266 @@ func configDir() string {
 	return dir
 }
 
-func tokenPath() string { return filepath.Join(configDir(), "token") }
-func userPath() string  { return filepath.Join(configDir(), "user") }
+func profilesPath() string { return filepath.Join(configDir(), "profiles.json") }
+func tokenPath() string    { return filepath.Join(configDir(), "token") }
+func userPath() string     { return filepath.Join(configDir(), "user") }
 
-func loadToken() string {
-	data, err := os.ReadFile(tokenPath())
+//  多实例（Profile）
+
+type Profile struct {
+	Name  string                 `json:"name"`
+	API   string                 `json:"api"`
+	Token string                 `json:"token"`
+	User  map[string]interface{} `json:"user,omitempty"`
+}
+
+type ProfileStore struct {
+	Current  string     `json:"current"`
+	Profiles []*Profile `json:"profiles"`
+}
+
+// 预置实例。DEFAULT_API 对应的那个会成为初始当前实例。
+func builtinProfiles() []*Profile {
+	return []*Profile{
+		{Name: "cc", API: "https://page.goose.cc.cd"},
+		{Name: "l", API: "https://page.goose.l.cd"},
+	}
+}
+
+func normalizeAPI(u string) string {
+	u = strings.TrimRight(strings.TrimSpace(u), "/")
+	u = strings.TrimPrefix(u, "https://")
+	u = strings.TrimPrefix(u, "http://")
+	return strings.ToLower(u)
+}
+
+func (s *ProfileStore) find(name string) *Profile {
+	for _, p := range s.Profiles {
+		if p != nil && strings.EqualFold(p.Name, name) {
+			return p
+		}
+	}
+	return nil
+}
+
+func (s *ProfileStore) findByAPI(api string) *Profile {
+	key := normalizeAPI(api)
+	for _, p := range s.Profiles {
+		if p != nil && normalizeAPI(p.API) == key {
+			return p
+		}
+	}
+	return nil
+}
+
+func (s *ProfileStore) currentProfile() *Profile {
+	if p := s.find(s.Current); p != nil {
+		return p
+	}
+	if len(s.Profiles) > 0 && s.Profiles[0] != nil {
+		return s.Profiles[0]
+	}
+	return nil
+}
+
+func (s *ProfileStore) names() []string {
+	out := []string{}
+	for _, p := range s.Profiles {
+		if p != nil {
+			out = append(out, p.Name)
+		}
+	}
+	return out
+}
+
+/** 读取配置；首次运行时生成预置实例，并把旧版单密钥文件迁移进来 */
+func loadStore() *ProfileStore {
+	data, err := os.ReadFile(profilesPath())
+	if err == nil {
+		var s ProfileStore
+		if json.Unmarshal(data, &s) == nil && len(s.Profiles) > 0 {
+			if s.currentProfile() == nil {
+				s.Current = s.Profiles[0].Name
+			}
+			return &s
+		}
+	}
+
+	// ---- 首次运行：建预置实例 + 迁移旧凭证 ----
+	s := &ProfileStore{Profiles: builtinProfiles()}
+	s.Current = "cc"
+	for _, p := range s.Profiles {
+		if normalizeAPI(p.API) == normalizeAPI(DEFAULT_API) {
+			s.Current = p.Name
+			break
+		}
+	}
+	if old := strings.TrimSpace(readLegacyToken()); old != "" {
+		if p := s.currentProfile(); p != nil {
+			p.Token = old
+			p.User = readLegacyUser()
+			printWarning("检测到旧版本保存的密钥，已迁移到实例 " + p.Name + "（" + p.API + "）")
+			fmt.Println(c("  若这个密钥其实属于另一个站，请切过去重新登录：", cDim))
+			fmt.Println(c("    goosehost switch <另一个实例>", cYellow))
+			fmt.Println(c("    goosehost login --key <那个站的密钥>", cYellow))
+			fmt.Println(c("  查看全部实例：goosehost profiles", cDim))
+			fmt.Println()
+		}
+	}
+	_ = saveStore(s)
+	return s
+}
+
+func saveStore(s *ProfileStore) error {
+	data, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(profilesPath(), data, 0600)
+}
+
+// 旧版（单实例）遗留文件，仅用于迁移
+func readLegacyToken() string {
+	b, err := os.ReadFile(tokenPath())
 	if err != nil {
 		return ""
 	}
-	return strings.TrimSpace(string(data))
+	return string(b)
 }
 
-func loadUser() map[string]interface{} {
-	data, err := os.ReadFile(userPath())
+func readLegacyUser() map[string]interface{} {
+	b, err := os.ReadFile(userPath())
 	if err != nil {
 		return nil
 	}
 	var u map[string]interface{}
-	if json.Unmarshal(data, &u) != nil {
+	if json.Unmarshal(b, &u) != nil {
 		return nil
 	}
 	return u
 }
 
-func saveToken(token string, user map[string]interface{}) error {
-	if err := os.WriteFile(tokenPath(), []byte(token), 0600); err != nil {
-		return err
+// 当前生效的实例。命令里所有取密钥/取地址的地方都走它。
+var current *Profile
+
+func loadToken() string {
+	if current == nil {
+		return ""
 	}
-	if user != nil {
-		data, _ := json.Marshal(user)
-		_ = os.WriteFile(userPath(), data, 0600)
-	}
-	return nil
+	return strings.TrimSpace(current.Token)
 }
 
+func loadUser() map[string]interface{} {
+	if current == nil {
+		return nil
+	}
+	return current.User
+}
+
+/** 把密钥和账号写进【当前实例】——不会写到别的实例去 */
+func saveToken(token string, user map[string]interface{}) error {
+	if current == nil {
+		return fmt.Errorf("未选定实例")
+	}
+	current.Token = strings.TrimSpace(token)
+	if user != nil {
+		current.User = user
+	}
+	s := loadStore()
+	// 按地址定位最稳：临时实例（用 --api 指定的）没有名字，只能靠地址认
+	p := s.findByAPI(current.API)
+	if p == nil {
+		p = &Profile{Name: autoName(current.API), API: current.API}
+		s.Profiles = append(s.Profiles, p)
+		current.Name = p.Name
+	}
+	p.Token = current.Token
+	p.User = current.User
+	return saveStore(s)
+}
+
+/** 由后端地址推一个实例名：page.goose.l.cd → l */
+func autoName(api string) string {
+	h := normalizeAPI(api)
+	if i := strings.Index(h, "/"); i >= 0 {
+		h = h[:i]
+	}
+	h = strings.TrimSuffix(strings.TrimPrefix(h, "page.goose."), ".cd")
+	h = strings.Trim(h, ".")
+	if h == "" {
+		h = strings.NewReplacer(".", "-", ":", "-", "/", "-").Replace(normalizeAPI(api))
+	}
+	if h == "" {
+		h = "default"
+	}
+	return h
+}
+
+/** 只清除【当前实例】的凭证，其他实例的密钥不受影响 */
 func clearAuth() {
-	_ = os.Remove(tokenPath())
-	_ = os.Remove(userPath())
+	if current == nil {
+		return
+	}
+	current.Token = ""
+	current.User = nil
+	s := loadStore()
+	if p := s.findByAPI(current.API); p != nil {
+		p.Token = ""
+		p.User = nil
+		_ = saveStore(s)
+	}
 }
 
 func requireToken() string {
 	t := loadToken()
 	if t == "" {
-		printError("未配置 API 密钥，请先执行：goosehost login --key gooseh-xxx")
+		printError("当前实例 " + profileLabel() + " 未配置 API 密钥")
+		fmt.Println(c("  请先执行：goosehost login --key gooseh-xxx", cYellow))
+		fmt.Println(c("  若密钥存在别的实例上，用 goosehost switch <名字> 切过去；", cDim))
+		fmt.Println(c("  用 goosehost profiles 查看全部实例。", cDim))
 		os.Exit(1)
 	}
 	return t
+}
+
+/** 当前实例的名字（未命名时退回地址），始终安全可用 */
+func currentName() string {
+	if current == nil {
+		return "(未选定)"
+	}
+	if current.Name == "" {
+		return current.API
+	}
+	return current.Name
+}
+
+/** 实例的可读标签，例如：cc (https://page.goose.cc.cd) */
+func profileLabel() string {
+	if current == nil {
+		return "(未选定)"
+	}
+	if current.Name == "" {
+		return current.API + " (未命名实例)"
+	}
+	return current.Name + " (" + current.API + ")"
+}
+
+/** 写操作前打一行目标实例，防止部署到错的站上 */
+func printTarget() {
+	if current == nil {
+		return
+	}
+	name := current.Name
+	if name == "" {
+		name = "未命名"
+	}
+	line := "目标实例: " + c(name, cBold+cYellow) + "  " + c(current.API, cDim)
+	if t := loadToken(); t != "" {
+		line += "  密钥 " + c(maskKey(t), cDim)
+	} else {
+		line += "  " + c("(未登录)", cRed)
+	}
+	fmt.Println(line)
 }
 
 func maskKey(k string) string {
@@ -348,6 +562,12 @@ func printHelp() {
 	fmt.Println(c("goosehost login --key gooseh-xxxxxxxx", cYellow))
 	fmt.Println()
 	fmt.Println(c("  "+strings.Repeat("-", 50), cDim))
+	fmt.Println(c("多实例：密钥按实例分开保存，切换时不会串台", cBold))
+	fmt.Println(c("goosehost profiles", cYellow)+c("            查看全部实例", cDim))
+	fmt.Println(c("goosehost switch <名字>", cYellow)+c("         切换实例", cDim))
+	fmt.Println(c("goosehost --profile <名字> list", cYellow)+c("  临时用某个实例跑一条命令", cDim))
+	fmt.Println()
+	fmt.Println(c("  "+strings.Repeat("-", 50), cDim))
 	fmt.Println("查看全部命令:")
 	fmt.Println(c("goosehost --help", cDim))
 	fmt.Println("更详细命令解答:")
@@ -394,7 +614,25 @@ func printSubHelp(name string) {
 		fmt.Println("  仅适用于 project 类型站点")
 	case "deploy":
 		fmt.Println("用法: goosehost deploy <path> [--slug <slug>]")
+
+	case "switch":
+		fmt.Println("用法: goosehost switch <名字>")
+		fmt.Println("  切换当前实例（地址 + 密钥整套切换）")
+		fmt.Println("  不带名字则列出全部实例")
+	case "profiles":
+		fmt.Println("用法: goosehost profiles")
+		fmt.Println("  列出全部实例、各自的地址与密钥状态")
+	case "profile":
+		fmt.Println("用法:")
+		fmt.Println("  goosehost profile add <名字> --api <地址>")
+		fmt.Println("  goosehost profile remove <名字>")
+		fmt.Println("  goosehost profile rename <旧名> <新名>")
+		fmt.Println("  goosehost profile set-api <名字> <地址>")
 	}
+	fmt.Println()
+	fmt.Println(c("全局参数:", cBold))
+	fmt.Println("  --profile <名字>   本次命令用指定实例（不改变当前实例）")
+	fmt.Println("  --api <地址>       临时指定后端地址（会按地址匹配到对应密钥）")
 	fmt.Println()
 }
 
@@ -411,10 +649,12 @@ func cmdLogin(args []string, api string) {
 		printWarning("密钥不以 gooseh- 开头，可能不是有效的 GooseHost API 密钥")
 	}
 
+	printInfo("密钥将保存到实例: " + profileLabel())
 	printInfo("正在校验密钥...")
 	resp, data := mustAPI("GET", api+"/api/me", *key, nil)
 	if resp.StatusCode != 200 {
 		printError("密钥无效: " + errMsg(data))
+		fmt.Println(c("  注意：密钥是按实例分开保存的，请确认是在 "+currentName()+" 这个站创建的。", cDim))
 		os.Exit(1)
 	}
 	var user map[string]interface{}
@@ -433,7 +673,8 @@ func cmdLogin(args []string, api string) {
 	if name == "" {
 		name = maskKey(*key)
 	}
-	printSuccess("密钥已保存，欢迎，" + name)
+	printSuccess("密钥已保存到实例 " + currentName() + "，欢迎，" + name)
+	fmt.Println(c("  切换实例：goosehost switch <名字>", cDim))
 }
 
 func cmdMe(args []string, api string) {
@@ -891,6 +1132,10 @@ func cmdConfig(args []string, api string) {
 	user := loadUser()
 	fmt.Println()
 	fmt.Println(c("GooseHost 配置信息", cBold+cCyan))
+	if current != nil && current.Name != "" {
+		fmt.Println("当前实例:")
+		fmt.Println("  " + c(current.Name, cBold+cYellow))
+	}
 	fmt.Println("API 地址:")
 	fmt.Println("  " + c(api, cYellow))
 	fmt.Println("认证状态:")
@@ -914,16 +1159,253 @@ func cmdConfig(args []string, api string) {
 		fmt.Println("  " + c(maskKey(token), cDim))
 	}
 	fmt.Println()
+	fmt.Println(c("已保存的实例（密钥各自独立，互不影响）:", cDim))
+	fmt.Println("  " + c(strings.Join(loadStore().names(), "、"), cDim))
+	fmt.Println(c("  切换：goosehost switch <名字>   查看：goosehost profiles", cDim))
+	fmt.Println()
 	fmt.Println(c("提示: 账号管理（注册、改昵称、创建/吊销密钥）请在网页端进行。", cDim))
 	fmt.Println()
 }
 
+// ---------- 实例管理 ----------
+
+/** goosehost profiles —— 列出全部实例 */
+func cmdProfiles(args []string, api string) {
+	s := loadStore()
+	fmt.Println()
+	fmt.Println(c("已配置的 GooseHost 实例", cBold+cCyan))
+	fmt.Println()
+	rows := [][]string{}
+	for _, p := range s.Profiles {
+		if p == nil {
+			continue
+		}
+		mark := ""
+		if strings.EqualFold(p.Name, s.Current) {
+			mark = "*"
+		}
+		key := c("未登录", cRed)
+		if p.Token != "" {
+			key = maskKey(p.Token)
+		}
+		who := ""
+		if p.User != nil {
+			if e := getStr(p.User, "email"); e != "" {
+				who = e
+			} else if n := getStr(p.User, "nickname"); n != "" {
+				who = n
+			}
+		}
+		rows = append(rows, []string{mark, p.Name, p.API, key, who})
+	}
+	printTable([]string{"当前", "名字", "后端地址", "密钥", "账号"}, rows)
+	fmt.Println(c("  * = 当前实例", cDim))
+	fmt.Println()
+	fmt.Println(c("切换: goosehost switch <名字>", cYellow))
+	fmt.Println(c("新增: goosehost profile add <名字> --api <地址>", cDim))
+	fmt.Println()
+}
+
+/** goosehost switch [名字] —— 不带名字就列出，带名字就切换 */
+func cmdSwitch(args []string, api string) {
+	rest := []string{}
+	for _, a := range args {
+		if a != "" {
+			rest = append(rest, a)
+		}
+	}
+	if len(rest) == 0 {
+		cmdProfiles(nil, api)
+		return
+	}
+	name := rest[0]
+	s := loadStore()
+	p := s.find(name)
+	if p == nil {
+		printError("没有名为 " + name + " 的实例")
+		fmt.Println(c("  现有实例: "+strings.Join(s.names(), "、"), cDim))
+		fmt.Println(c("  新增: goosehost profile add "+name+" --api https://xxx", cDim))
+		os.Exit(1)
+	}
+	if strings.EqualFold(s.Current, p.Name) {
+		printInfo("已经是实例 " + p.Name + " 了")
+		cmdProfiles(nil, api)
+		return
+	}
+	old := s.Current
+	s.Current = p.Name
+	if err := saveStore(s); err != nil {
+		printError("保存失败: " + err.Error())
+		os.Exit(1)
+	}
+	printSuccess("已从 " + old + " 切换到 " + p.Name)
+	fmt.Println()
+	fmt.Println(c("后端地址: ", cCyan) + c(p.API, cYellow))
+	if p.Token != "" {
+		fmt.Println(c("密钥: ", cCyan) + c(maskKey(p.Token), cDim))
+		if p.User != nil {
+			if e := getStr(p.User, "email"); e != "" {
+				fmt.Println(c("账号: ", cCyan) + c(e, cYellow))
+			}
+		}
+	} else {
+		printWarning("该实例还没配置密钥：goosehost login --key gooseh-xxx")
+	}
+	fmt.Println()
+}
+
+/** goosehost profile add|remove|rename */
+func cmdProfile(args []string, api string) {
+	if len(args) == 0 {
+		fmt.Println()
+		fmt.Println(c("用法:", cBold))
+		fmt.Println("  goosehost profile add <名字> --api <地址>")
+		fmt.Println("  goosehost profile remove <名字>")
+		fmt.Println("  goosehost profile rename <旧名> <新名>")
+		fmt.Println("  goosehost profile set-api <名字> <地址>")
+		fmt.Println()
+		return
+	}
+	sub := args[0]
+	rest := args[1:]
+	s := loadStore()
+
+	switch sub {
+	case "add":
+		fs := flag.NewFlagSet("profile add", flag.ExitOnError)
+		papi := fs.String("api", "", "后端地址")
+		_ = fs.Parse(rest)
+		name := ""
+		if fs.NArg() > 0 {
+			name = fs.Arg(0)
+		}
+		if name == "" || *papi == "" {
+			printError("用法: goosehost profile add <名字> --api <地址>")
+			os.Exit(1)
+		}
+		if s.find(name) != nil {
+			printError("实例 " + name + " 已存在")
+			os.Exit(1)
+		}
+		if dup := s.findByAPI(*papi); dup != nil {
+			printWarning("地址 " + *papi + " 已被实例 " + dup.Name + " 使用")
+			printWarning("同一个地址两个实例会让密钥归属变乱，已取消")
+			os.Exit(1)
+		}
+		s.Profiles = append(s.Profiles, &Profile{Name: name, API: strings.TrimRight(*papi, "/")})
+		if err := saveStore(s); err != nil {
+			printError("保存失败: " + err.Error())
+			os.Exit(1)
+		}
+		printSuccess("已新增实例 " + name + "（" + strings.TrimRight(*papi, "/") + "）")
+		fmt.Println(c("  登录: goosehost --profile "+name+" login --key gooseh-xxx", cDim))
+		fmt.Println(c("  或直接切过去: goosehost switch "+name, cDim))
+
+	case "remove", "rm", "delete":
+		if len(rest) == 0 {
+			printError("用法: goosehost profile remove <名字>")
+			os.Exit(1)
+		}
+		name := rest[0]
+		p := s.find(name)
+		if p == nil {
+			printError("没有名为 " + name + " 的实例")
+			os.Exit(1)
+		}
+		if strings.EqualFold(s.Current, name) {
+			printError("不能删除当前正在使用的实例，请先 switch 到别的实例")
+			os.Exit(1)
+		}
+		if p.Token != "" {
+			printWarning("该实例保存着密钥 " + maskKey(p.Token) + "，删除后需要重新 login")
+			printWarning("确认删除？(y/N)")
+			if a := strings.ToLower(readLine()); a != "y" && a != "yes" {
+				printInfo("已取消")
+				return
+			}
+		}
+		out := []*Profile{}
+		for _, q := range s.Profiles {
+			if q != nil && !strings.EqualFold(q.Name, name) {
+				out = append(out, q)
+			}
+		}
+		s.Profiles = out
+		if err := saveStore(s); err != nil {
+			printError("保存失败: " + err.Error())
+			os.Exit(1)
+		}
+		printSuccess("已删除实例 " + name)
+
+	case "rename":
+		if len(rest) < 2 {
+			printError("用法: goosehost profile rename <旧名> <新名>")
+			os.Exit(1)
+		}
+		oldName, newName := rest[0], rest[1]
+		p := s.find(oldName)
+		if p == nil {
+			printError("没有名为 " + oldName + " 的实例")
+			os.Exit(1)
+		}
+		if s.find(newName) != nil {
+			printError("实例 " + newName + " 已存在")
+			os.Exit(1)
+		}
+		p.Name = newName
+		if strings.EqualFold(s.Current, oldName) {
+			s.Current = newName
+		}
+		if err := saveStore(s); err != nil {
+			printError("保存失败: " + err.Error())
+			os.Exit(1)
+		}
+		printSuccess("已重命名 " + oldName + " → " + newName + "（密钥保持不变）")
+
+	case "set-api":
+		if len(rest) < 2 {
+			printError("用法: goosehost profile set-api <名字> <地址>")
+			os.Exit(1)
+		}
+		name, newAPI := rest[0], strings.TrimRight(rest[1], "/")
+		p := s.find(name)
+		if p == nil {
+			printError("没有名为 " + name + " 的实例")
+			os.Exit(1)
+		}
+		if dup := s.findByAPI(newAPI); dup != nil && !strings.EqualFold(dup.Name, name) {
+			printError("地址 " + newAPI + " 已被实例 " + dup.Name + " 使用")
+			os.Exit(1)
+		}
+		if p.Token != "" {
+			printWarning("改地址会让已有密钥 " + maskKey(p.Token) + " 指向新的站")
+			printWarning("如果只是想换站，建议新增实例而不是改地址。确认？(y/N)")
+			if a := strings.ToLower(readLine()); a != "y" && a != "yes" {
+				printInfo("已取消")
+				return
+			}
+		}
+		p.API = newAPI
+		if err := saveStore(s); err != nil {
+			printError("保存失败: " + err.Error())
+			os.Exit(1)
+		}
+		printSuccess("实例 " + name + " 的地址已改为 " + newAPI)
+
+	default:
+		printError("未知的 profile 子命令: " + sub)
+		fmt.Println(c("  可用: add / remove / rename / set-api", cDim))
+		os.Exit(1)
+	}
+}
+
 func cmdLogout(args []string, api string) {
-	printWarning("确定要清除本地 API 密钥吗？(y/N)")
+	printWarning("确定要清除实例 " + profileLabel() + " 的 API 密钥吗？(y/N)")
+	printWarning("其他实例的密钥不会受影响。")
 	ans := strings.ToLower(readLine())
 	if ans == "y" || ans == "yes" {
 		clearAuth()
-		printSuccess("已清除本地凭证")
+		printSuccess("已清除实例 " + profileLabel() + " 的凭证")
 	}
 }
 
@@ -1067,26 +1549,75 @@ func cmdDeploy(args []string, api string) {
 func main() {
 	args := os.Args[1:]
 
-	api := os.Getenv("GOOSEHOST_API")
-	if api == "" {
-		api = DEFAULT_API
-	}
+	profileName := ""
+	cliAPI := "" // 命令行 --api
+	envAPI := os.Getenv("GOOSEHOST_API")
 
-	// 全局 --api 提取
+	// 全局 --profile / --api 提取
 	filtered := []string{}
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch {
+		case a == "--profile" && i+1 < len(args):
+			profileName = args[i+1]
+			i++
+		case strings.HasPrefix(a, "--profile="):
+			profileName = a[len("--profile="):]
 		case a == "--api" && i+1 < len(args):
-			api = args[i+1]
+			cliAPI = args[i+1]
 			i++
 		case strings.HasPrefix(a, "--api="):
-			api = a[len("--api="):]
+			cliAPI = a[len("--api="):]
 		default:
 			filtered = append(filtered, a)
 		}
 	}
 	args = filtered
+
+	// --api 优先于环境变量；--profile 优先于两者
+	apiOverride := cliAPI
+	if apiOverride == "" {
+		apiOverride = envAPI
+	}
+
+	store := loadStore()
+
+	// ---- 选定本次生效的实例（地址与密钥始终成套）----
+	switch {
+	case profileName != "" && cliAPI != "":
+		printError("--profile 和 --api 不能同时使用（会造成地址与密钥错配）")
+		fmt.Println(c("  用 --profile 切换整套实例，或用 --api 临时指定地址。", cDim))
+		os.Exit(1)
+
+	case profileName != "":
+		p := store.find(profileName)
+		if p == nil {
+			printError("没有名为 " + profileName + " 的实例")
+			fmt.Println(c("  现有实例: "+strings.Join(store.names(), "、"), cDim))
+			os.Exit(1)
+		}
+		current = p
+
+	case apiOverride != "":
+		// 临时地址：如果这个地址已经存过，就整套用它（地址 + 它自己的密钥）；
+		// 没存过就建个匿名实例，密钥为空，需要 login。
+		if p := store.findByAPI(apiOverride); p != nil {
+			current = p
+		} else {
+			current = &Profile{Name: "", API: strings.TrimRight(apiOverride, "/")}
+		}
+
+	default:
+		current = store.currentProfile()
+	}
+
+	api := ""
+	if current != nil {
+		api = current.API
+	}
+	if api == "" {
+		api = DEFAULT_API
+	}
 
 	if len(args) == 0 {
 		printHelp()
@@ -1126,19 +1657,34 @@ func main() {
 	case "download":
 		cmdDownload(rest, api)
 	case "create":
+		printTarget()
 		cmdCreate(rest, api)
 	case "get":
 		cmdGet(rest, api)
 	case "update":
+		printTarget()
 		cmdUpdate(rest, api)
 	case "delete":
+		printTarget()
 		cmdDelete(rest, api)
 	case "put-file":
+		printTarget()
 		cmdPutFile(rest, api)
 	case "rm-file":
+		printTarget()
 		cmdRmFile(rest, api)
 	case "deploy":
+		printTarget()
 		cmdDeploy(rest, api)
+
+	// ---- 多实例 ----
+	case "switch", "use":
+		cmdSwitch(rest, api)
+	case "profiles", "instances":
+		cmdProfiles(rest, api)
+	case "profile":
+		cmdProfile(rest, api)
+
 	default:
 		printError("未知命令: " + cmd)
 		fmt.Println()
